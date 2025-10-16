@@ -1,0 +1,583 @@
+import 'package:allergen/screens/feature/allergen_analysis.dart';
+import 'package:allergen/styleguide.dart';
+import 'package:flutter/material.dart';
+import 'package:allergen/screens/feature/scan_screen.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+
+class IngredientAllergenModal extends StatefulWidget {
+  final String ingredient;
+  final Color ingredientColor;
+  final List<AllergenInfo> availableAllergens;
+  final bool isFromHistory;
+  final Map<String, double>? historicalSeverityData;
+  final List<String>? historicalMatchedAllergens;
+
+  const IngredientAllergenModal({
+    Key? key,
+    required this.ingredient,
+    required this.ingredientColor,
+    required this.availableAllergens,
+    this.isFromHistory = false,
+    this.historicalSeverityData,
+    this.historicalMatchedAllergens,
+  }) : super(key: key);
+
+  @override
+  State<IngredientAllergenModal> createState() =>
+      _IngredientAllergenModalState();
+}
+
+class _IngredientAllergenModalState extends State<IngredientAllergenModal> {
+  Map<String, double> displaySeverityData = {};
+  bool isLoading = true;
+  List<AllergenInfo> matchingAllergens = [];
+  final AllergenAnalysis allergenAnalysis = AllergenAnalysis();
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.isFromHistory) {
+      loadHistoricalData();
+    } else {
+      loadCurrentData();
+    }
+  }
+
+  Future<void> loadHistoricalData() async {
+    try {
+      Map<String, double> historicalSeverity =
+          widget.historicalSeverityData ?? {};
+
+      List<AllergenInfo> historicalAllergens = [];
+
+      if (widget.historicalMatchedAllergens != null &&
+          widget.historicalMatchedAllergens!.isNotEmpty) {
+        for (String allergenName in widget.historicalMatchedAllergens!) {
+          AllergenInfo? foundAllergen;
+          String lowerAllergenName = allergenName.toLowerCase().trim();
+
+          for (AllergenInfo allergen in widget.availableAllergens) {
+            String lowerAvailableName = allergen.name.toLowerCase().trim();
+
+            if (lowerAvailableName == lowerAllergenName) {
+              foundAllergen = allergen;
+              break;
+            }
+
+            if (lowerAvailableName.contains(lowerAllergenName) ||
+                lowerAllergenName.contains(lowerAvailableName)) {
+              foundAllergen = allergen;
+              break;
+            }
+          }
+
+          if (foundAllergen == null) {
+            double severity = 0.5;
+            historicalSeverity.forEach((key, value) {
+              if (key.toLowerCase().trim() == lowerAllergenName) {
+                severity = value;
+              }
+            });
+
+            String riskLevel =
+                severity >= 0.67
+                    ? 'severe'
+                    : severity >= 0.33
+                    ? 'moderate'
+                    : 'mild';
+
+            foundAllergen = AllergenInfo(
+              name: allergenName,
+              riskLevel: riskLevel,
+              symptoms: ['Allergic reaction possible'],
+              sources: [widget.ingredient],
+              isUserAllergen: true,
+            );
+            print("Not found in available allergens, created basic info");
+            print("       Severity: $severity, Risk level: $riskLevel");
+          }
+
+          historicalAllergens.add(foundAllergen);
+        }
+      } else {}
+
+      setState(() {
+        matchingAllergens = historicalAllergens;
+        displaySeverityData = historicalSeverity;
+        isLoading = false;
+      });
+    } catch (e) {
+      print("\nERROR loading historical data: $e");
+      print("Stack trace: ${StackTrace.current}");
+      setState(() {
+        matchingAllergens = [];
+        displaySeverityData = {};
+        isLoading = false;
+      });
+    }
+  }
+
+  Future<void> loadCurrentData() async {
+    try {
+      Map<String, double> severityMap = {};
+
+      User? user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        QuerySnapshot profile =
+            await FirebaseFirestore.instance
+                .collection('users')
+                .doc(user.uid)
+                .collection('profile')
+                .where('type', isEqualTo: 'allergen')
+                .get();
+
+        print("Found ${profile.docs.length} current allergen profiles");
+
+        for (QueryDocumentSnapshot doc in profile.docs) {
+          Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
+          String allergenName =
+              data['name']?.toString().toLowerCase().trim() ?? '';
+          double severity = (data['severity'] ?? 0.5).toDouble();
+
+          if (allergenName.isNotEmpty) {
+            severityMap[allergenName] = severity;
+            print("  → $allergenName: $severity");
+          }
+        }
+      }
+
+      setState(() {
+        displaySeverityData = severityMap;
+      });
+
+      if (widget.historicalMatchedAllergens != null &&
+          widget.historicalMatchedAllergens!.isNotEmpty) {
+        print("\n--- Using matched allergens from ingredient ---");
+        findAllergensFromMatchedList();
+      } else {
+        print("\n--- Searching for allergens in sources ---");
+        findMatchingAllergensFromIngredient();
+      }
+
+      setState(() {
+        isLoading = false;
+      });
+
+      print("Current data loaded successfully");
+    } catch (e) {
+      print("Error loading current data: $e");
+      setState(() => isLoading = false);
+    }
+  }
+
+  void findAllergensFromMatchedList() {
+    List<AllergenInfo> matchedAllergens = [];
+
+    print(
+      "Matched allergens from ingredient: ${widget.historicalMatchedAllergens}",
+    );
+
+    for (String allergenName in widget.historicalMatchedAllergens!) {
+      String lowerAllergenName = allergenName.toLowerCase().trim();
+
+      AllergenInfo? foundAllergen;
+      for (AllergenInfo allergen in widget.availableAllergens) {
+        String lowerAvailableName = allergen.name.toLowerCase().trim();
+
+        if (lowerAvailableName == lowerAllergenName ||
+            lowerAvailableName.contains(lowerAllergenName) ||
+            lowerAllergenName.contains(lowerAvailableName)) {
+          foundAllergen = allergen;
+          print("    ✓ Found: ${allergen.name}");
+          break;
+        }
+      }
+
+      if (foundAllergen == null) {
+        String? matchedUserAllergen = allergenAnalysis.findMatchingUserAllergen(
+          lowerAllergenName,
+          displaySeverityData.keys.toList(),
+        );
+
+        double severity =
+            matchedUserAllergen != null
+                ? displaySeverityData[matchedUserAllergen]!
+                : 0.5;
+
+        String riskLevel =
+            severity >= 0.67
+                ? 'severe'
+                : severity >= 0.33
+                ? 'moderate'
+                : 'mild';
+
+        foundAllergen = AllergenInfo(
+          name: allergenName,
+          riskLevel: riskLevel,
+          symptoms: ['Allergic reaction possible'],
+          sources: [widget.ingredient],
+          isUserAllergen: matchedUserAllergen != null,
+        );
+        print("Created basic allergen info");
+      }
+
+      matchedAllergens.add(foundAllergen);
+
+      if (!displaySeverityData.containsKey(lowerAllergenName)) {
+        String? matchedUserAllergen = allergenAnalysis.findMatchingUserAllergen(
+          lowerAllergenName,
+          displaySeverityData.keys.toList(),
+        );
+
+        if (matchedUserAllergen != null) {
+          displaySeverityData[lowerAllergenName] =
+              displaySeverityData[matchedUserAllergen]!;
+        } else {
+          displaySeverityData[lowerAllergenName] = 0.5;
+        }
+      }
+    }
+
+    setState(() {
+      matchingAllergens = matchedAllergens;
+    });
+  }
+
+  void findMatchingAllergensFromIngredient() {
+    String lowerIngredient = widget.ingredient.toLowerCase().trim();
+    List<AllergenInfo> matchedAllergens = [];
+
+    for (AllergenInfo allergenInfo in widget.availableAllergens) {
+      String allergenNameLower = allergenInfo.name.toLowerCase().trim();
+
+      bool isSourceMatch = allergenInfo.sources.any(
+        (source) => allergenAnalysis.isIngredientMatch(
+          lowerIngredient,
+          source.toLowerCase().trim(),
+        ),
+      );
+
+      if (!isSourceMatch) {
+        isSourceMatch = allergenAnalysis.isIngredientMatch(
+          lowerIngredient,
+          allergenNameLower,
+        );
+      }
+
+      if (isSourceMatch) {
+        print("Found allergen: ${allergenInfo.name} (source match)");
+
+        String? matchedUserAllergen = allergenAnalysis.findMatchingUserAllergen(
+          allergenNameLower,
+          displaySeverityData.keys.toList(),
+        );
+
+        if (matchedUserAllergen != null) {
+          print("  → User has this allergen in profile");
+          matchedAllergens.add(allergenInfo);
+        } else {
+          print("  → Not in user profile, but detected in ingredient");
+          matchedAllergens.add(allergenInfo);
+
+          if (!displaySeverityData.containsKey(allergenNameLower)) {
+            displaySeverityData[allergenNameLower] = 0.5;
+            print("  → Added default severity: 0.5");
+          }
+        }
+      }
+    }
+
+    print("Found ${matchedAllergens.length} matching allergens\n");
+
+    setState(() {
+      matchingAllergens = matchedAllergens;
+    });
+  }
+
+  Color getSeverityColor(double severity) {
+    if (severity < 0.33) return Colors.green;
+    if (severity < 0.67) return Colors.orange;
+    return Colors.red;
+  }
+
+  String getSeverityText(double severity) {
+    if (severity < 0.33) return 'Mild';
+    if (severity < 0.67) return 'Moderate';
+    return 'Severe';
+  }
+
+  Widget getAllergenIcon(String allergenName, Color severityColor) {
+    IconData iconData;
+    final String name = allergenName.toLowerCase().trim();
+
+    switch (name) {
+      case 'milk':
+      case 'dairy':
+        iconData = FontAwesomeIcons.glassWater;
+        break;
+      case 'cashew':
+      case 'nuts':
+      case 'nut':
+      case 'tree nuts':
+        iconData = FontAwesomeIcons.seedling;
+        break;
+      case 'egg':
+      case 'eggs':
+        iconData = FontAwesomeIcons.egg;
+        break;
+      case 'fish':
+        iconData = FontAwesomeIcons.fish;
+        break;
+      case 'wheat':
+      case 'gluten':
+        iconData = FontAwesomeIcons.wheatAwn;
+        break;
+      case 'soy':
+      case 'soybean':
+      case 'soya':
+        iconData = FontAwesomeIcons.leaf;
+        break;
+      case 'shellfish':
+      case 'seafood':
+      case 'crustacean':
+      case 'shrimp':
+      case 'crab':
+      case 'oysters':
+      case 'clams':
+      case 'mussels':
+      case 'squid':
+        iconData = FontAwesomeIcons.shrimp;
+        break;
+      case 'peanut':
+      case 'peanuts':
+        iconData = FontAwesomeIcons.circleNodes;
+        break;
+      case 'sesame':
+        iconData = FontAwesomeIcons.pepperHot;
+        break;
+      case 'lupin':
+        iconData = FontAwesomeIcons.spa;
+        break;
+      default:
+        iconData = FontAwesomeIcons.triangleExclamation;
+        break;
+    }
+
+    return FaIcon(iconData, color: severityColor, size: 30);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.arrow_back),
+                  onPressed: () => Navigator.pop(context),
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    widget.isFromHistory
+                        ? 'Historical Ingredient Analysis'
+                        : 'Ingredient Analysis',
+                    style: const TextStyle(
+                      fontSize: 18,
+                      color: AppColors.primary,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 24),
+            if (isLoading)
+              const Center(
+                child: Padding(
+                  padding: EdgeInsets.all(40),
+                  child: CircularProgressIndicator(),
+                ),
+              )
+            else ...[
+              Text(
+                widget.ingredient,
+                style: const TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.black87,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade100,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.grey.shade300),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      widget.isFromHistory ? Icons.history : Icons.psychology,
+                      size: 14,
+                      color: Colors.grey.shade600,
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      'AI Analysis',
+                      style: TextStyle(
+                        fontSize: 10,
+                        color: Colors.grey.shade600,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+              if (matchingAllergens.isEmpty)
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 8,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.green.shade50,
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: Colors.green.shade200),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.check_circle,
+                        size: 16,
+                        color: Colors.green.shade700,
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        widget.isFromHistory
+                            ? 'No allergens detected at scan time'
+                            : 'No allergens detected',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.green.shade700,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                )
+              else
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 8,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.red.shade50,
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: Colors.red.shade700),
+                  ),
+                  child: Text(
+                    'Contains ${matchingAllergens.length} of your allergens',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.red.shade700,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+              const SizedBox(height: 24),
+              if (matchingAllergens.isNotEmpty) ...[
+                Wrap(
+                  spacing: 16,
+                  runSpacing: 16,
+                  children:
+                      matchingAllergens.map((allergen) {
+                        String? matchedAllergenKey = allergenAnalysis
+                            .findMatchingUserAllergen(
+                              allergen.name.toLowerCase().trim(),
+                              displaySeverityData.keys.toList(),
+                            );
+
+                        double severity =
+                            matchedAllergenKey != null
+                                ? displaySeverityData[matchedAllergenKey] ?? 0.5
+                                : 0.5;
+                        Color severityColor = getSeverityColor(severity);
+
+                        return Column(
+                          children: [
+                            Container(
+                              width: 60,
+                              height: 60,
+                              decoration: BoxDecoration(
+                                color: severityColor.withOpacity(0.2),
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(
+                                  color: severityColor,
+                                  width: 2,
+                                ),
+                              ),
+                              child: Center(
+                                child: getAllergenIcon(
+                                  allergen.name,
+                                  severityColor,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            SizedBox(
+                              width: 70,
+                              child: Column(
+                                children: [
+                                  Text(
+                                    allergen.name,
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: Colors.grey.shade700,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    getSeverityText(severity),
+                                    style: TextStyle(
+                                      fontSize: 10,
+                                      color: severityColor,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        );
+                      }).toList(),
+                ),
+              ],
+            ],
+            const SizedBox(height: 40),
+          ],
+        ),
+      ),
+    );
+  }
+}

@@ -1,0 +1,1092 @@
+import 'package:flutter/material.dart';
+import 'package:allergen/styleguide.dart';
+
+class TermsAndConditionsScreen extends StatefulWidget {
+  const TermsAndConditionsScreen({Key? key}) : super(key: key);
+
+  @override
+  State<TermsAndConditionsScreen> createState() =>
+      _TermsAndConditionsScreenState();
+}
+
+class _TermsAndConditionsScreenState extends State<TermsAndConditionsScreen>
+    with SingleTickerProviderStateMixin {
+  late AnimationController animationController;
+  final ScrollController scrollController = ScrollController();
+  bool showScrollToTop = false;
+
+  @override
+  void initState() {
+    super.initState();
+    animationController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 800),
+    )..forward();
+
+    scrollController.addListener(() {
+      if (scrollController.offset > 300 && !showScrollToTop) {
+        setState(() => showScrollToTop = true);
+      } else if (scrollController.offset <= 300 && showScrollToTop) {
+        setState(() => showScrollToTop = false);
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    animationController.dispose();
+    scrollController.dispose();
+    super.dispose();
+  }
+
+  void scrollToTop() {
+    scrollController.animateTo(
+      0,
+      duration: const Duration(milliseconds: 500),
+      curve: Curves.easeOutCubic,
+    );
+  }
+
+  Widget buildIntroCard() {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            AppColors.primary.withOpacity(0.1),
+            AppColors.primary.withOpacity(0.05),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.primary.withOpacity(0.2)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: AppColors.primary,
+              borderRadius: BorderRadius.circular(12),
+              boxShadow: [
+                BoxShadow(
+                  color: AppColors.primary.withOpacity(0.3),
+                  blurRadius: 8,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: const Icon(
+              Icons.warning_amber_rounded,
+              color: Colors.white,
+              size: 28,
+            ),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'IMPORTANT MEDICAL DISCLAIMER',
+                  style: TextStyle(
+                    fontFamily: 'Poppins',
+                    fontSize: 17,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.textBlack,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'AlertGen is not a substitute for professional medical advice. Always consult healthcare professionals for allergy management.',
+                  style: TextStyle(
+                    fontFamily: 'Poppins',
+                    fontSize: 13,
+                    color: Colors.grey.shade700,
+                    height: 1.4,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFFF8FAFC),
+      extendBodyBehindAppBar: true,
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        flexibleSpace: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [AppColors.primary, AppColors.primary.withOpacity(0.9)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+          ),
+        ),
+        title: const Text(
+          'Terms and Conditions',
+          style: TextStyle(
+            fontFamily: 'Poppins',
+            color: Colors.white,
+            fontSize: 20,
+            fontWeight: FontWeight.w600,
+            letterSpacing: 0.3,
+          ),
+        ),
+        leading: IconButton(
+          icon: Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.2),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: const Icon(Icons.arrow_back, color: Colors.white, size: 20),
+          ),
+          onPressed: () => Navigator.pop(context),
+        ),
+      ),
+      body: Stack(
+        children: [
+          SingleChildScrollView(
+            controller: scrollController,
+            physics: const BouncingScrollPhysics(),
+            padding: const EdgeInsets.fromLTRB(20, 120, 20, 40),
+            child: FadeTransition(
+              opacity: animationController,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  buildIntroCard(),
+                  const SizedBox(height: 28),
+
+                  buildIconSection(
+                    number: '1',
+                    title: 'ACCEPTANCE OF TERMS',
+                    icon: Icons.task_alt_rounded,
+                    iconColor: const Color(0xFF3B82F6),
+                    content:
+                        'By downloading, installing, or using the AlertGen mobile application ("App"), you agree to be bound by these Terms and Conditions ("Terms"). If you do not agree to these Terms, do not use the App.',
+                    delay: 100,
+                  ),
+
+                  buildIconSection(
+                    number: '2',
+                    title: 'DESCRIPTION OF SERVICE',
+                    icon: Icons.settings_suggest_rounded,
+                    iconColor: const Color(0xFF8B5CF6),
+                    content:
+                        'AlertGen is an AI-powered mobile application that uses Optical Character Recognition (OCR) and artificial intelligence to help identify potential allergens in food products.',
+                    features: [
+                      'Ingredient scanning and analysis',
+                      'Allergen detection alerts',
+                      'Personalized allergy profiles',
+                      'Food alternative suggestions',
+                      'Emergency contact features',
+                      'First aid guidance',
+                    ],
+                    delay: 150,
+                  ),
+
+                  buildCriticalSection(
+                    number: '3',
+                    title: 'MEDICAL DISCLAIMER AND LIMITATIONS',
+                    content:
+                        'CRITICAL WARNING: AlertGen is NOT a medical device and should NOT be relied upon as the sole method for allergen detection.',
+                    warnings: [
+                      'May not detect all allergens',
+                      'Cannot identify cross-reactive allergens automatically',
+                      'May produce false positives or false negatives',
+                      'Depends on image quality and lighting conditions',
+                      'Requires internet connectivity for full functionality',
+                    ],
+                    acknowledgments: [
+                      'The App\'s accuracy can be affected by poor lighting, image quality, or unclear labels',
+                      'Regional and cultural recipe variations may cause misidentification',
+                      'Cross-contamination risks are not detected',
+                      'You remain solely responsible for your food safety decisions',
+                    ],
+                    delay: 200,
+                  ),
+
+                  buildIconSection(
+                    number: '4',
+                    title: 'USER RESPONSIBILITIES',
+                    icon: Icons.person_pin_outlined,
+                    iconColor: const Color(0xFF10B981),
+                    content: 'You agree to:',
+                    features: [
+                      'Always verify allergen information independently',
+                      'Consult healthcare professionals for allergy management',
+                      'Keep your allergy profile updated and accurate',
+                      'Use the App as a supplementary tool only',
+                      'Report any adverse reactions to appropriate medical authorities',
+                      'Not rely solely on the App for life-threatening allergy decisions',
+                    ],
+                    delay: 250,
+                  ),
+
+                  buildIconSection(
+                    number: '5',
+                    title: 'PRIVACY AND DATA COLLECTION',
+                    icon: Icons.privacy_tip_outlined,
+                    iconColor: const Color(0xFF06B6D4),
+                    content: 'We collect and process:',
+                    features: [
+                      'Personal allergy information you provide',
+                      'Images you capture for analysis',
+                      'Usage data and app performance metrics',
+                      'Device information for compatibility',
+                    ],
+                    footer:
+                        'Your data is processed according to our Privacy Policy. Images may be temporarily stored for analysis but are not permanently retained unless you save them.',
+                    delay: 300,
+                  ),
+
+                  buildIconSection(
+                    number: '6',
+                    title: 'LIMITATION OF LIABILITY',
+                    icon: Icons.gavel_rounded,
+                    iconColor: const Color(0xFFF59E0B),
+                    content: 'TO THE MAXIMUM EXTENT PERMITTED BY LAW:',
+                    features: [
+                      'We are not liable for any allergic reactions or health consequences',
+                      'We are not responsible for third-party content or services',
+                      'You use the App entirely at your own risk',
+                    ],
+                    delay: 350,
+                  ),
+
+                  buildIconSection(
+                    number: '7',
+                    title: 'TECHNICAL REQUIREMENTS',
+                    icon: Icons.phone_android_rounded,
+                    iconColor: const Color(0xFF8B5CF6),
+                    content: 'The App requires:',
+                    features: [
+                      'Android device with camera functionality',
+                      'Internet connection for AI analysis',
+                      'Sufficient device storage and processing power',
+                      'Compatible Android version',
+                    ],
+                    footer:
+                        'Performance may vary based on device capabilities and network conditions.',
+                    delay: 400,
+                  ),
+
+                  buildIconSection(
+                    number: '8',
+                    title: 'PROHIBITED USES',
+                    icon: Icons.block_rounded,
+                    iconColor: const Color(0xFFEF4444),
+                    content: 'You may not:',
+                    features: [
+                      'Use the App for commercial food production or distribution',
+                      'Rely on the App for professional food service decisions',
+                      'Attempt to reverse engineer or modify the App',
+                      'Share your account credentials with others',
+                      'Use the App in violation of applicable laws',
+                    ],
+                    delay: 450,
+                  ),
+
+                  buildIconSection(
+                    number: '9',
+                    title: 'UPDATES AND MODIFICATIONS',
+                    icon: Icons.system_update_alt_rounded,
+                    iconColor: const Color(0xFF3B82F6),
+                    content:
+                        'We may update the App and these Terms at any time. Continued use after updates constitutes acceptance of revised Terms. We recommend regularly checking for updates to maintain optimal performance.',
+                    delay: 500,
+                  ),
+
+                  buildIconSection(
+                    number: '10',
+                    title: 'TERMINATION',
+                    icon: Icons.exit_to_app_rounded,
+                    iconColor: const Color(0xFF6B7280),
+                    content:
+                        'We may terminate or suspend your access to the App at any time for violation of these Terms. Upon termination, you must cease all use of the App and may lose access to saved data.',
+                    delay: 550,
+                  ),
+
+                  buildEmergencySection(delay: 600),
+                  buildContactSection(delay: 650),
+
+                  const SizedBox(height: 20),
+                ],
+              ),
+            ),
+          ),
+
+          // Scroll to top button
+          if (showScrollToTop)
+            Positioned(
+              right: 20,
+              bottom: 20,
+              child: Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  onTap: scrollToTop,
+                  borderRadius: BorderRadius.circular(16),
+                  child: Container(
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [
+                          AppColors.primary,
+                          AppColors.primary.withOpacity(0.9),
+                        ],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppColors.primary.withOpacity(0.4),
+                          blurRadius: 12,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: const Icon(
+                      Icons.keyboard_arrow_up_rounded,
+                      color: Colors.white,
+                      size: 24,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget buildLastUpdated() {
+    return Center(
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.grey.shade200),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.04),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: AppColors.primary.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(
+                Icons.calendar_today_rounded,
+                size: 16,
+                color: AppColors.primary,
+              ),
+            ),
+            const SizedBox(width: 10),
+            Text(
+              'Last updated: ${DateTime.now().toString().split(' ')[0]}',
+              style: TextStyle(
+                fontFamily: 'Poppins',
+                fontSize: 13,
+                color: Colors.grey.shade700,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget buildIconSection({
+    required String number,
+    required String title,
+    required IconData icon,
+    required Color iconColor,
+    required String content,
+    List<String>? features,
+    String? footer,
+    int delay = 0,
+  }) {
+    return TweenAnimationBuilder(
+      duration: Duration(milliseconds: 600 + delay),
+      tween: Tween<double>(begin: 0, end: 1),
+      curve: Curves.easeOutCubic,
+      builder: (context, double value, child) {
+        return Transform.translate(
+          offset: Offset(0, 20 * (1 - value)),
+          child: Opacity(opacity: value, child: child),
+        );
+      },
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 16.0),
+        padding: const EdgeInsets.all(22.0),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20.0),
+          boxShadow: [
+            BoxShadow(
+              color: iconColor.withOpacity(0.08),
+              blurRadius: 16,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [iconColor, iconColor.withOpacity(0.8)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.circular(14),
+                    boxShadow: [
+                      BoxShadow(
+                        color: iconColor.withOpacity(0.3),
+                        blurRadius: 12,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: Icon(icon, color: Colors.white, size: 24),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 3,
+                        ),
+                        decoration: BoxDecoration(
+                          color: iconColor.withOpacity(0.15),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                          'Section $number',
+                          style: TextStyle(
+                            fontFamily: 'Poppins',
+                            fontSize: 10,
+                            fontWeight: FontWeight.w700,
+                            color: iconColor,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        title,
+                        style: TextStyle(
+                          fontFamily: 'Poppins',
+                          fontSize: 15,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.textBlack,
+                          letterSpacing: 0.2,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Text(
+              content,
+              style: TextStyle(
+                fontFamily: 'Poppins',
+                fontSize: 14,
+                color: Colors.grey.shade700,
+                height: 1.7,
+              ),
+            ),
+            if (features != null) ...[
+              const SizedBox(height: 14),
+              ...features.map(
+                (feature) => buildFeatureItem(feature, iconColor),
+              ),
+            ],
+            if (footer != null) ...[
+              const SizedBox(height: 14),
+              Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: iconColor.withOpacity(0.06),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: iconColor.withOpacity(0.2),
+                    width: 1.5,
+                  ),
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(
+                      Icons.info_outline_rounded,
+                      size: 18,
+                      color: iconColor,
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        footer,
+                        style: TextStyle(
+                          fontFamily: 'Poppins',
+                          fontSize: 13,
+                          color: Colors.grey.shade800,
+                          height: 1.6,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget buildCriticalSection({
+    required String number,
+    required String title,
+    required String content,
+    required List<String> warnings,
+    required List<String> acknowledgments,
+    int delay = 0,
+  }) {
+    return TweenAnimationBuilder(
+      duration: Duration(milliseconds: 600 + delay),
+      tween: Tween<double>(begin: 0, end: 1),
+      curve: Curves.easeOutCubic,
+      builder: (context, double value, child) {
+        return Transform.translate(
+          offset: Offset(0, 20 * (1 - value)),
+          child: Opacity(opacity: value, child: child),
+        );
+      },
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 16.0),
+        padding: const EdgeInsets.all(22.0),
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            colors: [Color(0xFFFEF2F2), Color(0xFFFEE2E2)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(20.0),
+          border: Border.all(
+            color: const Color(0xFFEF4444).withOpacity(0.4),
+            width: 2,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFFEF4444).withOpacity(0.15),
+              blurRadius: 16,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(14),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFFEF4444).withOpacity(0.2),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: const Icon(
+                    Icons.error_outline_rounded,
+                    color: Color(0xFFEF4444),
+                    size: 26,
+                  ),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 3,
+                        ),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFEF4444).withOpacity(0.2),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                          'Section $number',
+                          style: const TextStyle(
+                            fontFamily: 'Poppins',
+                            fontSize: 10,
+                            fontWeight: FontWeight.w700,
+                            color: Color(0xFFB91C1C),
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        title,
+                        style: const TextStyle(
+                          fontFamily: 'Poppins',
+                          fontSize: 15,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.textBlack,
+                          letterSpacing: 0.2,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.7),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: const Color(0xFFEF4444).withOpacity(0.3),
+                ),
+              ),
+              child: Text(
+                content,
+                style: const TextStyle(
+                  fontFamily: 'Poppins',
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                  color: Color(0xFFB91C1C),
+                  height: 1.6,
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              'The App:',
+              style: TextStyle(
+                fontFamily: 'Poppins',
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+                color: AppColors.textBlack,
+              ),
+            ),
+            const SizedBox(height: 10),
+            ...warnings.map((w) => buildWarningItem(w)),
+            const SizedBox(height: 16),
+            const Text(
+              'You acknowledge that:',
+              style: TextStyle(
+                fontFamily: 'Poppins',
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+                color: AppColors.textBlack,
+              ),
+            ),
+            const SizedBox(height: 10),
+            ...acknowledgments.map((a) => buildWarningItem(a)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget buildFeatureItem(String text, Color color) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            margin: const EdgeInsets.only(top: 2),
+            padding: const EdgeInsets.all(6),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [color.withOpacity(0.15), color.withOpacity(0.08)],
+              ),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(Icons.check_rounded, size: 14, color: color),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              text,
+              style: TextStyle(
+                fontFamily: 'Poppins',
+                fontSize: 13,
+                color: Colors.grey.shade700,
+                height: 1.6,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget buildWarningItem(String text) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            margin: const EdgeInsets.only(top: 6),
+            width: 8,
+            height: 8,
+            decoration: BoxDecoration(
+              color: const Color(0xFFEF4444),
+              shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFFEF4444).withOpacity(0.3),
+                  blurRadius: 4,
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              text,
+              style: TextStyle(
+                fontFamily: 'Poppins',
+                fontSize: 13,
+                color: Colors.grey.shade800,
+                height: 1.6,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget buildEmergencySection({int delay = 0}) {
+    return TweenAnimationBuilder(
+      duration: Duration(milliseconds: 600 + delay),
+      tween: Tween<double>(begin: 0, end: 1),
+      curve: Curves.easeOutCubic,
+      builder: (context, double value, child) {
+        return Transform.translate(
+          offset: Offset(0, 20 * (1 - value)),
+          child: Opacity(opacity: value, child: child),
+        );
+      },
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 16.0),
+        padding: const EdgeInsets.all(22.0),
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            colors: [Color(0xFFFEF2F2), Color(0xFFFEE2E2)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(20.0),
+          border: Border.all(
+            color: const Color(0xFFEF4444).withOpacity(0.4),
+            width: 2,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFFEF4444).withOpacity(0.15),
+              blurRadius: 16,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(14),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFFEF4444).withOpacity(0.2),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: const Icon(
+                    Icons.emergency_rounded,
+                    color: Color(0xFFEF4444),
+                    size: 26,
+                  ),
+                ),
+                const SizedBox(width: 14),
+                const Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Section 11',
+                        style: TextStyle(
+                          fontFamily: 'Poppins',
+                          fontSize: 10,
+                          fontWeight: FontWeight.w700,
+                          color: Color(0xFFB91C1C),
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                      Text(
+                        'EMERGENCY SITUATIONS',
+                        style: TextStyle(
+                          fontFamily: 'Poppins',
+                          fontSize: 15,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.textBlack,
+                          letterSpacing: 0.2,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.7),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: const Color(0xFFEF4444).withOpacity(0.3),
+                ),
+              ),
+              child: const Text(
+                'In case of allergic reactions or emergencies:',
+                style: TextStyle(
+                  fontFamily: 'Poppins',
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                  color: Color(0xFFB91C1C),
+                  height: 1.6,
+                ),
+              ),
+            ),
+            const SizedBox(height: 14),
+            buildWarningItem('Seek immediate medical attention'),
+            buildWarningItem(
+              'Contact emergency services (911 or local equivalent)',
+            ),
+            buildWarningItem(
+              'Do not rely on the App\'s emergency features as primary response',
+            ),
+            buildWarningItem(
+              'Follow your healthcare provider\'s emergency action plan',
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget buildContactSection({int delay = 0}) {
+    return TweenAnimationBuilder(
+      duration: Duration(milliseconds: 600 + delay),
+      tween: Tween<double>(begin: 0, end: 1),
+      curve: Curves.easeOutCubic,
+      builder: (context, double value, child) {
+        return Transform.translate(
+          offset: Offset(0, 20 * (1 - value)),
+          child: Opacity(opacity: value, child: child),
+        );
+      },
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 16.0),
+        padding: const EdgeInsets.all(22.0),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20.0),
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFF06B6D4).withOpacity(0.1),
+              blurRadius: 16,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFF06B6D4), Color(0xFF0891B2)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.circular(14),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFF06B6D4).withOpacity(0.3),
+                        blurRadius: 12,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: const Icon(
+                    Icons.contact_support_outlined,
+                    color: Colors.white,
+                    size: 24,
+                  ),
+                ),
+                const SizedBox(width: 14),
+                const Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Section 12',
+                        style: TextStyle(
+                          fontFamily: 'Poppins',
+                          fontSize: 10,
+                          fontWeight: FontWeight.w700,
+                          color: Color(0xFF0891B2),
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                      Text(
+                        'CONTACT INFORMATION',
+                        style: TextStyle(
+                          fontFamily: 'Poppins',
+                          fontSize: 15,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.textBlack,
+                          letterSpacing: 0.2,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 18),
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [const Color(0xFFECFEFF), const Color(0xFFCFFAFE)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(
+                  color: const Color(0xFF67E8F9).withOpacity(0.5),
+                  width: 1.5,
+                ),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(10),
+                          boxShadow: [
+                            BoxShadow(
+                              color: const Color(0xFF06B6D4).withOpacity(0.15),
+                              blurRadius: 8,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: const Icon(
+                          Icons.email_outlined,
+                          color: Color(0xFF0284C7),
+                          size: 20,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      const Expanded(
+                        child: Text(
+                          'alertgenn@gmail.com',
+                          style: TextStyle(
+                            fontFamily: 'Poppins',
+                            fontSize: 14,
+                            fontWeight: FontWeight.w700,
+                            color: Color(0xFF0C4A6E),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 14),
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.6),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Text(
+                      'For questions about these Terms. For medical emergencies, contact your local emergency services immediately.',
+                      style: TextStyle(
+                        fontFamily: 'Poppins',
+                        fontSize: 12,
+                        color: Colors.grey.shade700,
+                        height: 1.6,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}

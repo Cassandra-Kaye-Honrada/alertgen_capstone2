@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "223497311060",
+    "project_id": "alertgen-18915",
+    "storage_bucket": "alertgen-18915.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:223497311060:android:263394655a44cffe15eec1",
+        "android_client_info": {
+          "package_name": "com.example.allergen"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "223497311060-f5ct4pb4iaih4megqb8aq40btfp2367l.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDwJWHYi5bJGdR7M59tJGDYthGrBPeNusE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "223497311060-f5ct4pb4iaih4megqb8aq40btfp2367l.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

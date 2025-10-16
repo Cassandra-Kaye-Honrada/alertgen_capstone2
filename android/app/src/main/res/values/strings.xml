@@ -1,0 +1,6 @@
+<resources>
+    <string name="app_name">allergen</string>
+    <string name="facebook_app_id">603475422280095</string>
+    <string name="facebook_client_token">b1d42838dd8c102f917dc1b26a970eee</string>
+    <string name="fb_login_protocol_scheme">fb603475422280095</string>
+</resources>
