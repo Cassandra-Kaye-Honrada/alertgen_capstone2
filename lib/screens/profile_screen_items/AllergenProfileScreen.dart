@@ -5,6 +5,7 @@ import 'package:allergen/styleguide.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'dart:async';
 
 class AllergenProfileScreen extends StatefulWidget {
   const AllergenProfileScreen({Key? key}) : super(key: key);
@@ -20,12 +21,20 @@ class _AllergenProfileScreenState extends State<AllergenProfileScreen> {
   List<String> filteredAllergens = [];
   List<String> usdaIngredients = [];
   List<String> savedAllergens = [];
+
+  // NEW: Track dictionary results and USDA search status
+  Set<String> dictionaryResults = {};
+  bool searchedUSDA = false;
+
   bool isLoading = true;
   bool isSearching = false;
   bool isGeneralProductAllergensEnabled = true;
 
+  // Add debounce timer
+  Timer? _debounceTimer;
+
   // Add your Gemini API key here
-  static String GEMINI_API_KEY = dotenv.env['GOOGLE_API_KEY'] ?? '';
+  static String GEMINI_API_KEY = dotenv.env['API_KEY'] ?? '';
 
   static const double MILD = 0.0;
   static const double MODERATE = 0.5;
@@ -68,19 +77,63 @@ class _AllergenProfileScreenState extends State<AllergenProfileScreen> {
 
   @override
   void dispose() {
+    _debounceTimer?.cancel();
     searchController.removeListener(onSearchChanged);
     searchController.dispose();
     super.dispose();
   }
 
-  // Initialize Tagalog-English dictionary with common ingredient translations
+  void onSearchChanged() async {
+    _debounceTimer?.cancel();
+
+    String searchTerm = searchController.text.trim();
+
+    if (searchTerm.isEmpty) {
+      setState(() {
+        updateFilteredAllergens();
+        isSearching = false;
+        usdaIngredients.clear();
+        dictionaryResults.clear();
+        searchedUSDA = false;
+      });
+    } else if (searchTerm.length >= 2) {
+      setState(() {
+        isSearching = true;
+      });
+
+      _debounceTimer = Timer(const Duration(seconds: 1), () async {
+        if (mounted) {
+          String translatedTerm = await translateTagalogToEnglish(searchTerm);
+          print(
+            'Search: Original: "$searchTerm", Translated: "$translatedTerm"',
+          );
+
+          await searchUSDAIngredients(translatedTerm, originalTerm: searchTerm);
+        }
+      });
+    } else {
+      setState(() {
+        filteredAllergens =
+            getAllAllergens()
+                .where(
+                  (allergen) =>
+                      allergen.toLowerCase().contains(searchTerm.toLowerCase()),
+                )
+                .toList();
+        isSearching = false;
+        usdaIngredients.clear();
+        dictionaryResults.clear();
+        searchedUSDA = false;
+      });
+    }
+  }
+
   Future<void> initializeTagalogDictionary() async {
     try {
       final dictionaryRef = FirebaseFirestore.instance.collection(
         'tagalog_dictionary',
       );
 
-      // Common ingredient translations
       final Map<String, String> commonTranslations = {
         'hipon': 'shrimp',
         'alamang': 'shrimp paste',
@@ -177,7 +230,6 @@ class _AllergenProfileScreenState extends State<AllergenProfileScreen> {
         'Starting dictionary initialization with ${commonTranslations.length} entries...',
       );
 
-      // Batch write for better performance
       WriteBatch batch = FirebaseFirestore.instance.batch();
       int batchCount = 0;
       int totalAdded = 0;
@@ -186,7 +238,6 @@ class _AllergenProfileScreenState extends State<AllergenProfileScreen> {
         final docId = entry.key.toLowerCase().trim();
         final docRef = dictionaryRef.doc(docId);
 
-        // Check if document already exists
         final doc = await docRef.get();
 
         if (!doc.exists) {
@@ -201,7 +252,6 @@ class _AllergenProfileScreenState extends State<AllergenProfileScreen> {
           batchCount++;
           totalAdded++;
 
-          // Commit batch every 500 operations (Firestore limit is 500)
           if (batchCount >= 500) {
             await batch.commit();
             print('Committed batch of $batchCount entries');
@@ -211,7 +261,6 @@ class _AllergenProfileScreenState extends State<AllergenProfileScreen> {
         }
       }
 
-      // Commit remaining operations
       if (batchCount > 0) {
         await batch.commit();
         print('Committed final batch of $batchCount entries');
@@ -222,7 +271,6 @@ class _AllergenProfileScreenState extends State<AllergenProfileScreen> {
       );
     } catch (e) {
       print('Error initializing dictionary: $e');
-      // Show error to user if needed
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -237,12 +285,10 @@ class _AllergenProfileScreenState extends State<AllergenProfileScreen> {
     }
   }
 
-  // Translate Tagalog to English using Firestore dictionary
   Future<String> translateTagalogToEnglish(String tagalogWord) async {
     try {
       final normalizedWord = tagalogWord.toLowerCase().trim();
 
-      // Check Firestore dictionary first
       final dictionaryRef = FirebaseFirestore.instance.collection(
         'tagalog_dictionary',
       );
@@ -256,12 +302,10 @@ class _AllergenProfileScreenState extends State<AllergenProfileScreen> {
         }
       }
 
-      // If not found, use Gemini AI to translate
       print('Not found in dictionary, using Gemini AI for: $tagalogWord');
       final translation = await translateWithGemini(tagalogWord);
 
       if (translation.isNotEmpty && translation != tagalogWord) {
-        // Save the new translation to Firestore
         await dictionaryRef.doc(normalizedWord).set({
           'tagalog': tagalogWord,
           'english': translation,
@@ -274,7 +318,6 @@ class _AllergenProfileScreenState extends State<AllergenProfileScreen> {
         return translation;
       }
 
-      // If all else fails, return original word
       return tagalogWord;
     } catch (e) {
       print('Error in translateTagalogToEnglish: $e');
@@ -282,7 +325,6 @@ class _AllergenProfileScreenState extends State<AllergenProfileScreen> {
     }
   }
 
-  // Translate using Gemini AI
   Future<String> translateWithGemini(String tagalogWord) async {
     try {
       final url = Uri.parse(
@@ -316,7 +358,6 @@ class _AllergenProfileScreenState extends State<AllergenProfileScreen> {
             data['candidates']?[0]?['content']?['parts']?[0]?['text']?.trim() ??
             '';
 
-        // Clean up the translation
         final cleanedTranslation =
             translation.toLowerCase().replaceAll(RegExp(r'[^\w\s]'), '').trim();
 
@@ -339,38 +380,8 @@ class _AllergenProfileScreenState extends State<AllergenProfileScreen> {
   }
 
   void clearSearch() {
+    _debounceTimer?.cancel();
     searchController.clear();
-  }
-
-  void onSearchChanged() async {
-    String searchTerm = searchController.text.trim();
-
-    if (searchTerm.isEmpty) {
-      setState(() {
-        updateFilteredAllergens();
-        isSearching = false;
-      });
-    } else if (searchTerm.length >= 2) {
-      setState(() {
-        isSearching = true;
-      });
-
-      String translatedTerm = await translateTagalogToEnglish(searchTerm);
-      print('Original: $searchTerm, Translated: $translatedTerm');
-
-      await searchUSDAIngredients(translatedTerm, originalTerm: searchTerm);
-    } else {
-      setState(() {
-        filteredAllergens =
-            getAllAllergens()
-                .where(
-                  (allergen) =>
-                      allergen.toLowerCase().contains(searchTerm.toLowerCase()),
-                )
-                .toList();
-        isSearching = false;
-      });
-    }
   }
 
   void updateFilteredAllergens() {
@@ -438,57 +449,160 @@ class _AllergenProfileScreenState extends State<AllergenProfileScreen> {
     return SEVERE;
   }
 
-  // Search USDA Food Database
+  // UPDATED: Complete search flow - Dictionary → USDA → AI Translation
   Future<void> searchUSDAIngredients(
     String searchTerm, {
     String? originalTerm,
   }) async {
     setState(() {
       isSearching = true;
+      dictionaryResults.clear();
+      searchedUSDA = false;
     });
 
     try {
       Set<String> foundIngredients = {};
 
-      // Search USDA FoodData Central API (requires API key)
-      // You can get a free API key from: https://fdc.nal.usda.gov/api-key-signup.html
-      String usdaApiKey =
-          dotenv.env['USDA_API_KEY'] ?? ''; // Add your USDA API key
-
-      try {
-        final response = await http.get(
-          Uri.parse(
-            'https://api.nal.usda.gov/fdc/v1/foods/search?api_key=$usdaApiKey&query=$searchTerm&pageSize=20',
-          ),
+      // STEP 1: Search the Tagalog dictionary for exact matches
+      print('Step 1: Searching dictionary for "$searchTerm"');
+      await searchTagalogDictionary(
+        searchTerm,
+        foundIngredients,
+        exactMatch: true,
+      );
+      if (originalTerm != null && originalTerm != searchTerm) {
+        await searchTagalogDictionary(
+          originalTerm,
+          foundIngredients,
+          exactMatch: true,
         );
+      }
 
-        if (response.statusCode == 200) {
-          final data = json.decode(response.body);
+      // Store dictionary results
+      if (foundIngredients.isNotEmpty) {
+        dictionaryResults = Set<String>.from(foundIngredients);
+        print('Dictionary results: $dictionaryResults');
+      }
 
-          if (data['foods'] != null) {
-            for (var food in data['foods']) {
-              String foodName = food['description'] ?? '';
-              if (foodName.isNotEmpty) {
-                String cleanedName = cleanIngredientName(foodName);
-                if (cleanedName.length <= 50) {
-                  foundIngredients.add(cleanedName);
+      // STEP 2: Search USDA (regardless of dictionary results)
+      print('Step 2: Searching USDA for "$searchTerm"');
+      String usdaApiKey = dotenv.env['USDA_API_KEY'] ?? '';
+
+      if (usdaApiKey.isNotEmpty) {
+        try {
+          final response = await http.get(
+            Uri.parse(
+              'https://api.nal.usda.gov/fdc/v1/foods/search?api_key=$usdaApiKey&query=$searchTerm&pageSize=10',
+            ),
+          );
+
+          if (response.statusCode == 200) {
+            final data = json.decode(response.body);
+            if (data['foods'] != null && (data['foods'] as List).isNotEmpty) {
+              searchedUSDA = true;
+              print('USDA returned ${data['foods'].length} results');
+
+              for (var food in data['foods']) {
+                String foodName = food['description'] ?? '';
+                if (foodName.isNotEmpty) {
+                  String cleanedName = cleanIngredientName(foodName);
+                  if (cleanedName.length <= 50) {
+                    foundIngredients.add(cleanedName);
+                  }
+                }
+
+                if (food['ingredients'] != null) {
+                  String ingredients = food['ingredients'];
+                  List<String> extracted = extractPotentialAllergens(
+                    ingredients,
+                    searchTerm,
+                  );
+                  foundIngredients.addAll(extracted);
                 }
               }
+            } else {
+              print('USDA returned no results');
+            }
+          }
+        } catch (e) {
+          print('Error searching USDA: $e');
+        }
+      }
 
-              // Extract allergen information from ingredients
-              if (food['ingredients'] != null) {
-                String ingredients = food['ingredients'];
-                List<String> extracted = extractPotentialAllergens(
-                  ingredients,
-                  searchTerm,
-                );
-                foundIngredients.addAll(extracted);
+      // STEP 3: If USDA returned nothing, translate with AI and search again
+      if (!searchedUSDA ||
+          (foundIngredients.isEmpty && dictionaryResults.isEmpty)) {
+        print(
+          'Step 3: No USDA results, checking if Tagalog and translating...',
+        );
+
+        // Check if it's potentially Tagalog by seeing if AI translation differs
+        String aiTranslation = await translateWithGemini(searchTerm);
+
+        if (aiTranslation.isNotEmpty &&
+            aiTranslation.toLowerCase() != searchTerm.toLowerCase()) {
+          print('AI translated "$searchTerm" to "$aiTranslation"');
+
+          // Save to Firebase dictionary
+          final normalizedWord = searchTerm.toLowerCase().trim();
+          await FirebaseFirestore.instance
+              .collection('tagalog_dictionary')
+              .doc(normalizedWord)
+              .set({
+                'tagalog': searchTerm,
+                'english': aiTranslation,
+                'category': 'ingredient',
+                'createdAt': FieldValue.serverTimestamp(),
+                'source': 'gemini_ai',
+              });
+
+          // Add to dictionary results
+          String formattedTranslation = formatIngredientName(aiTranslation);
+          foundIngredients.add(formattedTranslation);
+          dictionaryResults.add(formattedTranslation);
+
+          // Search USDA again with translated term
+          print('Searching USDA again with translation: "$aiTranslation"');
+          if (usdaApiKey.isNotEmpty) {
+            try {
+              final response = await http.get(
+                Uri.parse(
+                  'https://api.nal.usda.gov/fdc/v1/foods/search?api_key=$usdaApiKey&query=$aiTranslation&pageSize=10',
+                ),
+              );
+
+              if (response.statusCode == 200) {
+                final data = json.decode(response.body);
+                if (data['foods'] != null) {
+                  searchedUSDA = true;
+                  print(
+                    'USDA found ${data['foods'].length} results for translation',
+                  );
+                  for (var food in data['foods']) {
+                    String foodName = food['description'] ?? '';
+                    if (foodName.isNotEmpty) {
+                      String cleanedName = cleanIngredientName(foodName);
+                      if (cleanedName.length <= 50) {
+                        foundIngredients.add(cleanedName);
+                      }
+                    }
+
+                    if (food['ingredients'] != null) {
+                      String ingredients = food['ingredients'];
+                      List<String> extracted = extractPotentialAllergens(
+                        ingredients,
+                        aiTranslation,
+                      );
+                      foundIngredients.addAll(extracted);
+                    }
+                  }
+                }
               }
+            } catch (e) {
+              print('Error searching USDA with translation: $e');
             }
           }
         }
-      } catch (e) {
-        print('Error searching USDA: $e');
       }
 
       // Check FDA major allergens
@@ -506,17 +620,25 @@ class _AllergenProfileScreenState extends State<AllergenProfileScreen> {
         }
       }
 
-      // Search custom Tagalog dictionary
-      await searchTagalogDictionary(searchTerm, foundIngredients);
+      // Search Tagalog dictionary for partial matches
+      await searchTagalogDictionary(
+        searchTerm,
+        foundIngredients,
+        exactMatch: false,
+      );
       if (originalTerm != null && originalTerm != searchTerm) {
-        await searchTagalogDictionary(originalTerm, foundIngredients);
+        await searchTagalogDictionary(
+          originalTerm,
+          foundIngredients,
+          exactMatch: false,
+        );
       }
 
       setState(() {
         usdaIngredients = foundIngredients.toList();
 
+        // Combine with allergens that match the search
         Set<String> combinedAllergens = {};
-
         combinedAllergens.addAll(
           getAllAllergens().where(
             (allergen) =>
@@ -528,11 +650,19 @@ class _AllergenProfileScreenState extends State<AllergenProfileScreen> {
           ),
         );
 
-        combinedAllergens.addAll(usdaIngredients);
+        // Prioritize all results
+        if (usdaIngredients.isNotEmpty) {
+          filteredAllergens = usdaIngredients;
+        } else {
+          filteredAllergens = combinedAllergens.toList();
+        }
 
-        filteredAllergens = combinedAllergens.toList();
         isSearching = false;
       });
+
+      print('Final results count: ${filteredAllergens.length}');
+      print('Dictionary results: ${dictionaryResults.length}');
+      print('USDA searched: $searchedUSDA');
     } catch (e) {
       print('Error searching: $e');
       setState(() {
@@ -548,70 +678,96 @@ class _AllergenProfileScreenState extends State<AllergenProfileScreen> {
     }
   }
 
-  // Search Tagalog dictionary for matching ingredients
   Future<void> searchTagalogDictionary(
     String searchTerm,
-    Set<String> foundIngredients,
-  ) async {
+    Set<String> foundIngredients, {
+    bool exactMatch = false,
+  }) async {
     try {
       final dictionaryRef = FirebaseFirestore.instance.collection(
         'tagalog_dictionary',
       );
 
-      // Search by English translation
-      final englishQuery =
-          await dictionaryRef
-              .where(
-                'english',
-                isGreaterThanOrEqualTo: searchTerm.toLowerCase(),
-              )
-              .where(
-                'english',
-                isLessThanOrEqualTo: '${searchTerm.toLowerCase()}\uf8ff',
-              )
-              .get();
-
-      for (var doc in englishQuery.docs) {
-        final data = doc.data();
-        if (data['english'] != null) {
-          String englishWord = data['english'];
-          foundIngredients.add(
-            englishWord
-                .split(' ')
-                .map((word) => word[0].toUpperCase() + word.substring(1))
-                .join(' '),
-          );
+      if (exactMatch) {
+        final exactDoc =
+            await dictionaryRef.doc(searchTerm.toLowerCase().trim()).get();
+        if (exactDoc.exists) {
+          final data = exactDoc.data() as Map<String, dynamic>?;
+          if (data != null && data['english'] != null) {
+            String englishWord = data['english'].toString();
+            foundIngredients.add(formatIngredientName(englishWord));
+          }
         }
-      }
 
-      // Search by Tagalog word
-      final tagalogQuery =
-          await dictionaryRef
-              .where(
-                'tagalog',
-                isGreaterThanOrEqualTo: searchTerm.toLowerCase(),
-              )
-              .where(
-                'tagalog',
-                isLessThanOrEqualTo: '${searchTerm.toLowerCase()}\uf8ff',
-              )
-              .get();
+        final exactQuery =
+            await dictionaryRef
+                .where('tagalog', isEqualTo: searchTerm.toLowerCase())
+                .get();
 
-      for (var doc in tagalogQuery.docs) {
-        final data = doc.data();
-        if (data['english'] != null) {
-          String englishWord = data['english'];
-          foundIngredients.add(
-            englishWord
-                .split(' ')
-                .map((word) => word[0].toUpperCase() + word.substring(1))
-                .join(' '),
-          );
+        for (var doc in exactQuery.docs) {
+          final data = doc.data() as Map<String, dynamic>;
+          if (data['english'] != null) {
+            String englishWord = data['english'].toString();
+            foundIngredients.add(formatIngredientName(englishWord));
+          }
+        }
+      } else {
+        final tagalogQuery =
+            await dictionaryRef
+                .where(
+                  'tagalog',
+                  isGreaterThanOrEqualTo: searchTerm.toLowerCase(),
+                )
+                .where(
+                  'tagalog',
+                  isLessThanOrEqualTo: '${searchTerm.toLowerCase()}\uf8ff',
+                )
+                .get();
+
+        final englishQuery =
+            await dictionaryRef
+                .where(
+                  'english',
+                  isGreaterThanOrEqualTo: searchTerm.toLowerCase(),
+                )
+                .where(
+                  'english',
+                  isLessThanOrEqualTo: '${searchTerm.toLowerCase()}\uf8ff',
+                )
+                .get();
+
+        for (var doc in tagalogQuery.docs) {
+          final data = doc.data() as Map<String, dynamic>;
+          if (data['english'] != null) {
+            String englishWord = data['english'].toString();
+            foundIngredients.add(formatIngredientName(englishWord));
+          }
+        }
+
+        for (var doc in englishQuery.docs) {
+          final data = doc.data() as Map<String, dynamic>;
+          if (data['english'] != null) {
+            String englishWord = data['english'].toString();
+            foundIngredients.add(formatIngredientName(englishWord));
+          }
         }
       }
     } catch (e) {
       print('Error searching Tagalog dictionary: $e');
     }
+  }
+
+  String formatIngredientName(String name) {
+    return name
+        .split(' ')
+        .map(
+          (word) =>
+              word.isNotEmpty
+                  ? word[0].toUpperCase() + word.substring(1).toLowerCase()
+                  : '',
+        )
+        .where((word) => word.isNotEmpty)
+        .join(' ');
   }
 
   List<String> extractPotentialAllergens(String text, String searchTerm) {
@@ -1139,6 +1295,143 @@ class _AllergenProfileScreenState extends State<AllergenProfileScreen> {
     }
   }
 
+  // NEW: Helper method to build allergen list items with correct badges
+  Widget buildAllergenListItem(String allergen) {
+    final isSelected = selectedAllergens.contains(allergen);
+    final isFromDictionary = dictionaryResults.contains(allergen);
+    final isFromUSDA = usdaIngredients.contains(allergen) && !isFromDictionary;
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: isSelected ? AppColors.primaryColor3 : const Color(0xFFE5E7EB),
+          width: isSelected ? 2 : 1,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 4,
+            offset: const Offset(0, 1),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(12),
+          onTap: () => showAllergenModal(allergen),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        allergen,
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                          fontFamily: 'Poppins',
+                          color:
+                              isSelected
+                                  ? AppColors.primaryColor3
+                                  : const Color(0xFF374151),
+                        ),
+                      ),
+                      if (isFromDictionary) ...[
+                        const SizedBox(height: 4),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF8B5CF6).withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: const Text(
+                            'DICTIONARY',
+                            style: TextStyle(
+                              color: Color(0xFF8B5CF6),
+                              fontSize: 9,
+                              fontWeight: FontWeight.w600,
+                              fontFamily: 'Poppins',
+                            ),
+                          ),
+                        ),
+                      ],
+                      if (isFromUSDA) ...[
+                        const SizedBox(height: 4),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF10B981).withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: const Text(
+                            'USDA',
+                            style: TextStyle(
+                              color: Color(0xFF10B981),
+                              fontSize: 9,
+                              fontWeight: FontWeight.w600,
+                              fontFamily: 'Poppins',
+                            ),
+                          ),
+                        ),
+                      ],
+                      if (isSelected) ...[
+                        const SizedBox(height: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: getSeverityColor(
+                              allergenSeverity[allergen] ?? MODERATE,
+                            ),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Text(
+                            getSeverityLabel(
+                              allergenSeverity[allergen] ?? MODERATE,
+                            ),
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 10,
+                              fontWeight: FontWeight.w500,
+                              fontFamily: 'Poppins',
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+                Icon(
+                  isSelected ? Icons.check_circle : Icons.add_circle_outline,
+                  color:
+                      isSelected
+                          ? AppColors.primaryColor3
+                          : const Color(0xFF9CA3AF),
+                  size: 20,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -1322,125 +1615,7 @@ class _AllergenProfileScreenState extends State<AllergenProfileScreen> {
               itemCount: filteredAllergens.length,
               itemBuilder: (context, index) {
                 final allergen = filteredAllergens[index];
-                final isSelected = selectedAllergens.contains(allergen);
-                final isFromUSDA = usdaIngredients.contains(allergen);
-
-                return Container(
-                  margin: const EdgeInsets.only(bottom: 8),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color:
-                          isSelected
-                              ? AppColors.primaryColor3
-                              : const Color(0xFFE5E7EB),
-                      width: isSelected ? 2 : 1,
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.05),
-                        blurRadius: 4,
-                        offset: const Offset(0, 1),
-                      ),
-                    ],
-                  ),
-                  child: Material(
-                    color: Colors.transparent,
-                    child: InkWell(
-                      borderRadius: BorderRadius.circular(12),
-                      onTap: () => showAllergenModal(allergen),
-                      child: Padding(
-                        padding: const EdgeInsets.all(16),
-                        child: Row(
-                          children: [
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    allergen,
-                                    style: TextStyle(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w500,
-                                      fontFamily: 'Poppins',
-                                      color:
-                                          isSelected
-                                              ? AppColors.primaryColor3
-                                              : const Color(0xFF374151),
-                                    ),
-                                  ),
-                                  if (isFromUSDA) ...[
-                                    const SizedBox(height: 4),
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 6,
-                                        vertical: 2,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: const Color(
-                                          0xFF10B981,
-                                        ).withOpacity(0.1),
-                                        borderRadius: BorderRadius.circular(4),
-                                      ),
-                                      child: const Text(
-                                        'USDA',
-                                        style: TextStyle(
-                                          color: Color(0xFF10B981),
-                                          fontSize: 9,
-                                          fontWeight: FontWeight.w600,
-                                          fontFamily: 'Poppins',
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                  if (isSelected) ...[
-                                    const SizedBox(height: 8),
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 8,
-                                        vertical: 4,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: getSeverityColor(
-                                          allergenSeverity[allergen] ??
-                                              MODERATE,
-                                        ),
-                                        borderRadius: BorderRadius.circular(12),
-                                      ),
-                                      child: Text(
-                                        getSeverityLabel(
-                                          allergenSeverity[allergen] ??
-                                              MODERATE,
-                                        ),
-                                        style: const TextStyle(
-                                          color: Colors.white,
-                                          fontSize: 10,
-                                          fontWeight: FontWeight.w500,
-                                          fontFamily: 'Poppins',
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ],
-                              ),
-                            ),
-                            Icon(
-                              isSelected
-                                  ? Icons.check_circle
-                                  : Icons.add_circle_outline,
-                              color:
-                                  isSelected
-                                      ? AppColors.primaryColor3
-                                      : const Color(0xFF9CA3AF),
-                              size: 20,
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                );
+                return buildAllergenListItem(allergen);
               },
             ),
           ],
