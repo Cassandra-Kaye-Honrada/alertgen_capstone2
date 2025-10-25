@@ -22,7 +22,6 @@ class _AllergenProfileScreenState extends State<AllergenProfileScreen> {
   List<String> usdaIngredients = [];
   List<String> savedAllergens = [];
 
-  // NEW: Track dictionary results and USDA search status
   Set<String> dictionaryResults = {};
   bool searchedUSDA = false;
 
@@ -33,7 +32,6 @@ class _AllergenProfileScreenState extends State<AllergenProfileScreen> {
   // Add debounce timer
   Timer? _debounceTimer;
 
-  // Add your Gemini API key here
   static String GEMINI_API_KEY = dotenv.env['API_KEY'] ?? '';
 
   static const double MILD = 0.0;
@@ -449,7 +447,6 @@ class _AllergenProfileScreenState extends State<AllergenProfileScreen> {
     return SEVERE;
   }
 
-  // UPDATED: Complete search flow - Dictionary → USDA → AI Translation
   Future<void> searchUSDAIngredients(
     String searchTerm, {
     String? originalTerm,

@@ -5,6 +5,244 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 class AllergenAnalysis {
+  String generateCacheKey(String dishName) {
+    String original = dishName.toLowerCase().trim();
+
+    String mainProtein = extractMainProtein(original);
+
+    String normalized =
+        original
+            .replaceAll(
+              RegExp(
+                r'\b(filipino|pinoy|style|traditional|classic|homemade|authentic|special|deluxe|premium|original)\b',
+              ),
+              '',
+            )
+            .replaceAll(
+              RegExp(r'\b(fried|grilled|roasted|steamed|boiled|stewed)\b'),
+              '',
+            )
+            .replaceAll(RegExp(r'\b(with|and)\b'), '')
+            .replaceAll(RegExp(r'[^\w\s]'), '')
+            .replaceAll(RegExp(r'\s+'), ' ')
+            .trim();
+
+    String baseDish = normalizeDishName(normalized);
+
+    if (mainProtein.isNotEmpty) {
+      return '${mainProtein}_${baseDish}';
+    }
+
+    return baseDish;
+  }
+
+  String extractMainProtein(String dishName) {
+    final List<Map<String, dynamic>> proteinKeywords = [
+      {
+        'keywords': ['seafood', 'mixed seafood'],
+        'value': 'seafood',
+      },
+      {
+        'keywords': ['shrimp', 'hipon', 'prawn'],
+        'value': 'shrimp',
+      },
+      {
+        'keywords': ['fish', 'isda', 'tilapia', 'bangus', 'galunggong'],
+        'value': 'fish',
+      },
+      {
+        'keywords': ['crab', 'alimango'],
+        'value': 'crab',
+      },
+      {
+        'keywords': ['squid', 'pusit', 'calamari'],
+        'value': 'squid',
+      },
+      {
+        'keywords': ['mussel', 'tahong'],
+        'value': 'mussel',
+      },
+      {
+        'keywords': ['clam', 'halaan'],
+        'value': 'clam',
+      },
+      {
+        'keywords': ['oyster', 'talaba'],
+        'value': 'oyster',
+      },
+
+      {
+        'keywords': ['chicken', 'manok'],
+        'value': 'chicken',
+      },
+      {
+        'keywords': ['pork', 'baboy'],
+        'value': 'pork',
+      },
+      {
+        'keywords': ['beef', 'baka'],
+        'value': 'beef',
+      },
+      {   
+        'keywords': ['oxtail', 'buntot'],
+        'value': 'oxtail',
+      },
+      {
+        'keywords': ['tripe', 'goto', 'tuwalya'],
+        'value': 'tripe',
+      },
+      {
+        'keywords': ['goat', 'kambing'],
+        'value': 'goat',
+      },
+      {
+        'keywords': ['lamb', 'tupa'],
+        'value': 'lamb',
+      },
+
+      {
+        'keywords': ['vegetable', 'gulay', 'veggie'],
+        'value': 'vegetable',
+      },
+      {
+        'keywords': ['mushroom', 'kabute'],
+        'value': 'mushroom',
+      },
+    ];
+
+    String cleaned = dishName.toLowerCase().trim();
+
+    for (var protein in proteinKeywords) {
+      List<String> keywords = protein['keywords'] as List<String>;
+      for (String keyword in keywords) {
+        if (cleaned.contains(keyword)) {
+          return protein['value'] as String;
+        }
+      }
+    }
+
+    return '';
+  }
+
+  String normalizeDishName(String dishName) {
+    final Map<String, List<String>> dishVariations = {
+      'kare_kare': ['kare kare', 'karekare', 'kare-kare', 'kare kareng'],
+      'adobo': ['adobo', 'adobong'],
+      'sinigang': ['sinigang', 'sinigang na', 'singang'],
+      'afritada': ['afritada', 'apritada', 'afridata'],
+      'menudo': ['menudo', 'minudo'],
+      'sinanglaw': ['sinanglaw', 'sinanglao'],
+      'pinaitan': ['pinaitan', 'papaitan', 'piniatan'],
+      'caldereta': ['caldereta', 'kaldereta', 'calderetang'],
+      'mechado': ['mechado', 'mitšado', 'mechadong'],
+      'bistek': ['bistek', 'bistik', 'bistek tagalog'],
+      'tocino': ['tocino', 'tutsino', 'tocinong'],
+      'longganisa': ['longganisa', 'longanisa'],
+      'tapsilog': ['tapsilog', 'tapa', 'tapang'],
+      'ginataang': ['ginataang', 'ginataan'],
+      'dinuguan': ['dinuguan', 'dinardaraan', 'tidtad'],
+      'sisig': ['sisig', 'sizzling sisig'],
+      'lechon': ['lechon', 'litson'],
+      'lechon_kawali': ['lechon kawali', 'litson kawali'],
+      'lumpia': ['lumpia', 'lumpiang'],
+      'pancit_canton': ['pancit canton', 'pansit canton'],
+      'pancit_bihon': ['pancit bihon', 'pansit bihon'],
+      'pancit': ['pancit', 'pansit'],
+      'bicol_express': ['bicol express', 'bicol ekspres'],
+      'laing': ['laing', 'natong'],
+      'pinakbet': ['pinakbet', 'pakbet'],
+      'dinengdeng': ['dinengdeng', 'inabraw'],
+      'bulalo': ['bulalo', 'bone marrow soup'],
+      'nilaga': ['nilaga', 'nilagang'],
+      'tinola': ['tinola', 'tinolang'],
+      'arroz_caldo': ['arroz caldo', 'aroskaldo', 'lugaw'],
+      'goto': ['goto'],
+      'champorado': ['champorado', 'tsampurado'],
+      'halo_halo': ['halo halo', 'halohalo', 'halo-halo'],
+      'leche_flan': ['leche flan', 'letse flan', 'flan'],
+      'ube_halaya': ['ube halaya', 'halayang ube'],
+      'bibingka': ['bibingka', 'bibingkang'],
+      'puto': ['puto', 'putong'],
+      'turon': ['turon', 'turong', 'banana lumpia'],
+      'ukoy': ['ukoy', 'okoy'],
+      'kwek_kwek': ['kwek kwek', 'kwek-kwek', 'tokneneng'],
+      'isaw': ['isaw'],
+      'chocolate_cake': ['chocolate cake', 'choco cake'],
+      'sans_rival': ['sans rival', 'sansrival', 'sans-rival'],
+      'silvanas': ['silvanas', 'silvana', 'sylvanas'],
+    };
+
+    String cleaned = dishName.toLowerCase().trim();
+
+    for (var entry in dishVariations.entries) {
+      String baseKey = entry.key;
+      List<String> variations = entry.value;
+
+      for (String variation in variations) {
+        if (cleaned == variation ||
+            cleaned.startsWith(variation + ' ') ||
+            cleaned.endsWith(' ' + variation) ||
+            cleaned.contains(' ' + variation + ' ')) {
+          return baseKey;
+        }
+      }
+    }
+
+    return cleaned.replaceAll(RegExp(r'\s+'), '_');
+  }
+
+  Future<Map<String, dynamic>?> checkFoodCache(String cacheKey) async {
+    try {
+      final doc =
+          await FirebaseFirestore.instance
+              .collection('food_cache')
+              .doc(cacheKey)
+              .get();
+
+      if (doc.exists) {
+        FirebaseFirestore.instance
+            .collection('food_cache')
+            .doc(cacheKey)
+            .update({
+              'lastAccessed': FieldValue.serverTimestamp(),
+              'accessCount': FieldValue.increment(1),
+            })
+            .catchError((e) => print('Error updating cache stats: $e'));
+
+        return doc.data();
+      }
+      return null;
+    } catch (e) {
+      print('Error checking cache: $e');
+      return null;
+    }
+  }
+
+  Future<void> saveFoodCache(
+    String cacheKey,
+    String dishName,
+    String description,
+    List<String> ingredients,
+    List<AllergenInfo> allergens,
+  ) async {
+    try {
+      await FirebaseFirestore.instance
+          .collection('food_cache')
+          .doc(cacheKey)
+          .set({
+            'dishName': dishName,
+            'description': description,
+            'ingredients': ingredients,
+            'allergens': allergens.map((a) => a.toJson()).toList(),
+            'timestamp': FieldValue.serverTimestamp(),
+            'lastAccessed': FieldValue.serverTimestamp(),
+            'accessCount': 1,
+          });
+    } catch (e) {
+      print('Error saving to cache: $e');
+    }
+  }
+
   Future<Map<String, dynamic>> getUserAllergenData() async {
     try {
       final user = FirebaseAuth.instance.currentUser;

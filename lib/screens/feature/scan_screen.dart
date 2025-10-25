@@ -415,7 +415,6 @@ CRITICAL REQUIREMENTS:
         analysisStatus = '';
       });
 
-      // Show selection screen for multiple options
       await showSkinConditionSelectionScreen(skinOptions, imageFile);
     } catch (e) {
       setState(() {
@@ -1236,11 +1235,58 @@ Generate 3-4 possible dish interpretations with confidence scores.
       loading = true;
       dishName = selectedOption.dishName;
       description = selectedOption.description;
-      analysisStatus = 'Simplifying ingredients...';
+      analysisStatus = 'Checking cache...';
     });
 
     try {
+      String cacheKey = allergenAnalysis.generateCacheKey(
+        selectedOption.dishName,
+      );
+      print(
+        '🔑 Generated cache key: $cacheKey for dish: ${selectedOption.dishName}',
+      );
+
+      var cachedData = await allergenAnalysis.checkFoodCache(cacheKey);
+
+      if (cachedData != null) {
+        setState(() {
+          analysisStatus = 'Loading from cache...';
+          ingredients = List<String>.from(cachedData['ingredients'] ?? []);
+        });
+
+        List<AllergenInfo> cachedAllergens =
+            (cachedData['allergens'] as List? ?? [])
+                .map((a) => AllergenInfo.fromJson(a))
+                .toList();
+
+        List<IngredientColorInfo> ingredientColors = await allergenAnalysis
+            .computeIngredientColors(ingredients, cachedAllergens);
+
+        for (AllergenInfo allergen in cachedAllergens) {
+          allergen.ingredientColors.clear();
+          allergen.ingredientColors.addAll(ingredientColors);
+        }
+
+        setState(() {
+          allergens = cachedAllergens;
+          loading = false;
+          analysisStatus = '';
+        });
+
+        navigateToResults();
+
+        saveToFirebase(imageFile).catchError((e) {
+          print('Background save error: $e');
+        });
+
+        return;
+      }
+
       final model = GenerativeModel(model: 'gemini-2.5-pro', apiKey: apiKey);
+
+      setState(() {
+        analysisStatus = 'Simplifying ingredients...';
+      });
 
       List<String> simplifiedIngredients = await simplifyIngredientNames(
         selectedOption.ingredients,
@@ -1253,6 +1299,14 @@ Generate 3-4 possible dish interpretations with confidence scores.
       });
 
       await analyzeAllergensFromIngredients(simplifiedIngredients);
+
+      await allergenAnalysis.saveFoodCache(
+        cacheKey,
+        dishName,
+        description,
+        ingredients,
+        allergens,
+      );
 
       setState(() {
         loading = false;
@@ -1542,11 +1596,56 @@ Make the description:
       dishName = dishNameText;
       isOCRAnalysis = false;
       showManualInput = false;
-      analysisStatus = 'Simplifying ingredients...';
+      analysisStatus = 'Checking cache...';
     });
 
     try {
+      String cacheKey = allergenAnalysis.generateCacheKey(dishNameText);
+
+      var cachedData = await allergenAnalysis.checkFoodCache(cacheKey);
+
+      if (cachedData != null) {
+        setState(() {
+          ingredients = List<String>.from(cachedData['ingredients'] ?? []);
+          description = cachedData['description'] ?? '';
+          analysisStatus = 'Loading from cache...';
+        });
+
+        List<AllergenInfo> cachedAllergens =
+            (cachedData['allergens'] as List? ?? [])
+                .map((a) => AllergenInfo.fromJson(a))
+                .toList();
+
+        List<IngredientColorInfo> ingredientColors = await allergenAnalysis
+            .computeIngredientColors(ingredients, cachedAllergens);
+
+        for (AllergenInfo allergen in cachedAllergens) {
+          allergen.ingredientColors.clear();
+          allergen.ingredientColors.addAll(ingredientColors);
+        }
+
+        setState(() {
+          allergens = cachedAllergens;
+          loading = false;
+          analysisStatus = '';
+          image = null;
+        });
+
+        navigateToResults();
+        saveToFirebase(
+          null,
+        ).catchError((e) => print('Background save error: $e'));
+
+        dishNameController.clear();
+        ingredientController.clear();
+        return;
+      }
+
       final model = GenerativeModel(model: 'gemini-2.5-pro', apiKey: apiKey);
+
+      setState(() {
+        analysisStatus = 'Simplifying ingredients...';
+      });
 
       List<String> simplifiedIngredients = await simplifyIngredientNames(
         enteredIngredients,
@@ -1570,23 +1669,30 @@ Make the description:
       });
 
       await analyzeAllergensFromIngredients(simplifiedIngredients);
+
+      await allergenAnalysis.saveFoodCache(
+        cacheKey,
+        dishName,
+        description,
+        ingredients,
+        allergens,
+      );
+
       setState(() {
         loading = false;
         analysisStatus = '';
       });
-      navigateToResults();
 
-      saveToFirebase(null).catchError((e) {
-        print('Background save error: $e');
-      });
+      navigateToResults();
+      saveToFirebase(
+        null,
+      ).catchError((e) => print('Background save error: $e'));
     } catch (e) {
       showSnackBar('Error analyzing ingredients: $e', Colors.red);
       setState(() {
         loading = false;
         analysisStatus = '';
       });
-    } finally {
-      setState(() => loading = false);
     }
 
     dishNameController.clear();
@@ -1676,8 +1782,7 @@ Make the description:
         'timestamp': FieldValue.serverTimestamp(),
         'scanDate': DateTime.now().toIso8601String(),
         'userId': user.uid,
-        'userAllergensAtScanTime':
-            userAllergensWithSeverity,
+        'userAllergensAtScanTime': userAllergensWithSeverity,
       };
 
       await FirebaseFirestore.instance
@@ -1689,7 +1794,6 @@ Make the description:
       showSnackBar('Failed to save scan results: ${e.toString()}', Colors.red);
     }
   }
-
 
   Map<String, double> extractHistoricalSeverityData(
     Map<String, dynamic> scanData,
