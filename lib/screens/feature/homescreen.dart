@@ -7,6 +7,7 @@ import 'package:allergen/screens/feature/scan_screen.dart';
 import 'package:allergen/screens/feature/result_screen.dart';
 import 'package:allergen/screens/feature/allergen_analysis.dart';
 import 'package:allergen/screens/feature/skin_allergy/skin_allergy.dart';
+import 'package:allergen/screens/widgets/AirQualityWidget.dart';
 import 'package:allergen/services/emergency/emergency_service.dart';
 import 'package:allergen/styleguide.dart';
 import 'package:flutter/material.dart';
@@ -635,6 +636,8 @@ class HomescreenState extends State<Homescreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      AirQualityWidget(),
+                      SizedBox(height: 30),
                       buildEmergencySection(),
                       SizedBox(height: 30),
                       buildAllergenProfileSection(),
