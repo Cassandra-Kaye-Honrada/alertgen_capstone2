@@ -737,13 +737,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                               builder: (_) => ProfileDetailsScreen(),
                             ),
                           );
-
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text('Allergens saved successfully!'),
-                              backgroundColor: Colors.green,
-                            ),
-                          );
                         }
                       } catch (e) {
                         ScaffoldMessenger.of(context).showSnackBar(

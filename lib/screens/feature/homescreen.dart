@@ -1,4 +1,5 @@
 import 'package:allergen/screens/community/CommunityForumScreen.dart';
+import 'package:allergen/screens/feature/chatbot/floating_chatbot.dart';
 import 'package:allergen/screens/profile_screen_items/scanHistoryScreen.dart';
 import 'package:allergen/screens/profile_screen_items/ProfileScreen.dart';
 import 'package:allergen/screens/first_Aid_screens/FirstAidScreen.dart';
@@ -649,8 +650,8 @@ class HomescreenState extends State<Homescreen> {
           ),
         ],
       ),
-      floatingActionButton: Container(),
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
+      floatingActionButton: FloatingChatbotButton(),
+      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
       bottomNavigationBar: buildBottomNavigation(),
     );
   }
@@ -709,7 +710,7 @@ class HomescreenState extends State<Homescreen> {
               },
               icon: const Icon(Icons.chat),
               tooltip: 'Community Forum',
-              color: AppColors.primary, 
+              color: AppColors.primary,
             ),
           ],
         ),

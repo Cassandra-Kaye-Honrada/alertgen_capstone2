@@ -1,11 +1,9 @@
 import 'dart:async';
 import 'package:allergen/screens/feature/ingredient_chip_list.dart';
-import 'package:allergen/screens/feature/ingredientmodal.dart';
 import 'package:allergen/screens/feature/scan_screen.dart';
+import 'package:allergen/services/translation/translation.dart';
 import 'package:flutter/material.dart';
 import 'package:allergen/styleguide.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 
 class DescriptionTab extends StatefulWidget {
   final String description;
@@ -51,6 +49,7 @@ class _DescriptionTabState extends State<DescriptionTab>
   String? lastColor;
 
   List<String> editableIngredients = [];
+  final TranslationService translationService = TranslationService();
 
   @override
   bool get wantKeepAlive => true;

@@ -29,10 +29,9 @@ class _AllergenProfileScreenState extends State<AllergenProfileScreen> {
   bool isSearching = false;
   bool isGeneralProductAllergensEnabled = true;
 
-  // Add debounce timer
   Timer? _debounceTimer;
 
-  static String GEMINI_API_KEY = dotenv.env['API_KEY'] ?? '';
+  String GEMINI_API_KEY = dotenv.env['API_KEY'] ?? '';
 
   static const double MILD = 0.0;
   static const double MODERATE = 0.5;
@@ -533,14 +532,12 @@ class _AllergenProfileScreenState extends State<AllergenProfileScreen> {
           'Step 3: No USDA results, checking if Tagalog and translating...',
         );
 
-        // Check if it's potentially Tagalog by seeing if AI translation differs
         String aiTranslation = await translateWithGemini(searchTerm);
 
         if (aiTranslation.isNotEmpty &&
             aiTranslation.toLowerCase() != searchTerm.toLowerCase()) {
           print('AI translated "$searchTerm" to "$aiTranslation"');
 
-          // Save to Firebase dictionary
           final normalizedWord = searchTerm.toLowerCase().trim();
           await FirebaseFirestore.instance
               .collection('tagalog_dictionary')
@@ -553,12 +550,10 @@ class _AllergenProfileScreenState extends State<AllergenProfileScreen> {
                 'source': 'gemini_ai',
               });
 
-          // Add to dictionary results
           String formattedTranslation = formatIngredientName(aiTranslation);
           foundIngredients.add(formattedTranslation);
           dictionaryResults.add(formattedTranslation);
 
-          // Search USDA again with translated term
           print('Searching USDA again with translation: "$aiTranslation"');
           if (usdaApiKey.isNotEmpty) {
             try {
@@ -602,7 +597,6 @@ class _AllergenProfileScreenState extends State<AllergenProfileScreen> {
         }
       }
 
-      // Check FDA major allergens
       for (String allergen in fdaMajorAllergens) {
         if (allergen.toLowerCase().contains(searchTerm.toLowerCase())) {
           foundIngredients.add(allergen);
@@ -617,7 +611,6 @@ class _AllergenProfileScreenState extends State<AllergenProfileScreen> {
         }
       }
 
-      // Search Tagalog dictionary for partial matches
       await searchTagalogDictionary(
         searchTerm,
         foundIngredients,
@@ -634,7 +627,6 @@ class _AllergenProfileScreenState extends State<AllergenProfileScreen> {
       setState(() {
         usdaIngredients = foundIngredients.toList();
 
-        // Combine with allergens that match the search
         Set<String> combinedAllergens = {};
         combinedAllergens.addAll(
           getAllAllergens().where(
@@ -647,7 +639,6 @@ class _AllergenProfileScreenState extends State<AllergenProfileScreen> {
           ),
         );
 
-        // Prioritize all results
         if (usdaIngredients.isNotEmpty) {
           filteredAllergens = usdaIngredients;
         } else {

@@ -27,28 +27,23 @@ class _ProfileDetailsScreenState extends State<ProfileDetailsScreen> {
   DateTime? selectedBirthdate;
   int currentStep = 0;
 
-  // Basic Info
   String? selectedGender;
 
-  // Health Aspects (Step 1)
   bool foodAllergies = false;
   bool drugAllergies = false;
   bool asthmaRespiratory = false;
   bool skinSensitivity = false;
   bool otherHealth = false;
 
-  // Health Background (Step 2)
   bool lungDisease = false;
   bool heartDisease = false;
   bool sportsActivities = false;
   bool isPregnant = false;
 
-  // Care responsibilities
   bool caresForChildren = false;
   bool caresForToddlers = false;
   bool caresForBabies = false;
 
-  // Computed user group
   String? userGroup;
 
   final Color primaryColor = AppColors.primary;
@@ -88,7 +83,7 @@ class _ProfileDetailsScreenState extends State<ProfileDetailsScreen> {
             if (selectedBirthdate != null) {
               birthdateController.text =
                   "${selectedBirthdate!.day}/${selectedBirthdate!.month}/${selectedBirthdate!.year}";
-              _updateUserGroup();
+              updateUserGroup();
             }
           }
 
@@ -116,7 +111,7 @@ class _ProfileDetailsScreenState extends State<ProfileDetailsScreen> {
     }
   }
 
-  void _updateUserGroup() {
+  void updateUserGroup() {
     if (selectedBirthdate == null) return;
 
     final age = DateTime.now().difference(selectedBirthdate!).inDays ~/ 365;
@@ -170,12 +165,12 @@ class _ProfileDetailsScreenState extends State<ProfileDetailsScreen> {
         selectedBirthdate = pickedDate;
         birthdateController.text =
             "${pickedDate.day}/${pickedDate.month}/${pickedDate.year}";
-        _updateUserGroup();
+        updateUserGroup();
       });
     }
   }
 
-  bool _validateCurrentStep() {
+  bool validateCurrentStep() {
     if (currentStep == 0) {
       if (!formKey.currentState!.validate()) return false;
       if (selectedGender == null) {
@@ -196,31 +191,28 @@ class _ProfileDetailsScreenState extends State<ProfileDetailsScreen> {
     return true;
   }
 
-  void _nextStep() {
-    if (_validateCurrentStep()) {
+  void nextStep() {
+    if (validateCurrentStep()) {
       if (currentStep < 2) {
         setState(() => currentStep++);
       }
     }
   }
 
-  void _previousStep() {
+  void previousStep() {
     if (currentStep > 0) {
       setState(() => currentStep--);
     }
   }
 
   Future<void> saveProfile() async {
-    if (!_validateCurrentStep()) return;
+    if (!validateCurrentStep()) return;
 
     setState(() => isSaving = true);
 
     try {
       final user = FirebaseAuth.instance.currentUser;
       if (user == null) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('User not authenticated')));
         return;
       }
 
@@ -265,23 +257,6 @@ class _ProfileDetailsScreenState extends State<ProfileDetailsScreen> {
         'updatedAt': FieldValue.serverTimestamp(),
       }, SetOptions(merge: true));
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Row(
-            children: [
-              Icon(Icons.check_circle, color: Colors.white),
-              SizedBox(width: 12),
-              Text('Profile saved successfully'),
-            ],
-          ),
-          backgroundColor: Colors.green.shade600,
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10),
-          ),
-        ),
-      );
-
       Navigator.of(
         context,
       ).pushReplacement(MaterialPageRoute(builder: (_) => Homescreen()));
@@ -295,10 +270,6 @@ class _ProfileDetailsScreenState extends State<ProfileDetailsScreen> {
     }
   }
 
-  void skipProfile() {
-    // Skip functionality removed - profile completion is now required
-  }
-
   @override
   void dispose() {
     firstNameController.dispose();
@@ -308,7 +279,7 @@ class _ProfileDetailsScreenState extends State<ProfileDetailsScreen> {
     super.dispose();
   }
 
-  Widget _buildBasicInfoStep() {
+  Widget buildBasicInfoStep() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -381,7 +352,7 @@ class _ProfileDetailsScreenState extends State<ProfileDetailsScreen> {
         ),
         const SizedBox(height: 40),
 
-        _buildInputField(
+        buildInputField(
           controller: firstNameController,
           label: 'First Name',
           icon: Icons.person_outline,
@@ -393,7 +364,7 @@ class _ProfileDetailsScreenState extends State<ProfileDetailsScreen> {
         ),
         const SizedBox(height: 20),
 
-        _buildInputField(
+        buildInputField(
           controller: lastNameController,
           label: 'Last Name',
           icon: Icons.person_outline,
@@ -405,10 +376,10 @@ class _ProfileDetailsScreenState extends State<ProfileDetailsScreen> {
         ),
         const SizedBox(height: 20),
 
-        _buildGenderSelector(),
+        buildGenderSelector(),
         const SizedBox(height: 20),
 
-        _buildInputField(
+        buildInputField(
           controller: birthdateController,
           label: 'Date of Birth',
           icon: Icons.cake_outlined,
@@ -425,7 +396,7 @@ class _ProfileDetailsScreenState extends State<ProfileDetailsScreen> {
     );
   }
 
-  Widget _buildInputField({
+  Widget buildInputField({
     required TextEditingController controller,
     required String label,
     required IconData icon,
@@ -463,7 +434,7 @@ class _ProfileDetailsScreenState extends State<ProfileDetailsScreen> {
     );
   }
 
-  Widget _buildGenderSelector() {
+  Widget buildGenderSelector() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -480,16 +451,16 @@ class _ProfileDetailsScreenState extends State<ProfileDetailsScreen> {
         ),
         Row(
           children: [
-            Expanded(child: _buildGenderOption('Male', Icons.male)),
+            Expanded(child: buildGenderOption('Male', Icons.male)),
             SizedBox(width: 16),
-            Expanded(child: _buildGenderOption('Female', Icons.female)),
+            Expanded(child: buildGenderOption('Female', Icons.female)),
           ],
         ),
       ],
     );
   }
 
-  Widget _buildGenderOption(String gender, IconData icon) {
+  Widget buildGenderOption(String gender, IconData icon) {
     final isSelected = selectedGender == gender;
     return GestureDetector(
       onTap: () => setState(() => selectedGender = gender),
@@ -526,7 +497,7 @@ class _ProfileDetailsScreenState extends State<ProfileDetailsScreen> {
     );
   }
 
-  Widget _buildHealthAspectsStep() {
+  Widget buildHealthAspectsStep() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -755,15 +726,15 @@ class _ProfileDetailsScreenState extends State<ProfileDetailsScreen> {
           SizedBox(height: 24),
         ],
 
-        _buildSectionTitle('Medical Conditions', Icons.local_hospital),
+        buildSectionTitle('Medical Conditions', Icons.local_hospital),
         SizedBox(height: 12),
-        _buildToggleOption(
+        buildToggleOption(
           title: 'Lung disease',
           icon: '🫁',
           value: lungDisease,
           onChanged: (val) => setState(() => lungDisease = val),
         ),
-        _buildToggleOption(
+        buildToggleOption(
           title: 'Heart disease',
           icon: '❤️',
           value: heartDisease,
@@ -771,9 +742,9 @@ class _ProfileDetailsScreenState extends State<ProfileDetailsScreen> {
         ),
 
         SizedBox(height: 24),
-        _buildSectionTitle('Lifestyle', Icons.directions_run),
+        buildSectionTitle('Lifestyle', Icons.directions_run),
         SizedBox(height: 12),
-        _buildYesNoOption(
+        buildYesNoOption(
           question: 'Do you engage in sports or strenuous outdoor activities?',
           icon: '🏃',
           value: sportsActivities,
@@ -782,7 +753,7 @@ class _ProfileDetailsScreenState extends State<ProfileDetailsScreen> {
 
         if (selectedGender == 'Female') ...[
           SizedBox(height: 24),
-          _buildYesNoOption(
+          buildYesNoOption(
             question: 'Are you currently in any stage of pregnancy?',
             icon: '🤰',
             value: isPregnant,
@@ -791,21 +762,21 @@ class _ProfileDetailsScreenState extends State<ProfileDetailsScreen> {
         ],
 
         SizedBox(height: 24),
-        _buildSectionTitle('Care Responsibilities', Icons.family_restroom),
+        buildSectionTitle('Care Responsibilities', Icons.family_restroom),
         SizedBox(height: 12),
-        _buildToggleOption(
+        buildToggleOption(
           title: 'Children',
           icon: '👧',
           value: caresForChildren,
           onChanged: (val) => setState(() => caresForChildren = val),
         ),
-        _buildToggleOption(
+        buildToggleOption(
           title: 'Toddlers',
           icon: '👶',
           value: caresForToddlers,
           onChanged: (val) => setState(() => caresForToddlers = val),
         ),
-        _buildToggleOption(
+        buildToggleOption(
           title: 'Babies',
           icon: '🍼',
           value: caresForBabies,
@@ -815,7 +786,7 @@ class _ProfileDetailsScreenState extends State<ProfileDetailsScreen> {
     );
   }
 
-  Widget _buildSectionTitle(String title, IconData icon) {
+  Widget buildSectionTitle(String title, IconData icon) {
     return Row(
       children: [
         Icon(icon, color: primaryColor, size: 20),
@@ -832,7 +803,7 @@ class _ProfileDetailsScreenState extends State<ProfileDetailsScreen> {
     );
   }
 
-  Widget _buildToggleOption({
+  Widget buildToggleOption({
     required String title,
     required String icon,
     required bool value,
@@ -870,7 +841,7 @@ class _ProfileDetailsScreenState extends State<ProfileDetailsScreen> {
     );
   }
 
-  Widget _buildYesNoOption({
+  Widget buildYesNoOption({
     required String question,
     required String icon,
     required bool value,
@@ -906,7 +877,7 @@ class _ProfileDetailsScreenState extends State<ProfileDetailsScreen> {
           Row(
             children: [
               Expanded(
-                child: _buildYesNoButton(
+                child: buildYesNoButton(
                   label: 'Yes',
                   isSelected: value == true,
                   onTap: () => onChanged(true),
@@ -914,7 +885,7 @@ class _ProfileDetailsScreenState extends State<ProfileDetailsScreen> {
               ),
               SizedBox(width: 12),
               Expanded(
-                child: _buildYesNoButton(
+                child: buildYesNoButton(
                   label: 'No',
                   isSelected: value == false,
                   onTap: () => onChanged(false),
@@ -927,7 +898,7 @@ class _ProfileDetailsScreenState extends State<ProfileDetailsScreen> {
     );
   }
 
-  Widget _buildYesNoButton({
+  Widget buildYesNoButton({
     required String label,
     required bool isSelected,
     required VoidCallback onTap,
@@ -998,7 +969,6 @@ class _ProfileDetailsScreenState extends State<ProfileDetailsScreen> {
       ),
       body: Column(
         children: [
-          // Step indicator
           Container(
             color: Colors.white,
             padding: EdgeInsets.symmetric(vertical: 20, horizontal: 24),
@@ -1080,7 +1050,6 @@ class _ProfileDetailsScreenState extends State<ProfileDetailsScreen> {
             ),
           ),
 
-          // Content
           Expanded(
             child: SingleChildScrollView(
               child: Padding(
@@ -1102,9 +1071,9 @@ class _ProfileDetailsScreenState extends State<ProfileDetailsScreen> {
                     key: formKey,
                     child:
                         currentStep == 0
-                            ? _buildBasicInfoStep()
+                            ? buildBasicInfoStep()
                             : currentStep == 1
-                            ? _buildHealthAspectsStep()
+                            ? buildHealthAspectsStep()
                             : _buildHealthBackgroundStep(),
                   ),
                 ),
@@ -1112,7 +1081,6 @@ class _ProfileDetailsScreenState extends State<ProfileDetailsScreen> {
             ),
           ),
 
-          // Navigation buttons
           Container(
             padding: EdgeInsets.all(24),
             decoration: BoxDecoration(
@@ -1131,7 +1099,7 @@ class _ProfileDetailsScreenState extends State<ProfileDetailsScreen> {
                   if (currentStep > 0)
                     Expanded(
                       child: OutlinedButton(
-                        onPressed: _previousStep,
+                        onPressed: previousStep,
                         style: OutlinedButton.styleFrom(
                           padding: EdgeInsets.symmetric(vertical: 16),
                           side: BorderSide(color: primaryColor, width: 2),
@@ -1163,7 +1131,7 @@ class _ProfileDetailsScreenState extends State<ProfileDetailsScreen> {
                       onPressed:
                           isSaving
                               ? null
-                              : (currentStep < 2 ? _nextStep : saveProfile),
+                              : (currentStep < 2 ? nextStep : saveProfile),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.primary,
                         foregroundColor: Colors.white,
