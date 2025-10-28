@@ -3,7 +3,6 @@ import 'package:intl/intl.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-// Detailed screen with full information
 class AirQualityDetailScreen extends StatelessWidget {
   final String location;
   final double temperature;
@@ -566,7 +565,6 @@ class AirQualityDetailScreen extends StatelessWidget {
           }
         }
 
-        // Cold weather considerations
         if (temperature < 5) {
           if (asthmaRespiratory) {
             recommendations.add(
@@ -597,7 +595,6 @@ class AirQualityDetailScreen extends StatelessWidget {
       print('Error fetching user profile for recommendations: $e');
     }
 
-    // Remove duplicates and limit to 5 most critical recommendations
     final uniqueRecommendations = recommendations.toSet().toList();
     uniqueRecommendations.sort(
       (a, b) =>
@@ -607,7 +604,6 @@ class AirQualityDetailScreen extends StatelessWidget {
     return uniqueRecommendations.take(5).toList();
   }
 
-  // Helper method to determine severity level for sorting
   int _getSeverityLevel(Color color) {
     if (color == Colors.red) return 3;
     if (color == Colors.orange) return 2;
@@ -1443,7 +1439,6 @@ class HealthRecommendation {
   });
 }
 
-// New class for personalized recommendations
 class PersonalizedRecommendation {
   final IconData icon;
   final String title;

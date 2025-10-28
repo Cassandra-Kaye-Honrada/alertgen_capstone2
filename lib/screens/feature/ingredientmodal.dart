@@ -26,7 +26,8 @@ class IngredientAllergenModal extends StatefulWidget {
   }) : super(key: key);
 
   @override
-  State<IngredientAllergenModal> createState() => _IngredientAllergenModalState();
+  State<IngredientAllergenModal> createState() =>
+      _IngredientAllergenModalState();
 }
 
 class _IngredientAllergenModalState extends State<IngredientAllergenModal> {
@@ -48,7 +49,8 @@ class _IngredientAllergenModalState extends State<IngredientAllergenModal> {
 
   Future<void> loadHistoricalData() async {
     try {
-      Map<String, double> historicalSeverity = widget.historicalSeverityData ?? {};
+      Map<String, double> historicalSeverity =
+          widget.historicalSeverityData ?? {};
       List<AllergenInfo> historicalAllergens = [];
 
       if (widget.historicalMatchedAllergens != null &&
@@ -76,9 +78,10 @@ class _IngredientAllergenModalState extends State<IngredientAllergenModal> {
               }
             });
 
-            String riskLevel = severity >= 0.67
-                ? 'severe'
-                : severity >= 0.33
+            String riskLevel =
+                severity >= 0.67
+                    ? 'severe'
+                    : severity >= 0.33
                     ? 'moderate'
                     : 'mild';
 
@@ -116,23 +119,27 @@ class _IngredientAllergenModalState extends State<IngredientAllergenModal> {
 
       User? user = FirebaseAuth.instance.currentUser;
       if (user != null) {
-        QuerySnapshot profile = await FirebaseFirestore.instance
-            .collection('users')
-            .doc(user.uid)
-            .collection('profile')
-            .where('type', isEqualTo: 'allergen')
-            .get();
+        QuerySnapshot profile =
+            await FirebaseFirestore.instance
+                .collection('users')
+                .doc(user.uid)
+                .collection('profile')
+                .where('type', isEqualTo: 'allergen')
+                .get();
 
         for (QueryDocumentSnapshot doc in profile.docs) {
           Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
-          String allergenName = data['name']?.toString().toLowerCase().trim() ?? '';
+          String allergenName =
+              data['name']?.toString().toLowerCase().trim() ?? '';
           double severity = (data['severity'] ?? 0.5).toDouble();
 
           if (allergenName.isNotEmpty) {
-            String translatedName = await translationService.translateToEnglish(allergenName);
-            
+            String translatedName = await translationService.translateToEnglish(
+              allergenName,
+            );
+
             severityMap[translatedName] = severity;
-            
+
             if (translatedName != allergenName) {
               severityMap[allergenName] = severity;
             }
@@ -179,18 +186,21 @@ class _IngredientAllergenModalState extends State<IngredientAllergenModal> {
       }
 
       if (foundAllergen == null) {
-        String? matchedUserAllergen = allergenAnalysis.findMatchingUserAllergen(
-          lowerAllergenName,
-          displaySeverityData.keys.toList(),
-        );
+        String? matchedUserAllergen = await allergenAnalysis
+            .findMatchingUserAllergen(
+              lowerAllergenName,
+              displaySeverityData.keys.toList(),
+            );
 
-        double severity = matchedUserAllergen != null
-            ? displaySeverityData[matchedUserAllergen]!
-            : 0.5;
+        double severity =
+            matchedUserAllergen != null
+                ? displaySeverityData[matchedUserAllergen]!
+                : 0.5;
 
-        String riskLevel = severity >= 0.67
-            ? 'severe'
-            : severity >= 0.33
+        String riskLevel =
+            severity >= 0.67
+                ? 'severe'
+                : severity >= 0.33
                 ? 'moderate'
                 : 'mild';
 
@@ -206,10 +216,11 @@ class _IngredientAllergenModalState extends State<IngredientAllergenModal> {
       matchedAllergens.add(foundAllergen);
 
       if (!displaySeverityData.containsKey(lowerAllergenName)) {
-        String? matchedUserAllergen = allergenAnalysis.findMatchingUserAllergen(
-          lowerAllergenName,
-          displaySeverityData.keys.toList(),
-        );
+        String? matchedUserAllergen = await allergenAnalysis
+            .findMatchingUserAllergen(
+              lowerAllergenName,
+              displaySeverityData.keys.toList(),
+            );
 
         if (matchedUserAllergen != null) {
           displaySeverityData[lowerAllergenName] =
@@ -227,8 +238,18 @@ class _IngredientAllergenModalState extends State<IngredientAllergenModal> {
 
   Future<void> findMatchingAllergensFromIngredient() async {
     String lowerIngredient = widget.ingredient.toLowerCase().trim();
-    String translatedIngredient = await translationService.translateToEnglish(lowerIngredient);
-    
+    String translatedIngredient = await translationService.translateToEnglish(
+      lowerIngredient,
+    );
+
+    Map<String, String> translatedUserAllergens = {};
+    for (String userAllergen in displaySeverityData.keys) {
+      String translated = await translationService.translateToEnglish(
+        userAllergen.toLowerCase().trim(),
+      );
+      translatedUserAllergens[userAllergen] = translated;
+    }
+
     List<AllergenInfo> matchedAllergens = [];
 
     for (AllergenInfo allergenInfo in widget.availableAllergens) {
@@ -236,29 +257,52 @@ class _IngredientAllergenModalState extends State<IngredientAllergenModal> {
 
       bool isSourceMatch = allergenInfo.sources.any((source) {
         String lowerSource = source.toLowerCase().trim();
-        return allergenAnalysis.isIngredientMatch(lowerIngredient, lowerSource) ||
-               allergenAnalysis.isIngredientMatch(translatedIngredient, lowerSource);
+        return allergenAnalysis.isIngredientMatch(
+              lowerIngredient,
+              lowerSource,
+            ) ||
+            allergenAnalysis.isIngredientMatch(
+              translatedIngredient,
+              lowerSource,
+            );
       });
 
       if (!isSourceMatch) {
-        isSourceMatch = allergenAnalysis.isIngredientMatch(lowerIngredient, allergenNameLower) ||
-                        allergenAnalysis.isIngredientMatch(translatedIngredient, allergenNameLower);
+        isSourceMatch =
+            allergenAnalysis.isIngredientMatch(
+              lowerIngredient,
+              allergenNameLower,
+            ) ||
+            allergenAnalysis.isIngredientMatch(
+              translatedIngredient,
+              allergenNameLower,
+            );
       }
 
       if (isSourceMatch) {
-        String? matchedUserAllergen = allergenAnalysis.findMatchingUserAllergen(
-          allergenNameLower,
-          displaySeverityData.keys.toList(),
-        );
+        String? matchedUserAllergen;
+
+        for (var entry in translatedUserAllergens.entries) {
+          String userAllergen = entry.key.toLowerCase().trim();
+          String translatedUserAllergen = entry.value.toLowerCase().trim();
+
+          if (allergenNameLower == translatedUserAllergen ||
+              allergenNameLower.contains(translatedUserAllergen) ||
+              translatedUserAllergen.contains(allergenNameLower)) {
+            matchedUserAllergen = entry.key;
+            break;
+          }
+        }
+
+        if (matchedUserAllergen == null) {
+          matchedUserAllergen = await allergenAnalysis.findMatchingUserAllergen(
+            allergenNameLower,
+            displaySeverityData.keys.toList(),
+          );
+        }
 
         if (matchedUserAllergen != null) {
           matchedAllergens.add(allergenInfo);
-        } else {
-          matchedAllergens.add(allergenInfo);
-
-          if (!displaySeverityData.containsKey(allergenNameLower)) {
-            displaySeverityData[allergenNameLower] = 0.5;
-          }
         }
       }
     }
@@ -278,6 +322,76 @@ class _IngredientAllergenModalState extends State<IngredientAllergenModal> {
     if (severity < 0.33) return 'Mild';
     if (severity < 0.67) return 'Moderate';
     return 'Severe';
+  }
+
+  Future<List<Widget>> buildAllergenWidgets() async {
+    List<Widget> widgets = [];
+
+    for (AllergenInfo allergen in matchingAllergens) {
+      String? matchedAllergenKey = await allergenAnalysis
+          .findMatchingUserAllergen(
+            allergen.name.toLowerCase().trim(),
+            displaySeverityData.keys.toList(),
+          );
+
+      String displayName = allergen.name;
+      if (matchedAllergenKey != null) {
+        displayName = matchedAllergenKey;
+      }
+
+      double severity =
+          matchedAllergenKey != null
+              ? displaySeverityData[matchedAllergenKey] ?? 0.5
+              : 0.5;
+      Color severityColor = getSeverityColor(severity);
+
+      widgets.add(
+        Column(
+          children: [
+            Container(
+              width: 60,
+              height: 60,
+              decoration: BoxDecoration(
+                color: severityColor.withOpacity(0.2),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: severityColor, width: 2),
+              ),
+              child: Center(
+                child: getAllergenIcon(allergen.name, severityColor),
+              ),
+            ),
+            const SizedBox(height: 8),
+            SizedBox(
+              width: 70,
+              child: Column(
+                children: [
+                  Text(
+                    displayName,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.grey.shade700,
+                      fontWeight: FontWeight.w600,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    getSeverityText(severity),
+                    style: TextStyle(
+                      fontSize: 10,
+                      color: severityColor,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return widgets;
   }
 
   Widget getAllergenIcon(String allergenName, Color severityColor) {
@@ -424,7 +538,10 @@ class _IngredientAllergenModalState extends State<IngredientAllergenModal> {
               const SizedBox(height: 16),
               if (matchingAllergens.isEmpty)
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 8,
+                  ),
                   decoration: BoxDecoration(
                     color: Colors.green.shade50,
                     borderRadius: BorderRadius.circular(20),
@@ -454,7 +571,10 @@ class _IngredientAllergenModalState extends State<IngredientAllergenModal> {
                 )
               else
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 8,
+                  ),
                   decoration: BoxDecoration(
                     color: Colors.red.shade50,
                     borderRadius: BorderRadius.circular(20),
@@ -471,67 +591,28 @@ class _IngredientAllergenModalState extends State<IngredientAllergenModal> {
                 ),
               const SizedBox(height: 24),
               if (matchingAllergens.isNotEmpty) ...[
-                Wrap(
-                  spacing: 16,
-                  runSpacing: 16,
-                  children: matchingAllergens.map((allergen) {
-                    String? matchedAllergenKey =
-                        allergenAnalysis.findMatchingUserAllergen(
-                      allergen.name.toLowerCase().trim(),
-                      displaySeverityData.keys.toList(),
-                    );
-
-                    double severity = matchedAllergenKey != null
-                        ? displaySeverityData[matchedAllergenKey] ?? 0.5
-                        : 0.5;
-                    Color severityColor = getSeverityColor(severity);
-
-                    return Column(
-                      children: [
-                        Container(
-                          width: 60,
-                          height: 60,
-                          decoration: BoxDecoration(
-                            color: severityColor.withOpacity(0.2),
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(
-                              color: severityColor,
-                              width: 2,
-                            ),
-                          ),
-                          child: Center(
-                            child: getAllergenIcon(allergen.name, severityColor),
-                          ),
+                FutureBuilder<List<Widget>>(
+                  future: buildAllergenWidgets(),
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return const Center(
+                        child: Padding(
+                          padding: EdgeInsets.all(20),
+                          child: CircularProgressIndicator(),
                         ),
-                        const SizedBox(height: 8),
-                        SizedBox(
-                          width: 70,
-                          child: Column(
-                            children: [
-                              Text(
-                                allergen.name,
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: Colors.grey.shade700,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                                textAlign: TextAlign.center,
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                getSeverityText(severity),
-                                style: TextStyle(
-                                  fontSize: 10,
-                                  color: severityColor,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
+                      );
+                    }
+
+                    if (snapshot.hasError) {
+                      return Center(child: Text('Error loading allergens'));
+                    }
+
+                    return Wrap(
+                      spacing: 16,
+                      runSpacing: 16,
+                      children: snapshot.data ?? [],
                     );
-                  }).toList(),
+                  },
                 ),
               ],
             ],

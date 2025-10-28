@@ -460,31 +460,50 @@ class LoginScreenState extends State<LoginScreen> {
 
                 const SizedBox(height: 24),
 
-                // Sign In Button
                 ElevatedButton(
-                  onPressed: isLoading ? null : signIn,
+                  onPressed: isLoading ? () {} : signIn, // keep active look
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primary,
                     foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    padding: const EdgeInsets.symmetric(
+                      vertical: 16,
+                      horizontal: 20,
+                    ),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(8),
                     ),
                     elevation: 0,
                   ),
-                  child:
-                      isLoading
-                          ? const CircularProgressIndicator(
-                            color: Colors.white,
-                            strokeWidth: 2,
-                          )
-                          : Text(
-                            'Log in',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
+                  child: Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      const Align(
+                        alignment: Alignment.center,
+                        child: Text(
+                          'Log in',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: AnimatedOpacity(
+                          opacity: isLoading ? 1 : 0,
+                          duration: const Duration(milliseconds: 200),
+                          child: const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                              color: Colors.white,
+                              strokeWidth: 2,
                             ),
                           ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
 
                 const SizedBox(height: 16),

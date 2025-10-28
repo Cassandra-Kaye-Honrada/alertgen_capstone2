@@ -147,12 +147,12 @@ class HomescreenState extends State<Homescreen> {
 
     final foodSubscription = foodStream.listen((foodSnapshot) {
       lastFoodData = [foodSnapshot];
-      _emitCombinedHistory(controller, lastFoodData, lastSkinData);
+      emitCombinedHistory(controller, lastFoodData, lastSkinData);
     });
 
     final skinSubscription = skinStream.listen((skinSnapshot) {
       lastSkinData = [skinSnapshot];
-      _emitCombinedHistory(controller, lastFoodData, lastSkinData);
+      emitCombinedHistory(controller, lastFoodData, lastSkinData);
     });
 
     controller.onCancel = () {
@@ -163,7 +163,7 @@ class HomescreenState extends State<Homescreen> {
     recentHistory = controller.stream;
   }
 
-  void _emitCombinedHistory(
+  void emitCombinedHistory(
     StreamController<List<Map<String, dynamic>>> controller,
     List<QuerySnapshot>? foodData,
     List<QuerySnapshot>? skinData,

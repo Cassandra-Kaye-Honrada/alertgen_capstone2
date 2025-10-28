@@ -509,7 +509,7 @@ CRITICAL REQUIREMENTS:
     Map<String, dynamic> skinData,
     File imageFile,
   ) async {
-    await saveSkinToFirebase(skinData, imageFile);
+    // await saveSkinToFirebase(skinData, imageFile);
 
     bool shouldReset = await Navigator.push(
       context,
@@ -518,6 +518,14 @@ CRITICAL REQUIREMENTS:
             (context) => SkinResultScreen(skinData: skinData, image: imageFile),
       ),
     );
+
+    saveSkinToFirebase(skinData, imageFile)
+        .catchError((e) {
+          print('Background save error for skin analysis: $e');
+        })
+        .then((_) {
+          print('Skin analysis saved successfully to Firebase');
+        });
 
     if (shouldReset == true) {
       resetCameraState();
@@ -1339,6 +1347,7 @@ Generate 3-4 possible dish interpretations with confidence scores.
             const SizedBox(height: 40),
             AnalysisTrivia(
               analysisType: isSkinAnalysis ? 'skin' : 'food',
+              delaySeconds: 1,
               onTriviaLoaded: () {
                 print('Trivia loaded successfully');
               },
