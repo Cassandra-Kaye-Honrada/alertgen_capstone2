@@ -8,7 +8,6 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart';
 
-// Supported populations matching Google Air Quality API categories
 enum Population {
   generalPopulation,
   elderly,
@@ -126,7 +125,7 @@ class _AirQualityWidgetState extends State<AirQualityWidget> {
         Placemark place = placemarks[0];
         setState(() {
           _location =
-              '${place.locality ?? place.subAdministrativeArea ?? "Unknown"}, ${place.administrativeArea ?? ""}';
+              '${place.locality ?? place.subAdministrativeArea ?? "Unknown"}';
         });
       }
     } catch (e) {
@@ -244,25 +243,6 @@ class _AirQualityWidgetState extends State<AirQualityWidget> {
     return Population.generalPopulation;
   }
 
-  String _getPopulationApiString(Population population) {
-    switch (population) {
-      case Population.generalPopulation:
-        return 'UNIVERSAL_AQI';
-      case Population.elderly:
-        return 'ELDERLY';
-      case Population.lungDiseasePopulation:
-        return 'LUNG_DISEASE_POPULATION';
-      case Population.heartDiseasePopulation:
-        return 'HEART_DISEASE_POPULATION';
-      case Population.athletes:
-        return 'ATHLETES';
-      case Population.pregnantWomen:
-        return 'PREGNANT_WOMEN';
-      case Population.children:
-        return 'CHILDREN';
-    }
-  }
-
   String _getPopulationRecommendationKey(Population population) {
     switch (population) {
       case Population.generalPopulation:
@@ -354,6 +334,7 @@ class _AirQualityWidgetState extends State<AirQualityWidget> {
             data,
             _currentPopulation,
             _getPopulationRecommendationKey(_currentPopulation),
+            _applicablePopulations,
           );
           _isLoading = false;
         });
@@ -391,7 +372,7 @@ class _AirQualityWidgetState extends State<AirQualityWidget> {
               (context) => AirQualityDetailScreen(
                 airQualityData: _airQualityData!,
                 location: _location,
-                population: _currentPopulation,
+                applicablePopulations: _applicablePopulations,
               ),
         ),
       );
@@ -404,21 +385,25 @@ class _AirQualityWidgetState extends State<AirQualityWidget> {
       onTap: _navigateToDetailScreen,
       child: Container(
         margin: const EdgeInsets.all(16),
-        padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(20),
+          color: const Color(0xFFF5F5F5),
+          borderRadius: BorderRadius.circular(24),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.1),
-              blurRadius: 10,
-              offset: const Offset(0, 2),
+              color: Colors.black.withOpacity(0.08),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
             ),
           ],
         ),
         child:
             _isLoading
-                ? const Center(child: CircularProgressIndicator())
+                ? const Center(
+                  child: Padding(
+                    padding: EdgeInsets.all(40),
+                    child: CircularProgressIndicator(),
+                  ),
+                )
                 : _error != null
                 ? _buildErrorWidget()
                 : _airQualityData != null
@@ -429,186 +414,176 @@ class _AirQualityWidgetState extends State<AirQualityWidget> {
   }
 
   Widget _buildErrorWidget() {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(Icons.error_outline, size: 48, color: Colors.red[300]),
-        const SizedBox(height: 12),
-        Text(
-          _error!,
-          style: const TextStyle(color: Colors.red),
-          textAlign: TextAlign.center,
-        ),
-        const SizedBox(height: 12),
-        ElevatedButton(
-          onPressed: () {
-            _initialize();
-          },
-          child: const Text('Retry'),
-        ),
-      ],
+    return Padding(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.error_outline, size: 48, color: Colors.red[300]),
+          const SizedBox(height: 12),
+          Text(
+            _error!,
+            style: const TextStyle(color: Colors.red),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 12),
+          ElevatedButton(
+            onPressed: () {
+              _initialize();
+            },
+            child: const Text('Retry'),
+          ),
+        ],
+      ),
     );
   }
 
   Widget _buildAirQualityContent() {
     final aqi = _airQualityData!.aqi;
     final quality = _airQualityData!.qualityLevel;
-    final color = _airQualityData!.color;
     final dominantPollutant = _airQualityData!.dominantPollutant;
 
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Header with location and AQI
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  _location,
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black87,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                const Text(
-                  'Air Quality Index',
-                  style: TextStyle(fontSize: 14, color: Colors.grey),
-                ),
-              ],
-            ),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              decoration: BoxDecoration(
-                color: color.withOpacity(0.2),
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Container(
-                    width: 12,
-                    height: 12,
-                    decoration: BoxDecoration(
-                      color: color,
-                      shape: BoxShape.circle,
-                    ),
-                  ),
-                  const SizedBox(width: 6),
-                  Text(
-                    quality,
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: color,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-
-        const SizedBox(height: 20),
-
-        // Main AQI display
-        Center(
-          child: Column(
+        // Location header
+        Container(
+          padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
+              const Icon(Icons.location_on, color: Color(0xFF666666), size: 20),
+              const SizedBox(width: 6),
               Text(
-                '$aqi',
+                _location,
                 style: const TextStyle(
-                  fontSize: 64,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black87,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w500,
+                  color: Color(0xFF333333),
                 ),
-              ),
-              const SizedBox(height: 4),
-              const Text(
-                'AQI',
-                style: TextStyle(fontSize: 16, color: Colors.grey),
               ),
             ],
           ),
         ),
 
-        const SizedBox(height: 16),
+        // Gauge and info section
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+          child: Row(
+            children: [
+              // Circular gauge
+              SizedBox(
+                width: 140,
+                height: 140,
+                child: CustomPaint(
+                  painter: AQIGaugePainter(
+                    aqi: aqi.toDouble(),
+                    color: _airQualityData!.color,
+                  ),
+                  child: Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          '$aqi AQI',
+                          style: const TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF333333),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
 
-        // Dominant pollutant
-        Center(
-          child: Text(
-            'Dominant pollutant: $dominantPollutant',
-            style: const TextStyle(fontSize: 14, color: Colors.grey),
+              const SizedBox(width: 24),
+
+              // Air quality info
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Air Quality Index',
+                      style: TextStyle(fontSize: 14, color: Color(0xFF999999)),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      quality,
+                      style: const TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF333333),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      'Dominant pollutant: $dominantPollutant',
+                      style: const TextStyle(
+                        fontSize: 13,
+                        color: Color(0xFF666666),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
         ),
-
-        const SizedBox(height: 24),
-        const Divider(height: 1),
-        const SizedBox(height: 16),
 
         // Suggestion section
-        const Text(
-          'Suggestion for you',
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
-            color: Colors.black87,
-          ),
-        ),
-
-        const SizedBox(height: 8),
-
-        if (_airQualityData!.healthRecommendation != null)
-          Text(
-            _airQualityData!.healthRecommendation!,
-            style: const TextStyle(
-              fontSize: 14,
-              color: Colors.black54,
-              height: 1.4,
+        Container(
+          margin: const EdgeInsets.only(top: 8),
+          padding: const EdgeInsets.all(20),
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.only(
+              bottomLeft: Radius.circular(24),
+              bottomRight: Radius.circular(24),
             ),
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
           ),
-
-        const SizedBox(height: 8),
-
-        // View more button
-        Align(
-          alignment: Alignment.centerRight,
-          child: Text(
-            'View more details →',
-            style: TextStyle(
-              fontSize: 12,
-              color: Colors.blue[600],
-              fontWeight: FontWeight.w500,
-            ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Suggestion for you',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF333333),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    if (_airQualityData!.healthRecommendation != null)
+                      Text(
+                        _airQualityData!.healthRecommendation!,
+                        style: const TextStyle(
+                          fontSize: 13,
+                          color: Color(0xFF666666),
+                          height: 1.5,
+                        ),
+                        maxLines: 3,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 12),
+              const Icon(
+                Icons.arrow_forward,
+                color: Color(0xFF333333),
+                size: 24,
+              ),
+            ],
           ),
         ),
       ],
     );
-  }
-
-  String _getPopulationLabel(Population population) {
-    switch (population) {
-      case Population.generalPopulation:
-        return 'General';
-      case Population.elderly:
-        return 'Elderly';
-      case Population.lungDiseasePopulation:
-        return 'Lung Diseases';
-      case Population.heartDiseasePopulation:
-        return 'Heart Diseases';
-      case Population.athletes:
-        return 'Athletes';
-      case Population.pregnantWomen:
-        return 'Pregnant Women';
-      case Population.children:
-        return 'Children';
-    }
   }
 }
 
@@ -621,34 +596,38 @@ class AQIGaugePainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final center = Offset(size.width / 2, size.height / 2);
-    final radius = size.width / 2 - 10;
+    final radius = size.width / 2 - 12;
 
+    // Background arc
     final backgroundPaint =
         Paint()
           ..color = Colors.grey[300]!
           ..style = PaintingStyle.stroke
-          ..strokeWidth = 12
+          ..strokeWidth = 16
           ..strokeCap = StrokeCap.round;
 
     canvas.drawArc(
       Rect.fromCircle(center: center, radius: radius),
-      math.pi * 0.75,
-      math.pi * 1.5,
+      math.pi * 0.65,
+      math.pi * 1.7,
       false,
       backgroundPaint,
     );
 
+    // Gradient colors based on AQI ranges
+    final colors =
+        [
+          const Color(0xFFFF6B6B), // Red (Hazardous)
+          const Color(0xFFFF9F40), // Orange (Unhealthy)
+          const Color(0xFFFFD93D), // Yellow (Moderate)
+          const Color(0xFF6BCF7F), // Light green (Good)
+          const Color(0xFF4CAF50), // Green (Excellent)
+        ].reversed.toList();
+
     final gradient = SweepGradient(
-      startAngle: math.pi * 0.75,
-      endAngle: math.pi * 2.25,
-      colors:
-          [
-            Colors.red[400]!,
-            Colors.orange[300]!,
-            Colors.yellow[600]!,
-            Colors.lightGreen[400]!,
-            Colors.green[500]!,
-          ].reversed.toList(),
+      startAngle: math.pi * 0.65,
+      endAngle: math.pi * 2.35,
+      colors: colors,
     );
 
     final foregroundPaint =
@@ -657,14 +636,16 @@ class AQIGaugePainter extends CustomPainter {
             Rect.fromCircle(center: center, radius: radius),
           )
           ..style = PaintingStyle.stroke
-          ..strokeWidth = 12
+          ..strokeWidth = 16
           ..strokeCap = StrokeCap.round;
 
-    final sweepAngle = (aqi / 500) * math.pi * 1.5;
+    // Calculate sweep angle (max AQI 500)
+    final normalizedAqi = (aqi / 500).clamp(0.0, 1.0);
+    final sweepAngle = normalizedAqi * math.pi * 1.7;
 
     canvas.drawArc(
       Rect.fromCircle(center: center, radius: radius),
-      math.pi * 0.75,
+      math.pi * 0.65,
       sweepAngle,
       false,
       foregroundPaint,
@@ -682,6 +663,7 @@ class AirQualityData {
   final String dominantPollutant;
   final String? healthRecommendation;
   final Map<String, double> components;
+  final Map<String, String> allHealthRecommendations;
 
   AirQualityData({
     required this.aqi,
@@ -690,43 +672,59 @@ class AirQualityData {
     required this.dominantPollutant,
     this.healthRecommendation,
     required this.components,
+    required this.allHealthRecommendations,
   });
 
   factory AirQualityData.fromGoogleJson(
     Map<String, dynamic> json,
     Population population,
     String populationRecommendationKey,
+    List<Population> applicablePopulations,
   ) {
+    // Parse indexes array to get AQI data
     final indexes = json['indexes'] as List<dynamic>?;
 
     Map<String, dynamic>? aqiIndex;
-    if (indexes != null) {
+    if (indexes != null && indexes.isNotEmpty) {
+      // Try to find uaqi (Universal AQI) or usa_epa first
       aqiIndex = indexes.firstWhere(
         (index) => index['code'] == 'uaqi' || index['code'] == 'usa_epa',
-        orElse: () => indexes.isNotEmpty ? indexes[0] : null,
+        orElse: () => indexes[0],
       );
     }
 
     int aqi = 0;
     String qualityLevel = 'Unknown';
     Color color = Colors.grey;
+    String dominantPollutant = 'N/A';
 
     if (aqiIndex != null) {
       aqi = (aqiIndex['aqi'] as num?)?.toInt() ?? 0;
       qualityLevel = aqiIndex['category'] ?? 'Unknown';
       color = _getColorForCategory(aqiIndex['color'] as Map<String, dynamic>?);
+
+      // Get dominant pollutant from the index object
+      if (aqiIndex['dominantPollutant'] != null) {
+        final pollutantCode = aqiIndex['dominantPollutant'] as String;
+        dominantPollutant = _formatPollutantName(pollutantCode);
+      }
     }
 
-    String dominantPollutant = 'N/A';
-    if (json['dominantPollutant'] != null) {
-      dominantPollutant = (json['dominantPollutant'] as String).toUpperCase();
-    }
-
+    // Parse health recommendations
     String? healthRecommendation;
+    Map<String, String> allHealthRecommendations = {};
     final healthRecommendations =
         json['healthRecommendations'] as Map<String, dynamic>?;
 
     if (healthRecommendations != null) {
+      // Store all available health recommendations
+      for (var entry in healthRecommendations.entries) {
+        if (entry.value is String && (entry.value as String).isNotEmpty) {
+          allHealthRecommendations[entry.key] = entry.value as String;
+        }
+      }
+
+      // Get the primary recommendation for the current population
       healthRecommendation =
           healthRecommendations[populationRecommendationKey] as String?;
 
@@ -745,6 +743,7 @@ class AirQualityData {
       }
     }
 
+    // Parse pollutants array to get concentrations
     Map<String, double> components = {};
     final pollutants = json['pollutants'] as List<dynamic>?;
     if (pollutants != null) {
@@ -764,6 +763,7 @@ class AirQualityData {
       dominantPollutant: dominantPollutant,
       healthRecommendation: healthRecommendation,
       components: components,
+      allHealthRecommendations: allHealthRecommendations,
     );
   }
 
@@ -775,5 +775,18 @@ class AirQualityData {
     final blue = (colorData['blue'] as num?)?.toInt() ?? 128;
 
     return Color.fromARGB(255, red, green, blue);
+  }
+
+  static String _formatPollutantName(String code) {
+    final pollutantNames = {
+      'pm25': 'PM2.5',
+      'pm10': 'PM10',
+      'o3': 'Ozone',
+      'no2': 'Nitrogen Dioxide',
+      'so2': 'Sulfur Dioxide',
+      'co': 'Carbon Monoxide',
+    };
+
+    return pollutantNames[code.toLowerCase()] ?? code.toUpperCase();
   }
 }
