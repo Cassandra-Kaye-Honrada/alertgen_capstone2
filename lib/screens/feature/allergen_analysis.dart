@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:allergen/screens/feature/scan_screen.dart';
+import 'package:allergen/services/translation/translation.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -291,6 +292,8 @@ class AllergenAnalysis {
     }
   }
 
+
+
   Future<List<IngredientColorInfo>> computeIngredientColors(
     List<String> ingredients,
     List<AllergenInfo> allergens,
@@ -299,6 +302,16 @@ class AllergenAnalysis {
     Map<String, double> userAllergenSeverity = Map<String, double>.from(
       allergenData['severity'],
     );
+
+
+     Map<String, double> translatedSeverity = {};
+  for (var entry in userAllergenSeverity.entries) {
+    String tagalogName = entry.key;
+    String englishName = await TranslationService.instance.translateToEnglish(tagalogName);
+    translatedSeverity[englishName.toLowerCase().trim()] = entry.value;
+    translatedSeverity[tagalogName.toLowerCase().trim()] = entry.value;
+  }
+
 
     List<IngredientColorInfo> computedIngredientColors = [];
     for (String ingredient in ingredients) {
@@ -314,13 +327,12 @@ class AllergenAnalysis {
 
         if (isSourceMatch) {
           String allergenName = allergenInfo.name.toLowerCase();
-          String? matchedUserAllergen = findMatchingUserAllergen(
+          String? matchedUserAllergen = await findMatchingUserAllergen(
             allergenName,
-            userAllergenSeverity.keys.toList(),
-          );
+  translatedSeverity.keys.toList(),          );
 
           if (matchedUserAllergen != null) {
-            double severity = userAllergenSeverity[matchedUserAllergen]!;
+          double severity = translatedSeverity[matchedUserAllergen]!;
             if (severity > maxSeverity) {
               maxSeverity = severity;
               matchedAllergens = [allergenInfo.name];
@@ -398,16 +410,22 @@ class AllergenAnalysis {
     return false;
   }
 
-  String? findMatchingUserAllergen(
+  Future<String?> findMatchingUserAllergen (
     String allergenName,
     List<String> userAllergens,
-  ) {
+  ) async{
     String cleanAllergenName = allergenName.toLowerCase().trim();
 
     for (String userAllergen in userAllergens) {
       String cleanUserAllergen = userAllergen.toLowerCase().trim();
 
       if (cleanAllergenName == cleanUserAllergen) return userAllergen;
+
+          bool areEquivalent = await TranslationService.instance.areTermsEquivalent(
+      cleanAllergenName,
+      cleanUserAllergen,
+    );
+    if (areEquivalent) return userAllergen;
 
       if (isSingularPlural(cleanAllergenName, cleanUserAllergen))
         return userAllergen;

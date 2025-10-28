@@ -5,11 +5,13 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 class AnalysisTrivia extends StatefulWidget {
   final String analysisType;
   final VoidCallback? onTriviaLoaded;
+  final int delaySeconds; // New parameter to control delay
 
   const AnalysisTrivia({
     Key? key,
     required this.analysisType,
     this.onTriviaLoaded,
+    this.delaySeconds = 3, // Default to 3 seconds delay
   }) : super(key: key);
 
   @override
@@ -20,7 +22,9 @@ class _AnalysisTriviaState extends State<AnalysisTrivia>
     with SingleTickerProviderStateMixin {
   String currentTrivia = '';
   bool isLoading = true;
+  bool showTrivia = false;
   Timer? triviaTimer;
+  Timer? delayTimer;
   int triviaIndex = 0;
   List<String> triviaList = [];
   late AnimationController fadeController;
@@ -28,7 +32,7 @@ class _AnalysisTriviaState extends State<AnalysisTrivia>
 
   static const Color primaryTeal = Color(0xFF00A99D);
   static const Color darkTeal = Color(0xFF008B8B);
-  static const Color lightTeal = Color(0xFF4DD0E1);
+  // static const Color lightTeal = Color(0xFF4DD0E1);
 
   final List<String> fallbackFoodTrivia = [
     "🥘 Kare-Kare's peanut sauce makes it unsafe for people with peanut allergies!",
@@ -84,6 +88,7 @@ class _AnalysisTriviaState extends State<AnalysisTrivia>
   @override
   void dispose() {
     triviaTimer?.cancel();
+    delayTimer?.cancel();
     fadeController.dispose();
     super.dispose();
   }
@@ -91,8 +96,6 @@ class _AnalysisTriviaState extends State<AnalysisTrivia>
   Future<void> populateFirebaseTrivia() async {
     try {
       final firestore = FirebaseFirestore.instance;
-
-      print('📝 Starting Firebase trivia population...');
 
       final foodBatch = firestore.batch();
       for (int i = 0; i < fallbackFoodTrivia.length; i++) {
@@ -124,7 +127,15 @@ class _AnalysisTriviaState extends State<AnalysisTrivia>
   }
 
   Future<void> loadTrivia() async {
-    useFallbackTrivia();
+    delayTimer = Timer(Duration(seconds: widget.delaySeconds), () {
+      if (mounted) {
+        setState(() {
+          showTrivia = true;
+        });
+        fadeController.forward();
+        startTriviaRotation();
+      }
+    });
 
     try {
       final collection =
@@ -141,20 +152,20 @@ class _AnalysisTriviaState extends State<AnalysisTrivia>
             snapshot.docs.map((doc) => doc.data()['text'] as String).toList();
 
         if (firebaseTrivia.isNotEmpty) {
-          await fadeController.reverse();
           if (mounted) {
             setState(() {
               triviaList = firebaseTrivia;
               triviaIndex = 0;
               currentTrivia = triviaList[0];
+              isLoading = false;
             });
-            await fadeController.forward();
           }
         }
       }
     } catch (e) {
       print('Error loading Firebase trivia: $e');
-      print('ℹUsing fallback trivia instead');
+      print('ℹ Using fallback trivia instead');
+      useFallbackTrivia();
     }
 
     widget.onTriviaLoaded?.call();
@@ -169,13 +180,11 @@ class _AnalysisTriviaState extends State<AnalysisTrivia>
       currentTrivia = triviaList[0];
       isLoading = false;
     });
-    fadeController.forward();
-    startTriviaRotation();
   }
 
   void startTriviaRotation() {
     triviaTimer = Timer.periodic(const Duration(seconds: 6), (timer) {
-      if (mounted && triviaList.isNotEmpty) {
+      if (mounted && triviaList.isNotEmpty && showTrivia) {
         fadeController.reverse().then((_) {
           if (mounted) {
             setState(() {
@@ -191,7 +200,7 @@ class _AnalysisTriviaState extends State<AnalysisTrivia>
 
   @override
   Widget build(BuildContext context) {
-    if (isLoading) {
+    if (isLoading || !showTrivia) {
       return const SizedBox.shrink();
     }
 
