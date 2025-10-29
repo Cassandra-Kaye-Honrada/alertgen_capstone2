@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:allergen/screens/community/CommunityForumScreen.dart';
 import 'package:allergen/screens/feature/chatbot/floating_chatbot.dart';
 import 'package:allergen/screens/profile_screen_items/scanHistoryScreen.dart';
@@ -199,6 +201,13 @@ class HomescreenState extends State<Homescreen> {
               return IngredientColorInfo.fromJson(item as Map<String, dynamic>);
             }).toList();
 
+        Map<String, dynamic>? ingredientBenefits;
+        if (data.containsKey('ingredientBenefits')) {
+          ingredientBenefits = Map<String, dynamic>.from(
+            data['ingredientBenefits'] as Map? ?? {},
+          );
+        }
+
         combined.add({
           'id': doc.id,
           'type': 'food',
@@ -214,6 +223,7 @@ class HomescreenState extends State<Homescreen> {
           'isOCRAnalysis': data['isOCRAnalysis'] ?? false,
           'cachedImage': imageFile,
           'ingredientColors': ingredientColors,
+          'ingredientBenefits': ingredientBenefits,
         });
       }
 
@@ -462,6 +472,112 @@ class HomescreenState extends State<Homescreen> {
     return severityMap;
   }
 
+  // Future<void> navigateToFoodResult(Map<String, dynamic> historyItem) async {
+  //   final dishName = historyItem['dishName'] ?? 'Unknown Dish';
+  //   final description =
+  //       historyItem['description'] ?? 'No description available';
+  //   final ingredients = List<String>.from(historyItem['ingredients'] ?? []);
+  //   final allergenData = historyItem['allergens'] as List<dynamic>? ?? [];
+  //   final bool isOCRAnalysis = historyItem['isOCRAnalysis'] as bool? ?? false;
+
+  //   final List<IngredientColorInfo> ingredientColors =
+  //       historyItem['ingredientColors'] as List<IngredientColorInfo>? ?? [];
+
+  //   String? fileName = historyItem['fileName'] as String?;
+
+  //   if (fileName == null || fileName.isEmpty) {
+  //     final imagePath = historyItem['imagePath'] as String?;
+  //     if (imagePath != null) {
+  //       fileName = imagePath.split('/').last;
+  //     }
+  //   }
+
+  //   final List<AllergenInfo> allergens =
+  //       allergenData.map((allergen) {
+  //         final allergenMap = allergen as Map<String, dynamic>;
+  //         return AllergenInfo(
+  //           name: allergenMap['name'] ?? 'Unknown',
+  //           riskLevel: allergenMap['riskLevel'] ?? 'mild',
+  //           symptoms: List<String>.from(allergenMap['symptoms'] ?? []),
+  //           sources:
+  //               allergen['source'] is List
+  //                   ? List<String>.from(allergen['source'])
+  //                   : (allergen['source'] != null
+  //                       ? [allergen['source'].toString()]
+  //                       : []),
+  //           category: allergenMap['category'] ?? 'FDA_MAJOR',
+  //           isUserAllergen: allergenMap['isUserAllergen'] ?? false,
+  //         );
+  //       }).toList();
+
+  //   File? imageFile = historyItem['cachedImage'];
+
+  //   if (imageFile == null && fileName != null && fileName.isNotEmpty) {
+  //     showDialog(
+  //       context: context,
+  //       barrierDismissible: false,
+  //       builder:
+  //           (context) => Center(
+  //             child: CircularProgressIndicator(
+  //               valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF0B8FAC)),
+  //             ),
+  //           ),
+  //     );
+
+  //     imageFile = await downloadAndCacheImage(fileName, 'food');
+
+  //     if (Navigator.canPop(context)) {
+  //       Navigator.of(context).pop();
+  //     }
+  //   }
+
+  //   Map<String, double> historicalSeverity = extractHistoricalSeverityData(
+  //     historyItem,
+  //   );
+
+  //   IngredientBenefitsMap? benefitsMap;
+  //   if (historyItem.containsKey('ingredientBenefits')) {
+  //     benefitsMap = IngredientBenefitsMap();
+  //     Map<String, dynamic> benefits =
+  //         historyItem['ingredientBenefits'] as Map<String, dynamic>;
+  //     benefits.forEach((key, value) {
+  //       benefitsMap!.addBenefit(key, value.toString());
+  //     });
+  //   }
+
+  //   Navigator.push(
+  //     context,
+  //     MaterialPageRoute(
+  //       builder:
+  //           (context) => ResultScreen(
+  //             image: imageFile,
+  //             dishName: dishName,
+  //             description: description,
+  //             ingredients: ingredients,
+  //             allergens: allergens,
+  //             isOCRAnalysis: isOCRAnalysis,
+  //             ingredientColors: ingredientColors,
+  //             onIngredientsChanged: (updatedIngredients) {
+  //               if (context.mounted) {
+  //                 ScaffoldMessenger.of(context).showSnackBar(
+  //                   const SnackBar(
+  //                     content: Text(
+  //                       'This is historical data. To update allergen analysis with your current profile, please scan again.',
+  //                     ),
+  //                     backgroundColor: Colors.orange,
+  //                     duration: Duration(seconds: 4),
+  //                   ),
+  //                 );
+  //               }
+  //             },
+  //             isFromHistory: true,
+  //             historicalSeverityData: historicalSeverity,
+  //             ingredientBenefitsMap: benefitsMap,
+  //           ),
+  //     ),
+  //   );
+  // }
+
   Future<void> navigateToFoodResult(Map<String, dynamic> historyItem) async {
     final dishName = historyItem['dishName'] ?? 'Unknown Dish';
     final description =
@@ -525,6 +641,44 @@ class HomescreenState extends State<Homescreen> {
       historyItem,
     );
 
+    // FIX: Properly extract and create IngredientBenefitsMap
+    IngredientBenefitsMap? benefitsMap;
+    if (historyItem.containsKey('ingredientBenefits')) {
+      benefitsMap = IngredientBenefitsMap();
+      var benefitsData = historyItem['ingredientBenefits'];
+
+      print('📦 Loading ingredientBenefits from history');
+      print('Type: ${benefitsData.runtimeType}');
+
+      if (benefitsData is Map) {
+        Map<String, dynamic> benefits = Map<String, dynamic>.from(benefitsData);
+        print('✅ Found ${benefits.length} ingredient benefits');
+
+        benefits.forEach((key, value) {
+          String ingredientKey = key.toString();
+          String benefitValue = value.toString();
+          benefitsMap!.addBenefit(ingredientKey, benefitValue);
+          print(
+            '  - $ingredientKey: ${benefitValue.substring(0, benefitValue.length > 50 ? 50 : benefitValue.length)}...',
+          );
+        });
+
+        print('Successfully loaded ${benefits.length} ingredient benefits');
+      } else {
+        print(
+          'ERROR: ingredientBenefits is not a Map, it is: ${benefitsData.runtimeType}',
+        );
+      }
+    } else {
+      print('Available fields: ${historyItem.keys.join(', ')}');
+    }
+
+    if (benefitsMap != null) {
+      print(' Keys: ${benefitsMap.benefitsMap.keys.toList()}');
+    } else {
+      print('NULL (no benefits available)');
+    }
+
     Navigator.push(
       context,
       MaterialPageRoute(
@@ -552,6 +706,7 @@ class HomescreenState extends State<Homescreen> {
               },
               isFromHistory: true,
               historicalSeverityData: historicalSeverity,
+              ingredientBenefitsMap: benefitsMap,
             ),
       ),
     );

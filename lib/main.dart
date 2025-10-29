@@ -9,9 +9,9 @@ final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
-  await dotenv.load(fileName: ".env");  
-    // await EmergencyService().initialize();
-  
+  await dotenv.load(fileName: ".env");
+  // await EmergencyService().initialize();
+
   runApp(const AlertGen());
 }
 

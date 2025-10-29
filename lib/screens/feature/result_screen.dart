@@ -24,6 +24,7 @@ class ResultScreen extends StatefulWidget {
   final List<IngredientColorInfo> ingredientColors;
   final bool isFromHistory;
   final Map<String, double>? historicalSeverityData;
+   final IngredientBenefitsMap? ingredientBenefitsMap;
 
   const ResultScreen({
     Key? key,
@@ -37,6 +38,7 @@ class ResultScreen extends StatefulWidget {
     required this.ingredientColors,
     this.isFromHistory = false,
     this.historicalSeverityData,
+     this.ingredientBenefitsMap,
   }) : super(key: key);
 
   @override
@@ -623,6 +625,8 @@ CRITICAL REQUIREMENTS:
                   onIngredientsChanged: performAllergenAnalysis,
                   isFromHistory: widget.isFromHistory,
                   historicalSeverityData: widget.historicalSeverityData,
+                    ingredientBenefitsMap: widget.ingredientBenefitsMap,
+
                 ),
               ],
             ),

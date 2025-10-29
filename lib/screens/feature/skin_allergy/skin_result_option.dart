@@ -34,23 +34,28 @@ class SkinConditionOption {
 
   factory SkinConditionOption.fromJson(Map<String, dynamic> json) {
     return SkinConditionOption(
-      conditionName: json['conditionName'] ?? 'Unknown Condition',
+      conditionName: json['conditionName']?.toString() ?? 'Unknown Condition',
       isFoodAllergyRelated: json['isFoodAllergyRelated'] ?? false,
-      confidence: (json['confidence'] ?? 0.0).toDouble(),
-      description: json['description'] ?? '',
-      severity: json['severity'] ?? 'unknown',
-      likelyFoodTriggers: List<Map<String, dynamic>>.from(
-        json['likelyFoodTriggers'] ?? [],
-      ),
-      symptoms: List<String>.from(json['symptoms'] ?? []),
-      immediateActions: List<String>.from(json['immediateActions'] ?? []),
-      foodsToAvoid: List<String>.from(json['foodsToAvoid'] ?? []),
-      whenToSeekHelp: json['whenToSeekHelp'] ?? '',
-      additionalNotes: json['additionalNotes'] ?? '',
-      imageUrls:
-          json['imageUrls'] != null
-              ? List<String>.from(json['imageUrls'])
-              : null,
+      confidence: (json['confidence'] ?? 0.5).toDouble(),
+      description: json['description']?.toString() ?? '',
+      severity: json['severity']?.toString() ?? 'unknown',
+      likelyFoodTriggers:
+          (json['likelyFoodTriggers'] as List?)
+              ?.map((e) => Map<String, dynamic>.from(e))
+              .toList() ??
+          [],
+      symptoms:
+          (json['symptoms'] as List?)?.map((e) => e.toString()).toList() ?? [],
+      immediateActions:
+          (json['immediateActions'] as List?)
+              ?.map((e) => e.toString())
+              .toList() ??
+          [],
+      foodsToAvoid:
+          (json['foodsToAvoid'] as List?)?.map((e) => e.toString()).toList() ??
+          [],
+      whenToSeekHelp: json['whenToSeekHelp']?.toString() ?? '',
+      additionalNotes: json['additionalNotes']?.toString() ?? '',
     );
   }
 

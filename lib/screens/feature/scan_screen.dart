@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:allergen/screens/feature/allergen_analysis.dart';
 import 'package:allergen/screens/feature/dish_confimation_screen.dart';
 import 'package:allergen/screens/feature/skin_allergy/skin_allergy.dart';
+import 'package:allergen/screens/feature/skin_allergy/skin_catch.dart';
 import 'package:allergen/screens/feature/skin_allergy/skin_result_option.dart';
 import 'package:allergen/screens/feature/trivia/trivia.dart';
 import 'package:allergen/screens/profile_screen_items/ProfileScreen.dart';
@@ -58,6 +59,8 @@ class _CameraScannerScreenState extends State<CameraScannerScreen>
   final TextEditingController ingredientController = TextEditingController();
   final FocusNode ingredientFocusNode = FocusNode();
   final TextEditingController dishNameController = TextEditingController();
+  IngredientBenefitsMap ingredientBenefitsMap = IngredientBenefitsMap();
+  final SkinAnalysisCache skinCache = SkinAnalysisCache();
 
   bool isSkinAnalysis = false;
 
@@ -396,6 +399,51 @@ CRITICAL REQUIREMENTS:
         analysisStatus = 'Analyzing skin condition/allergy...';
       });
 
+      final imageHash = skinCache.generateImageHash(imageFile);
+
+      final exactMatch = await skinCache.checkExactImageMatch(imageHash);
+
+      if (exactMatch != null) {
+        setState(() {
+          loading = false;
+          analysisStatus = '';
+        });
+
+        navigateToSkinResults(exactMatch, imageFile, fromCache: true);
+        return;
+      }
+
+      setState(() {
+        analysisStatus = 'Comparing with previous conditions...';
+      });
+
+      final similarMatch = await skinCache.checkSimilarSkinCondition(
+        imageFile,
+        apiKey,
+      );
+
+      if (similarMatch != null) {
+        final matchConfidence = similarMatch['matchConfidence'] ?? 0.0;
+        final matchReasoning = similarMatch['matchReasoning'] ?? '';
+
+        setState(() {
+          loading = false;
+          analysisStatus = '';
+        });
+
+        showSnackBar(
+          'Found similar condition (${(matchConfidence * 100).toInt()}% match): ${matchReasoning}',
+          Colors.blue,
+        );
+
+        navigateToSkinResults(similarMatch, imageFile, fromCache: true);
+        return;
+      }
+
+      setState(() {
+        analysisStatus = 'Analyzing skin condition/allergy...';
+      });
+
       final model = GenerativeModel(model: 'gemini-2.5-pro', apiKey: apiKey);
       final imageBytes = await imageFile.readAsBytes();
 
@@ -415,7 +463,21 @@ CRITICAL REQUIREMENTS:
         analysisStatus = '';
       });
 
-      await showSkinConditionSelectionScreen(skinOptions, imageFile);
+      if (skinOptions.isNotEmpty) {
+        skinOptions.sort((a, b) => b.confidence.compareTo(a.confidence));
+
+        await showSkinConditionSelectionScreen(
+          skinOptions,
+          imageFile,
+          imageHash,
+        );
+      } else {
+        showSnackBar('Unable to analyze skin condition', Colors.red);
+        setState(() {
+          image = null;
+          loading = false;
+        });
+      }
     } catch (e) {
       setState(() {
         loading = false;
@@ -472,6 +534,7 @@ CRITICAL REQUIREMENTS:
   Future<void> showSkinConditionSelectionScreen(
     List<SkinConditionOption> options,
     File imageFile,
+    String imageHash,
   ) async {
     final selectedOption = await Navigator.push<SkinConditionOption>(
       context,
@@ -484,7 +547,6 @@ CRITICAL REQUIREMENTS:
               },
               onManualEntry: () {
                 Navigator.pop(context, null);
-
                 showSnackBar(
                   'Please consult a healthcare professional for accurate diagnosis',
                   Colors.blue,
@@ -496,7 +558,10 @@ CRITICAL REQUIREMENTS:
 
     if (selectedOption != null) {
       final skinData = selectedOption.toJson();
-      navigateToSkinResults(skinData, imageFile);
+
+      await skinCache.saveSkinAnalysisCache(skinData, imageFile, imageHash);
+
+      navigateToSkinResults(skinData, imageFile, fromCache: false);
     } else {
       setState(() {
         image = null;
@@ -507,9 +572,12 @@ CRITICAL REQUIREMENTS:
 
   void navigateToSkinResults(
     Map<String, dynamic> skinData,
-    File imageFile,
-  ) async {
-    // await saveSkinToFirebase(skinData, imageFile);
+    File imageFile, {
+    bool fromCache = false,
+  }) async {
+    if (fromCache) {
+      print('Using previous analysis result');
+    }
 
     bool shouldReset = await Navigator.push(
       context,
@@ -519,13 +587,15 @@ CRITICAL REQUIREMENTS:
       ),
     );
 
-    saveSkinToFirebase(skinData, imageFile)
-        .catchError((e) {
-          print('Background save error for skin analysis: $e');
-        })
-        .then((_) {
-          print('Skin analysis saved successfully to Firebase');
-        });
+    if (!fromCache) {
+      saveSkinToFirebase(skinData, imageFile)
+          .catchError((e) {
+            print('Background save error for skin analysis: $e');
+          })
+          .then((_) {
+            print('Skin analysis saved successfully to Firebase');
+          });
+    }
 
     if (shouldReset == true) {
       resetCameraState();
@@ -723,8 +793,25 @@ Return JSON with this exact structure (DO NOT include allergens):
 {
   "dishName": "Specific product brand and name (e.g., 'Lucky Me! Pancit Canton Sweet Style')",
   "description": "Brief description including product category, key features, and brand information. Note if international product.",
-  "ingredients": ["ingredient1", "ingredient2", "ingredient3"]
+  "ingredients": [
+    {
+      "name": "ingredient1",
+      "benefits": "Health benefits, nutritional value, and key properties for health-conscious individuals"
+    },
+    {
+      "name": "ingredient2",
+      "benefits": "Health benefits, nutritional value, and key properties for health-conscious individuals"
+    }
+  ]
 }
+
+INGREDIENT BENEFITS GUIDELINES:
+- Include nutritional highlights (vitamins, minerals, protein, fiber, etc.)
+- Mention health benefits (heart health, immunity, digestion, etc.)
+- Note any concerns (allergens, high sodium, processed, etc.)
+- Keep each benefit description concise (1-2 sentences)
+- For processed ingredients, be honest about nutritional limitations
+
 
 CRITICAL REQUIREMENTS:
 1. Focus PRIMARILY on Filipino food products but analyze international ones too
@@ -751,12 +838,20 @@ CRITICAL IDENTIFICATION RULES:
    - For soy-based sauces, you MUST list "soy sauce"
    - For creamy soups, you MUST list "milk" or "cream"
 
+**CRITICAL: LIST EACH INGREDIENT INDIVIDUALLY**
+- **NEVER use generic terms like "mixed seafood", "mixed vegetables", "assorted vegetables", or "various seafood"**
+- **ALWAYS list each specific ingredient separately:** 
+  - Instead of "mixed seafood" → list "shrimp, squid, mussels, fish"
+  - Instead of "mixed vegetables" → list "cabbage, carrots, green beans, eggplant"
+  - Instead of "assorted nuts" → list "cashews, almonds, peanuts"
+- **Be as specific as possible with each ingredient you can visually identify**
+
 FILIPINO DISHES - VISUAL IDENTIFICATION WITH ALLERGEN FOCUS (PRIMARY FOCUS):
 
 KARE-KARE:
 - Thick, orange/brown peanut-based sauce - **MUST include "peanut butter" in ingredients**
 - Usually has oxtail, beef, or tripe
-- Vegetables: bok choy, string beans, eggplant
+- Vegetables: List individually: "bok choy", "string beans", "eggplant" (NOT "mixed vegetables")
 - Served with bagoong on the side - **MUST specify "shrimp paste" or "fish paste"**
 
 ADOBO:
@@ -766,52 +861,111 @@ ADOBO:
 
 SINIGANG:
 - Clear, sour broth - may contain **fish sauce (patis)** - list if present
-- Vegetables clearly visible in soup
+- Vegetables clearly visible: List individually: "radish", "tomatoes", "water spinach", "long beans" (NOT "mixed vegetables")
 
 GINILING (Ground Pork/Beef):
 - Small, minced/ground meat pieces
 - Usually contains soy sauce - **MUST list "soy sauce"**
 - May have oyster sauce - **MUST list "oyster sauce" (contains shellfish)**
+- List vegetables individually: "carrots", "potatoes", "peas" (NOT "mixed vegetables")
 
 DINENGDENG:
 - Clear broth with bagoong - **MUST specify "fish paste (bagoong)" or "shrimp paste (bagoong)"**
-- Mixed vegetables clearly visible
+- List vegetables individually: "bitter melon", "squash", "okra", "eggplant" (NOT "mixed vegetables")
 
 PINAKBET:
-- Mixed vegetables with bagoong - **MUST specify "shrimp paste" or "fish paste"**
+- List vegetables individually: "bitter melon", "eggplant", "squash", "okra", "tomatoes" (NOT "mixed vegetables")
+- With bagoong - **MUST specify "shrimp paste" or "fish paste"**
 
 BICOL EXPRESS:
 - Creamy, spicy dish - **MUST list "coconut milk" and "chili peppers"**
+- List other ingredients: "pork", "shrimp paste", "garlic", "onions"
 
 LAING:
 - Taro leaves in coconut milk - **MUST list "coconut milk" and "taro leaves"**
+- List other ingredients: "coconut cream", "chili peppers", "ginger"
+
+SEAFOOD DISHES:
+- **NEVER say "mixed seafood" or "assorted seafood"**
+- **ALWAYS list each type separately:** "shrimp", "squid", "mussels", "clams", "fish", "crab"
+- Be specific with fish types if identifiable: "tilapia", "bangus", "tuna"
+
+VEGETABLE DISHES:
+- **NEVER say "mixed vegetables" or "assorted vegetables"**
+- **ALWAYS list each vegetable separately:** "cabbage", "carrots", "green beans", "bell peppers", "onions"
 
 INTERNATIONAL FOODS (Secondary focus):
 - If you identify chocolate cake, croissant, pasta, etc., still analyze thoroughly
 - Note in description that this is outside primary Filipino cuisine expertise
-- Still extract all ingredients accurately
+- Still extract all ingredients accurately and individually
 
 INGREDIENT IDENTIFICATION RULES:
 1. Base ingredient identification on VISIBLE ingredients and the KNOWN TRADITIONAL RECIPE of the identified dish
 2. Include all common seasonings, sauces, and oils
-3. **Your most important task is to ensure allergenic components are explicitly named.** Do not just say "sauce"; specify "peanut sauce" or "peanut butter"
-4. For international dishes, research typical ingredients used
+3. **List EVERY ingredient separately - no grouping or generic terms**
+4. **Your most important task is to ensure allergenic components are explicitly named.** Do not just say "sauce"; specify "peanut sauce" or "peanut butter"
+5. For international dishes, research typical ingredients used
+6. **If you can see multiple vegetables or seafood items, list each one individually**
 
 Return JSON with this exact structure (DO NOT include allergens):
 {
   "dishName": "Exact dish name (prioritize Filipino dishes)",
   "description": "Brief description of the dish characteristics and preparation method, mentioning key flavors. Note if this is outside primary Filipino cuisine focus.",
-  "ingredients": ["ingredient1", "ingredient2", "ingredient3", "etc"]
+  "ingredients": [
+    {
+      "name": "ingredient1",
+      "benefits": "Nutritional value, health benefits, and educational information for health-conscious individuals"
+    },
+    {
+      "name": "ingredient2",
+      "benefits": "Nutritional value, health benefits, and educational information for health-conscious individuals"
+    }
+  ]
 }
+
+INGREDIENT BENEFITS GUIDELINES:
+- Highlight nutritional content (vitamins, minerals, macronutrients)
+- Mention specific health benefits (anti-inflammatory, antioxidant properties, etc.)
+- Include traditional medicinal uses if applicable (especially for Filipino ingredients)
+- **CRITICAL: For allergenic ingredients, ALWAYS provide BOTH health benefits AND allergen warning**
+- **DO NOT skip health benefits just because it's an allergen - balance both aspects**
+- Note potential concerns (high sodium, saturated fat, allergens)
+- Be specific: "Rich in Vitamin C and antioxidants" rather than "healthy"
+- For Filipino ingredients, mention cultural significance if relevant
+
+EXAMPLES OF PROPER ALLERGENIC INGREDIENT BENEFITS:
+
+- Peanuts: "Excellent source of plant-based protein, healthy monounsaturated fats, and vitamin E. Rich in niacin, folate, and magnesium which support heart health and energy metabolism. Contains resveratrol, a powerful antioxidant. Major allergen - can cause severe reactions in sensitive individuals."
+
+- Shrimp: "Excellent source of high-quality protein and omega-3 fatty acids. Rich in selenium, vitamin B12, and astaxanthin (powerful antioxidant). Low in calories and supports heart, brain, and immune health. Contains iodine for thyroid function. Shellfish allergen - avoid if allergic."
+
+- Eggs: "Complete protein source with all essential amino acids. Rich in choline for brain health, vitamin D for bones, and lutein for eye health. Contains B vitamins and selenium. One of the most nutritious foods available. Common allergen, especially in children."
+
+- Milk: "Excellent source of calcium, vitamin D, and high-quality protein. Supports bone health and muscle growth. Rich in B vitamins and phosphorus. Contains beneficial probiotics in fermented forms. Dairy allergen - those with lactose intolerance or milk allergy should avoid."
+
+- Soy sauce: "Adds rich umami flavor to dishes. Contains some antioxidants and beneficial compounds from fermentation. Source of amino acids and minerals. High in sodium - use moderately. Contains soy allergen."
+
+- Fish (general): "Excellent source of omega-3 fatty acids (EPA and DHA) crucial for heart and brain health. High-quality protein with all essential amino acids. Rich in vitamin D, B vitamins, selenium, and iodine. Supports cognitive function and reduces inflammation. Fish allergen."
+
+- Cashews: "Rich in heart-healthy monounsaturated fats and copper. Good source of magnesium for bone health and iron for blood health. Contains antioxidants and supports immune function. Lower in fat than most nuts. Tree nut allergen."
+
+- Wheat flour: "Source of complex carbohydrates for energy. Whole wheat provides fiber, B vitamins, iron, and magnesium. Enriched versions contain added nutrients. Supports digestive health when whole grain. Contains gluten - allergen for those with celiac disease or wheat allergy."
+
+- Oyster sauce: "Rich umami flavor enhancer. Contains zinc, iron, and vitamin B12 from oysters. Provides minerals that support immune function and metabolism. High in sodium - use in moderation. Shellfish allergen derived from oysters."
+
+- Bagoong (shrimp paste): "Traditional Filipino fermented condiment rich in protein and umami flavor. Contains beneficial probiotics from fermentation. Source of calcium and omega-3 fatty acids. High in sodium - use sparingly. Shellfish allergen from fermented shrimp."
+
+- Coconut milk: "Rich in medium-chain triglycerides (MCTs) that provide quick energy. Contains lauric acid with antimicrobial properties. Good source of manganese, copper, and iron. Adds creamy texture and tropical flavor. While generally safe, some individuals may have coconut allergies."
 
 CRITICAL REQUIREMENTS:
 1. PRIMARY FOCUS on Filipino cuisine identification
 2. Focus ONLY on dish identification and ingredient extraction
 3. Do NOT analyze allergens in this step
-4. **Ensure base allergenic ingredients (peanuts, shrimp, fish, soy, milk, etc.) are explicitly listed in the ingredients array.** This is mandatory
-5. If international dish, still analyze but note in description
+4. **List EVERY ingredient individually - absolutely NO generic terms like "mixed vegetables" or "mixed seafood"**
+5. **Ensure base allergenic ingredients (peanuts, shrimp, fish, soy, milk, etc.) are explicitly listed in the ingredients array.** This is mandatory
+6. **Provide health benefits for EACH individual ingredient**
+7. If international dish, still analyze but note in description
 ''';
-
   String getAllergenAnalysisPrompt(List<String> userAllergens) {
     String userAllergensText =
         userAllergens.isNotEmpty ? userAllergens.join(', ') : '';
@@ -987,6 +1141,9 @@ CRITICAL REQUIREMENTS:
   String get ingredientSimplificationPrompt => '''
 You are an expert ingredient name standardizer. Your task is to convert complex ingredient names into simple, recognizable names while preserving allergen-relevant context.
 
+**CRITICAL**: You MUST return a JSON array with BOTH "original" and "simplified" for EVERY ingredient, maintaining the EXACT same order.
+
+
 SIMPLIFICATION RULES:
 1. **PRESERVE FOOD CONTEXT**: Keep recognizable food names intact
    - CORRECT: "Lumpia wrapper" -> "lumpia wrapper"
@@ -1020,9 +1177,12 @@ Return JSON with this exact structure:
 }
 
 CRITICAL REQUIREMENTS:
-1. Keep common food names recognizable (lumpia wrapper, soy sauce, fish sauce)
-2. Only simplify overly technical or marketing terms
-3. Preserve allergen context within food names
+1. Return ALL ingredients in the SAME ORDER as provided
+2. ALWAYS include both "original" and "simplified" fields
+3. If no simplification needed, return the same name for both
+4. Keep common food names recognizable (lumpia wrapper, soy sauce, fish sauce)
+5. Only simplify overly technical or marketing terms
+6. Preserve allergen context within food names
 ''';
 
   String get multiOptionOCRPrompt => '''
@@ -1050,14 +1210,31 @@ Return JSON with this exact structure (DO NOT include allergens):
     {
       "dishName": "Specific product brand and name",
       "description": "Brief description including product category",
-      "ingredients": ["ingredient1", "ingredient2", "ingredient3"],
-      "confidence": 0.95
+  "ingredients": [
+        {
+          "name": "ingredient1",
+          "benefits": "Health benefits and nutritional information"
+        },
+        {
+          "name": "ingredient2",
+          "benefits": "Health benefits and nutritional information"
+        }
+      ],
+            "confidence": 0.95
     },
     {
       "dishName": "Alternative interpretation",
       "description": "Different possible product identification",
-      "ingredients": ["ingredient1", "ingredient2", "ingredient3"],
-      "confidence": 0.75
+  "ingredients": [
+        {
+          "name": "ingredient1",
+          "benefits": "Health benefits and nutritional information"
+        },
+        {
+          "name": "ingredient2",
+          "benefits": "Health benefits and nutritional information"
+        }
+      ],      "confidence": 0.75
     }
   ]
 }
@@ -1088,14 +1265,32 @@ Return JSON with this exact structure (DO NOT include allergens):
     {
       "dishName": "Most likely Filipino dish name",
       "description": "Brief description of visual characteristics",
-      "ingredients": ["ingredient1", "ingredient2", "ingredient3"],
-      "confidence": 0.90
+ "ingredients": [
+        {
+          "name": "ingredient1",
+          "benefits": "Nutritional value and health benefits"
+        },
+        {
+          "name": "ingredient2",
+          "benefits": "Nutritional value and health benefits"
+        }
+      ],
+            "confidence": 0.90
     },
     {
       "dishName": "Alternative Filipino dish interpretation",
       "description": "Different possible dish identification",
-      "ingredients": ["ingredient1", "ingredient2", "ingredient3"],
-      "confidence": 0.75
+ "ingredients": [
+        {
+          "name": "ingredient1",
+          "benefits": "Nutritional value and health benefits"
+        },
+        {
+          "name": "ingredient2",
+          "benefits": "Nutritional value and health benefits"
+        }
+      ],
+            "confidence": 0.75
     }
   ]
 }
@@ -1121,10 +1316,85 @@ CRITICAL REQUIREMENTS:
     try {
       setState(() {
         isOCRAnalysis = true;
-        analysisStatus = 'Generating dish options...';
+        analysisStatus = 'Checking cache...';
       });
 
       final model = GenerativeModel(model: 'gemini-2.5-pro', apiKey: apiKey);
+
+      final quickExtractPrompt = '''
+Extract ONLY the product name from this OCR text. Return just the product name, nothing else.
+
+OCR TEXT:
+"$ocrText"
+
+Return only the product name.
+''';
+
+      final quickResponse = await model.generateContent([
+        Content.text(quickExtractPrompt),
+      ]);
+
+      String possibleDishName = (quickResponse.text ?? '').trim();
+
+      String cacheKey = allergenAnalysis.generateCacheKey(possibleDishName);
+      var cachedData = await allergenAnalysis.checkFoodCache(cacheKey);
+
+      if (cachedData != null) {
+        setState(() {
+          dishName = cachedData['dishName'] ?? possibleDishName;
+          description = cachedData['description'] ?? '';
+          ingredients = List<String>.from(cachedData['ingredients'] ?? []);
+          analysisStatus = 'Loading from cache...';
+        });
+
+        ingredientBenefitsMap = IngredientBenefitsMap();
+        if (cachedData.containsKey('ingredientBenefits')) {
+          var benefitsData = cachedData['ingredientBenefits'];
+          if (benefitsData is Map) {
+            Map<String, dynamic> benefits = Map<String, dynamic>.from(
+              benefitsData,
+            );
+            benefits.forEach((key, value) {
+              ingredientBenefitsMap.addBenefit(
+                key.toString(),
+                value.toString(),
+              );
+            });
+          }
+        }
+
+        List<AllergenInfo> cachedAllergens =
+            (cachedData['allergens'] as List? ?? [])
+                .map((a) => AllergenInfo.fromJson(a))
+                .toList();
+
+        List<IngredientColorInfo> ingredientColors = await allergenAnalysis
+            .computeIngredientColors(ingredients, cachedAllergens);
+
+        for (AllergenInfo allergen in cachedAllergens) {
+          allergen.ingredientColors.clear();
+          allergen.ingredientColors.addAll(ingredientColors);
+        }
+
+        setState(() {
+          allergens = cachedAllergens;
+          loading = false;
+          analysisStatus = '';
+        });
+
+        navigateToResults();
+
+        saveToFirebase(imageFile).catchError((e) {
+          print('Background save error: $e');
+        });
+
+        return;
+      }
+
+      setState(() {
+        analysisStatus = 'Generating dish options...';
+      });
+
       final ingredientPrompt = '''$multiOptionOCRPrompt
 
 EXTRACTED TEXT FROM FOOD LABEL:
@@ -1189,6 +1459,72 @@ Generate 3-4 possible dish interpretations with confidence scores.
         ingredientResponse.text ?? '',
       );
 
+      if (dishOptions.isNotEmpty) {
+        dishOptions.sort((a, b) => b.confidence.compareTo(a.confidence));
+
+        String cacheKey = allergenAnalysis.generateCacheKey(
+          dishOptions.first.dishName,
+        );
+        var cachedData = await allergenAnalysis.checkFoodCache(cacheKey);
+
+        if (cachedData != null) {
+          setState(() {
+            dishName = cachedData['dishName'] ?? dishOptions.first.dishName;
+            description = cachedData['description'] ?? '';
+            ingredients = List<String>.from(cachedData['ingredients'] ?? []);
+            analysisStatus = 'Loading from cache...';
+          });
+
+          ingredientBenefitsMap = IngredientBenefitsMap();
+          if (cachedData.containsKey('ingredientBenefits')) {
+            var benefitsData = cachedData['ingredientBenefits'];
+            if (benefitsData is Map) {
+              Map<String, dynamic> benefits = Map<String, dynamic>.from(
+                benefitsData,
+              );
+              benefits.forEach((key, value) {
+                ingredientBenefitsMap.addBenefit(
+                  key.toString(),
+                  value.toString(),
+                );
+              });
+            }
+          }
+
+          List<AllergenInfo> cachedAllergens =
+              (cachedData['allergens'] as List? ?? [])
+                  .map((a) => AllergenInfo.fromJson(a))
+                  .toList();
+
+          List<IngredientColorInfo> ingredientColors = await allergenAnalysis
+              .computeIngredientColors(ingredients, cachedAllergens);
+
+          for (AllergenInfo allergen in cachedAllergens) {
+            allergen.ingredientColors.clear();
+            allergen.ingredientColors.addAll(ingredientColors);
+          }
+
+          setState(() {
+            allergens = cachedAllergens;
+            loading = false;
+            analysisStatus = '';
+          });
+
+          showSnackBar(
+            'Found previous analysis - loading instantly!',
+            Colors.green,
+          );
+
+          navigateToResults();
+
+          saveToFirebase(imageFile).catchError((e) {
+            print('Background save error: $e');
+          });
+
+          return;
+        }
+      }
+
       setState(() {
         loading = false;
         analysisStatus = '';
@@ -1247,18 +1583,26 @@ Generate 3-4 possible dish interpretations with confidence scores.
     });
 
     try {
+      ingredientBenefitsMap = IngredientBenefitsMap();
+      for (var ingWithBenefits in selectedOption.ingredientsWithBenefits) {
+        ingredientBenefitsMap.addBenefit(
+          ingWithBenefits.name,
+          ingWithBenefits.benefits,
+        );
+      }
+
       String cacheKey = allergenAnalysis.generateCacheKey(
         selectedOption.dishName,
       );
       print(
-        '🔑 Generated cache key: $cacheKey for dish: ${selectedOption.dishName}',
+        ' Generated cache key: $cacheKey for dish: ${selectedOption.dishName}',
       );
 
       var cachedData = await allergenAnalysis.checkFoodCache(cacheKey);
 
       if (cachedData != null) {
         setState(() {
-          analysisStatus = 'Loading from cache...';
+          analysisStatus = 'Analyzing...';
           ingredients = List<String>.from(cachedData['ingredients'] ?? []);
         });
 
@@ -1295,11 +1639,29 @@ Generate 3-4 possible dish interpretations with confidence scores.
       setState(() {
         analysisStatus = 'Simplifying ingredients...';
       });
+      List<String> originalIngredients =
+          selectedOption.ingredientsWithBenefits.map((e) => e.name).toList();
 
       List<String> simplifiedIngredients = await simplifyIngredientNames(
-        selectedOption.ingredients,
+        originalIngredients,
         model,
       );
+
+      IngredientBenefitsMap updatedBenefitsMap = IngredientBenefitsMap();
+      for (
+        int i = 0;
+        i < originalIngredients.length && i < simplifiedIngredients.length;
+        i++
+      ) {
+        String originalName = originalIngredients[i];
+        String simplifiedName = simplifiedIngredients[i];
+        String? benefit = ingredientBenefitsMap.getBenefit(originalName);
+
+        if (benefit != null) {
+          updatedBenefitsMap.addBenefit(simplifiedName, benefit);
+        }
+      }
+      ingredientBenefitsMap = updatedBenefitsMap;
 
       setState(() {
         ingredients = simplifiedIngredients;
@@ -1360,6 +1722,76 @@ Generate 3-4 possible dish interpretations with confidence scores.
     );
   }
 
+  Future<void> ensureAllIngredientBenefits(
+    List<String> ingredients,
+    GenerativeModel model,
+  ) async {
+    List<String> missingBenefits = [];
+
+    for (String ingredient in ingredients) {
+      String? benefit = ingredientBenefitsMap.getBenefit(ingredient);
+      if (benefit == null || benefit.isEmpty) {
+        missingBenefits.add(ingredient);
+      }
+    }
+
+    if (missingBenefits.isEmpty) return;
+
+    try {
+      final benefitsPrompt = '''
+You are a nutritional expert. For each ingredient provided, give detailed health benefits in 2-3 sentences.
+
+INGREDIENTS: ${missingBenefits.join(', ')}
+
+Return JSON with this structure:
+{
+  "benefits": [
+    {
+      "name": "ingredient name",
+      "benefits": "Detailed nutritional value, health benefits, vitamins, minerals."
+    }
+  ]
+}
+
+GUIDELINES:
+- Highlight nutritional content (vitamins, minerals, macronutrients)
+- Mention specific health benefits (anti-inflammatory, antioxidant, etc.)
+- Note potential allergens if applicable
+- Be specific and educational
+- Keep each benefit description 2-3 sentences
+- Focus on facts, no promotional language
+''';
+
+      final benefitsResponse = await model.generateContent([
+        Content.text(benefitsPrompt),
+      ]);
+
+      String responseText = benefitsResponse.text ?? '';
+      String cleanResponse = responseText;
+
+      if (responseText.contains('```json')) {
+        cleanResponse = responseText.split('```json')[1].split('```')[0];
+      } else if (responseText.contains('```')) {
+        cleanResponse = responseText.split('```')[1];
+      }
+
+      final jsonData = json.decode(cleanResponse.trim());
+      final List<dynamic> benefitsList = jsonData['benefits'] ?? [];
+
+      for (var item in benefitsList) {
+        if (item is Map<String, dynamic>) {
+          String name = item['name']?.toString() ?? '';
+          String benefits = item['benefits']?.toString() ?? '';
+          if (name.isNotEmpty && benefits.isNotEmpty) {
+            ingredientBenefitsMap.addBenefit(name, benefits);
+          }
+        }
+      }
+    } catch (e) {
+      print('Error fetching missing benefits: $e');
+    }
+  }
+
   Future<List<String>> simplifyIngredientNames(
     List<String> originalIngredients,
     GenerativeModel model,
@@ -1383,15 +1815,43 @@ ${originalIngredients.join(', ')}
       List<dynamic> simplifications =
           simplificationData['simplifiedIngredients'] ?? [];
 
+      Map<String, String> originalToSimplified = {};
+
       for (var item in simplifications) {
-        if (item is Map<String, dynamic> && item['simplified'] != null) {
-          simplifiedIngredients.add(item['simplified'].toString().trim());
+        if (item is Map<String, dynamic> &&
+            item['original'] != null &&
+            item['simplified'] != null) {
+          String original = item['original'].toString().trim();
+          String simplified = item['simplified'].toString().trim();
+          originalToSimplified[original.toLowerCase()] = simplified;
+          simplifiedIngredients.add(simplified);
         }
       }
 
-      if (simplifiedIngredients.isEmpty) {
+      if (simplifiedIngredients.isEmpty ||
+          simplifiedIngredients.length != originalIngredients.length) {
         return originalIngredients;
       }
+
+      IngredientBenefitsMap updatedBenefitsMap = IngredientBenefitsMap();
+
+      for (String originalIngredient in originalIngredients) {
+        String originalLower = originalIngredient.toLowerCase().trim();
+        String? simplifiedName = originalToSimplified[originalLower];
+
+        if (simplifiedName != null) {
+          String? benefit = ingredientBenefitsMap.getBenefit(
+            originalIngredient,
+          );
+          if (benefit != null && benefit.isNotEmpty) {
+            updatedBenefitsMap.addBenefit(simplifiedName, benefit);
+          } else {
+            print('No benefit found for: "$originalIngredient"');
+          }
+        }
+      }
+
+      ingredientBenefitsMap = updatedBenefitsMap;
 
       return simplifiedIngredients;
     } catch (e) {
@@ -1532,6 +1992,7 @@ Analyze each ingredient carefully and identify allergens.
               onIngredientsChanged: updateAllergens,
               isOCRAnalysis: isOCRAnalysis,
               isFromHistory: false,
+              ingredientBenefitsMap: ingredientBenefitsMap,
             ),
       ),
     );
@@ -1593,12 +2054,14 @@ Make the description:
       return;
     }
 
-    final enteredIngredients =
-        ingredientText
-            .split(',')
-            .map((ingredient) => ingredient.trim())
-            .where((ingredient) => ingredient.isNotEmpty)
-            .toList();
+    final rawIngredients = ingredientText.split(',');
+    final enteredIngredients = <String>[];
+    for (int i = 0; i < rawIngredients.length; i++) {
+      final trimmed = rawIngredients[i].trim();
+      if (trimmed.isNotEmpty) {
+        enteredIngredients.add(trimmed);
+      }
+    }
 
     setState(() {
       loading = true;
@@ -1609,31 +2072,37 @@ Make the description:
     });
 
     try {
-      String cacheKey = allergenAnalysis.generateCacheKey(dishNameText);
-
-      var cachedData = await allergenAnalysis.checkFoodCache(cacheKey);
+      final cacheKey = allergenAnalysis.generateCacheKey(dishNameText);
+      final cachedData = await allergenAnalysis.checkFoodCache(cacheKey);
 
       if (cachedData != null) {
-        setState(() {
-          ingredients = List<String>.from(cachedData['ingredients'] ?? []);
-          description = cachedData['description'] ?? '';
-          analysisStatus = 'Loading from cache...';
-        });
+        final cachedIngredients = List<String>.from(
+          cachedData['ingredients'] ?? [],
+        );
+        final cachedDescription = cachedData['description'] ?? '';
+        final cachedAllergensRaw = cachedData['allergens'] as List? ?? [];
 
-        List<AllergenInfo> cachedAllergens =
-            (cachedData['allergens'] as List? ?? [])
-                .map((a) => AllergenInfo.fromJson(a))
-                .toList();
+        final cachedAllergens = <AllergenInfo>[];
+        for (int i = 0; i < cachedAllergensRaw.length; i++) {
+          final allergen = AllergenInfo.fromJson(cachedAllergensRaw[i]);
+          cachedAllergens.add(allergen);
+        }
 
-        List<IngredientColorInfo> ingredientColors = await allergenAnalysis
-            .computeIngredientColors(ingredients, cachedAllergens);
+        final ingredientColors = await allergenAnalysis.computeIngredientColors(
+          cachedIngredients,
+          cachedAllergens,
+        );
 
-        for (AllergenInfo allergen in cachedAllergens) {
-          allergen.ingredientColors.clear();
-          allergen.ingredientColors.addAll(ingredientColors);
+        for (int i = 0; i < cachedAllergens.length; i++) {
+          cachedAllergens[i].ingredientColors.clear();
+          for (int j = 0; j < ingredientColors.length; j++) {
+            cachedAllergens[i].ingredientColors.add(ingredientColors[j]);
+          }
         }
 
         setState(() {
+          ingredients = cachedIngredients;
+          description = cachedDescription;
           allergens = cachedAllergens;
           loading = false;
           analysisStatus = '';
@@ -1641,22 +2110,73 @@ Make the description:
         });
 
         navigateToResults();
-        saveToFirebase(
-          null,
-        ).catchError((e) => print('Background save error: $e'));
-
+        saveToFirebase(null).catchError((_) {});
         dishNameController.clear();
         ingredientController.clear();
         return;
       }
 
-      final model = GenerativeModel(model: 'gemini-2.5-pro', apiKey: apiKey);
+      final flashModel = GenerativeModel(
+        model: 'gemini-1.5-flash',
+        apiKey: apiKey,
+      );
+
+      setState(() {
+        analysisStatus = 'Analyzing ingredients...';
+      });
+
+      final benefitsPrompt = '''
+You are a nutritional expert. For each ingredient provided, give detailed health benefits in 2-3 sentences.
+
+INGREDIENTS: ${enteredIngredients.join(', ')}
+
+Return JSON with this structure:
+{
+  "benefits": [
+    {
+      "name": "ingredient name",
+      "benefits": "Detailed nutritional value, health benefits, vitamins, minerals."
+    }
+  ]
+}
+
+GUIDELINES:
+- Highlight nutritional content (vitamins, minerals, macronutrients)
+- Mention specific health benefits (anti-inflammatory, antioxidant, etc.)
+- Note potential allergens if applicable
+- Be specific and educational
+- Keep each benefit description 2-3 sentences
+- Focus on facts, no promotional language
+''';
+
+      final benefitsResponse = await flashModel.generateContent([
+        Content.text(benefitsPrompt),
+      ]);
+
+      final benefitsData = await parseIngredientResponse(
+        benefitsResponse.text ?? '',
+      );
+      final benefitsList = benefitsData['benefits'] ?? [];
+
+      ingredientBenefitsMap = IngredientBenefitsMap();
+
+      for (int i = 0; i < benefitsList.length; i++) {
+        final item = benefitsList[i];
+        if (item is Map<String, dynamic>) {
+          final name = item['name']?.toString() ?? '';
+          final benefits = item['benefits']?.toString() ?? '';
+          if (name.isNotEmpty && benefits.isNotEmpty) {
+            ingredientBenefitsMap.addBenefit(name, benefits);
+          }
+        }
+      }
 
       setState(() {
         analysisStatus = 'Simplifying ingredients...';
       });
 
-      List<String> simplifiedIngredients = await simplifyIngredientNames(
+      final model = GenerativeModel(model: 'gemini-2.5-pro', apiKey: apiKey);
+      final simplifiedIngredients = await simplifyIngredientNames(
         enteredIngredients,
         model,
       );
@@ -1693,9 +2213,7 @@ Make the description:
       });
 
       navigateToResults();
-      saveToFirebase(
-        null,
-      ).catchError((e) => print('Background save error: $e'));
+      saveToFirebase(null).catchError((_) {});
     } catch (e) {
       showSnackBar('Error analyzing ingredients: $e', Colors.red);
       setState(() {
@@ -1766,6 +2284,14 @@ Make the description:
         );
       }
 
+      Map<String, String> benefitsToSave = {};
+      for (String ingredient in ingredients) {
+        String? benefit = ingredientBenefitsMap.getBenefit(ingredient);
+        if (benefit != null && benefit.isNotEmpty) {
+          benefitsToSave[ingredient] = benefit;
+        }
+      }
+
       final scanData = {
         'dishName': dishName.isNotEmpty ? dishName : 'Unknown Product',
         'description':
@@ -1785,6 +2311,8 @@ Make the description:
                 )
                 .toList(),
         'ingredientColors': ingredientColors.map((ic) => ic.toJson()).toList(),
+        'ingredientBenefits': benefitsToSave,
+
         'imageUrl': imageUrl ?? '',
         'fileName': fileName ?? '',
         'isOCRAnalysis': isOCRAnalysis,
@@ -1893,6 +2421,29 @@ Make the description:
     Map<String, double> historicalSeverity = extractHistoricalSeverityData(
       scanData,
     );
+    IngredientBenefitsMap? benefitsMap;
+    if (scanData.containsKey('ingredientBenefits')) {
+      benefitsMap = IngredientBenefitsMap();
+      var benefitsData = scanData['ingredientBenefits'];
+      print('ingredientBenefits type: ${benefitsData.runtimeType}');
+      print('ingredientBenefits content: $benefitsData');
+
+      if (benefitsData is Map) {
+        Map<String, dynamic> benefits = Map<String, dynamic>.from(benefitsData);
+        print(
+          'Converted to Map<String, dynamic> with ${benefits.length} entries',
+        );
+
+        benefits.forEach((key, value) {
+          String ingredientKey = key.toString();
+          String benefitValue = value.toString();
+          benefitsMap!.addBenefit(ingredientKey, benefitValue);
+          print(
+            'Added benefit for "$ingredientKey": ${benefitValue.substring(0, benefitValue.length > 50 ? 50 : benefitValue.length)}...',
+          );
+        });
+      }
+    }
 
     Navigator.push(
       context,
@@ -1919,6 +2470,7 @@ Make the description:
                       .toList(),
               isFromHistory: true,
               historicalSeverityData: historicalSeverity,
+              ingredientBenefitsMap: benefitsMap,
             ),
       ),
     );
@@ -2805,5 +3357,17 @@ class AllergenInfo {
       default:
         return FontAwesomeIcons.triangleExclamation;
     }
+  }
+}
+
+class IngredientBenefitsMap {
+  Map<String, String> benefitsMap = {};
+
+  void addBenefit(String ingredient, String benefit) {
+    benefitsMap[ingredient.toLowerCase().trim()] = benefit;
+  }
+
+  String? getBenefit(String ingredient) {
+    return benefitsMap[ingredient.toLowerCase().trim()];
   }
 }

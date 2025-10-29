@@ -4,23 +4,58 @@ class DishOption {
   final String dishName;
   final String description;
   final List<String> ingredients;
+  final List<IngredientWithBenefits> ingredientsWithBenefits;
   final double confidence;
 
   DishOption({
     required this.dishName,
     required this.description,
     required this.ingredients,
+    List<IngredientWithBenefits>? ingredientsWithBenefits,
     required this.confidence,
-  });
+  }) : ingredientsWithBenefits = ingredientsWithBenefits ?? [];
 
   factory DishOption.fromJson(Map<String, dynamic> json) {
+    List<IngredientWithBenefits> ingredientsWithBenefits = [];
+    List<String> ingredientNames = [];
+
+    // Parse ingredients with benefits
+    if (json['ingredients'] is List) {
+      for (var item in json['ingredients']) {
+        if (item is Map<String, dynamic>) {
+          String name = item['name']?.toString() ?? '';
+          String benefits = item['benefits']?.toString() ?? '';
+
+          if (name.isNotEmpty) {
+            ingredientNames.add(name);
+            ingredientsWithBenefits.add(
+              IngredientWithBenefits(name: name, benefits: benefits),
+            );
+          }
+        } else if (item is String) {
+          ingredientNames.add(item);
+          ingredientsWithBenefits.add(
+            IngredientWithBenefits(name: item, benefits: ''),
+          );
+        }
+      }
+    }
+
     return DishOption(
-      dishName: json['dishName'] ?? 'Unknown Dish',
-      description: json['description'] ?? '',
-      ingredients: List<String>.from(json['ingredients'] ?? []),
+      dishName: json['dishName']?.toString() ?? 'Unknown',
+      description: json['description']?.toString() ?? '',
+      ingredients: ingredientNames,
+      ingredientsWithBenefits: ingredientsWithBenefits,
       confidence: (json['confidence'] ?? 0.5).toDouble(),
     );
   }
+}
+
+class IngredientWithBenefits {
+  final String name;
+  final String benefits;
+
+  IngredientWithBenefits({required this.name, required this.benefits});
 }
 
 class DishSelectionScreen extends StatefulWidget {
@@ -41,6 +76,7 @@ class DishSelectionScreen extends StatefulWidget {
 
 class _DishSelectionScreenState extends State<DishSelectionScreen> {
   int? selectedIndex;
+  bool showingBenefits = false;
 
   @override
   Widget build(BuildContext context) {
@@ -63,10 +99,7 @@ class _DishSelectionScreenState extends State<DishSelectionScreen> {
         ),
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(1),
-          child: Container(
-            color: Colors.grey[200],
-            height: 1,
-          ),
+          child: Container(color: Colors.grey[200], height: 1),
         ),
       ),
       body: Column(
@@ -76,9 +109,7 @@ class _DishSelectionScreenState extends State<DishSelectionScreen> {
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
               color: Colors.blue[50],
-              border: Border(
-                bottom: BorderSide(color: Colors.blue[100]!),
-              ),
+              border: Border(bottom: BorderSide(color: Colors.blue[100]!)),
             ),
             child: Row(
               children: [
@@ -104,7 +135,7 @@ class _DishSelectionScreenState extends State<DishSelectionScreen> {
               itemBuilder: (context, index) {
                 final option = widget.options[index];
                 final isSelected = selectedIndex == index;
-                return _buildOptionCard(option, index, isSelected);
+                return buildOptionCard(option, index, isSelected);
               },
             ),
           ),
@@ -115,7 +146,16 @@ class _DishSelectionScreenState extends State<DishSelectionScreen> {
     );
   }
 
-  Widget _buildOptionCard(DishOption option, int index, bool isSelected) {
+  Widget buildOptionCard(DishOption option, int index, bool isSelected) {
+    final hasDetailedBenefits =
+        option.ingredientsWithBenefits.isNotEmpty &&
+        option.ingredientsWithBenefits.any(
+          (ing) =>
+              ing.benefits.isNotEmpty &&
+              ing.benefits != 'No nutritional information available.' &&
+              ing.benefits != 'Nutritional information not available.',
+        );
+
     return GestureDetector(
       onTap: () => setState(() => selectedIndex = index),
       child: AnimatedContainer(
@@ -130,9 +170,10 @@ class _DishSelectionScreenState extends State<DishSelectionScreen> {
           ),
           boxShadow: [
             BoxShadow(
-              color: isSelected
-                  ? const Color(0xFF00BCD4).withOpacity(0.2)
-                  : Colors.black.withOpacity(0.05),
+              color:
+                  isSelected
+                      ? const Color(0xFF00BCD4).withOpacity(0.2)
+                      : Colors.black.withOpacity(0.05),
               blurRadius: isSelected ? 12 : 4,
               offset: Offset(0, isSelected ? 4 : 2),
             ),
@@ -169,7 +210,10 @@ class _DishSelectionScreenState extends State<DishSelectionScreen> {
                           style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.w700,
-                            color: isSelected ? const Color(0xFF00BCD4) : Colors.black87,
+                            color:
+                                isSelected
+                                    ? const Color(0xFF00BCD4)
+                                    : Colors.black87,
                           ),
                         ),
                         const SizedBox(height: 4),
@@ -181,10 +225,14 @@ class _DishSelectionScreenState extends State<DishSelectionScreen> {
                                 vertical: 4,
                               ),
                               decoration: BoxDecoration(
-                                color: getConfidenceColor(option.confidence).withOpacity(0.1),
+                                color: getConfidenceColor(
+                                  option.confidence,
+                                ).withOpacity(0.1),
                                 borderRadius: BorderRadius.circular(8),
                                 border: Border.all(
-                                  color: getConfidenceColor(option.confidence).withOpacity(0.3),
+                                  color: getConfidenceColor(
+                                    option.confidence,
+                                  ).withOpacity(0.3),
                                 ),
                               ),
                               child: Row(
@@ -193,7 +241,9 @@ class _DishSelectionScreenState extends State<DishSelectionScreen> {
                                   Icon(
                                     Icons.stars_rounded,
                                     size: 14,
-                                    color: getConfidenceColor(option.confidence),
+                                    color: getConfidenceColor(
+                                      option.confidence,
+                                    ),
                                   ),
                                   const SizedBox(width: 4),
                                   Text(
@@ -201,12 +251,49 @@ class _DishSelectionScreenState extends State<DishSelectionScreen> {
                                     style: TextStyle(
                                       fontSize: 12,
                                       fontWeight: FontWeight.w600,
-                                      color: getConfidenceColor(option.confidence),
+                                      color: getConfidenceColor(
+                                        option.confidence,
+                                      ),
                                     ),
                                   ),
                                 ],
                               ),
                             ),
+                            if (hasDetailedBenefits) ...[
+                              const SizedBox(width: 8),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 4,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: Colors.green.withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(
+                                    color: Colors.green.withOpacity(0.3),
+                                  ),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(
+                                      Icons.local_hospital_rounded,
+                                      size: 14,
+                                      color: Colors.green[700],
+                                    ),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      'Health info',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w600,
+                                        color: Colors.green[700],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
                           ],
                         ),
                       ],
@@ -234,7 +321,11 @@ class _DishSelectionScreenState extends State<DishSelectionScreen> {
                 children: [
                   Row(
                     children: [
-                      Icon(Icons.restaurant_menu, size: 16, color: Colors.grey[600]),
+                      Icon(
+                        Icons.restaurant_menu,
+                        size: 16,
+                        color: Colors.grey[600],
+                      ),
                       const SizedBox(width: 6),
                       Text(
                         'Ingredients (${option.ingredients.length})',
@@ -244,32 +335,69 @@ class _DishSelectionScreenState extends State<DishSelectionScreen> {
                           color: Colors.grey[700],
                         ),
                       ),
+                      const Spacer(),
+                      if (hasDetailedBenefits)
+                        GestureDetector(
+                          onTap: () {
+                            showIngredientBenefitsDialog(option);
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 4,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.blue[50],
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Icons.info_outline,
+                                  size: 14,
+                                  color: Colors.blue[700],
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  'View benefits',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w600,
+                                    color: Colors.blue[700],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
                     ],
                   ),
                   const SizedBox(height: 8),
                   Wrap(
                     spacing: 6,
                     runSpacing: 6,
-                    children: option.ingredients.take(6).map((ingredient) {
-                      return Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 10,
-                          vertical: 6,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.grey[100],
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: Colors.grey[300]!),
-                        ),
-                        child: Text(
-                          ingredient,
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Colors.grey[800],
-                          ),
-                        ),
-                      );
-                    }).toList(),
+                    children:
+                        option.ingredients.take(6).map((ingredient) {
+                          return Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 6,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.grey[100],
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: Colors.grey[300]!),
+                            ),
+                            child: Text(
+                              ingredient,
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.grey[800],
+                              ),
+                            ),
+                          );
+                        }).toList(),
                   ),
                   if (option.ingredients.length > 6)
                     Padding(
@@ -293,14 +421,210 @@ class _DishSelectionScreenState extends State<DishSelectionScreen> {
     );
   }
 
+  void showIngredientBenefitsDialog(DishOption option) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder:
+          (context) => DraggableScrollableSheet(
+            initialChildSize: 0.7,
+            minChildSize: 0.5,
+            maxChildSize: 0.95,
+            builder:
+                (context, scrollController) => Container(
+                  decoration: const BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.vertical(
+                      top: Radius.circular(20),
+                    ),
+                  ),
+                  child: Column(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(20),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: const BorderRadius.vertical(
+                            top: Radius.circular(20),
+                          ),
+                          border: Border(
+                            bottom: BorderSide(color: Colors.grey[200]!),
+                          ),
+                        ),
+                        child: Column(
+                          children: [
+                            Container(
+                              width: 40,
+                              height: 4,
+                              margin: const EdgeInsets.only(bottom: 16),
+                              decoration: BoxDecoration(
+                                color: Colors.grey[300],
+                                borderRadius: BorderRadius.circular(2),
+                              ),
+                            ),
+                            Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(10),
+                                  decoration: BoxDecoration(
+                                    color: Colors.green[50],
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: Icon(
+                                    Icons.local_hospital_rounded,
+                                    color: Colors.green[700],
+                                    size: 24,
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      const Text(
+                                        'Ingredient Health Benefits',
+                                        style: TextStyle(
+                                          fontSize: 18,
+                                          fontWeight: FontWeight.w700,
+                                          color: Colors.black87,
+                                        ),
+                                      ),
+                                      Text(
+                                        option.dishName,
+                                        style: TextStyle(
+                                          fontSize: 13,
+                                          color: Colors.grey[600],
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                      Expanded(
+                        child: ListView.builder(
+                          controller: scrollController,
+                          padding: const EdgeInsets.all(20),
+                          itemCount: option.ingredientsWithBenefits.length,
+                          itemBuilder: (context, index) {
+                            final ingredient =
+                                option.ingredientsWithBenefits[index];
+                            final hasBenefits =
+                                ingredient.benefits.isNotEmpty &&
+                                ingredient.benefits !=
+                                    'No nutritional information available.' &&
+                                ingredient.benefits !=
+                                    'Nutritional information not available.';
+
+                            if (!hasBenefits) return const SizedBox.shrink();
+
+                            return Container(
+                              margin: const EdgeInsets.only(bottom: 16),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: Colors.grey[200]!),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withOpacity(0.03),
+                                    blurRadius: 8,
+                                    offset: const Offset(0, 2),
+                                  ),
+                                ],
+                              ),
+                              child: ExpansionTile(
+                                tilePadding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: 4,
+                                ),
+                                childrenPadding: const EdgeInsets.fromLTRB(
+                                  16,
+                                  0,
+                                  16,
+                                  16,
+                                ),
+                                leading: Container(
+                                  width: 40,
+                                  height: 40,
+                                  decoration: BoxDecoration(
+                                    gradient: LinearGradient(
+                                      colors: [
+                                        Colors.green[100]!,
+                                        Colors.blue[100]!,
+                                      ],
+                                      begin: Alignment.topLeft,
+                                      end: Alignment.bottomRight,
+                                    ),
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  child: Icon(
+                                    Icons.eco_rounded,
+                                    color: Colors.green[700],
+                                    size: 20,
+                                  ),
+                                ),
+                                title: Text(
+                                  ingredient.name,
+                                  style: const TextStyle(
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w600,
+                                    color: Colors.black87,
+                                  ),
+                                ),
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.all(12),
+                                    decoration: BoxDecoration(
+                                      color: Colors.green[50],
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: Row(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Icon(
+                                          Icons.lightbulb_outline,
+                                          size: 16,
+                                          color: Colors.green[700],
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Expanded(
+                                          child: Text(
+                                            ingredient.benefits,
+                                            style: TextStyle(
+                                              fontSize: 13,
+                                              color: Colors.grey[800],
+                                              height: 1.5,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+          ),
+    );
+  }
+
   Widget buildManualEntryButton() {
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
       decoration: BoxDecoration(
         color: Colors.white,
-        border: Border(
-          top: BorderSide(color: Colors.grey[200]!),
-        ),
+        border: Border(top: BorderSide(color: Colors.grey[200]!)),
       ),
       child: OutlinedButton(
         onPressed: widget.onManualEntry,
@@ -345,9 +669,11 @@ class _DishSelectionScreenState extends State<DishSelectionScreen> {
       ),
       child: SafeArea(
         child: ElevatedButton(
-          onPressed: selectedIndex != null
-              ? () => widget.onOptionSelected(widget.options[selectedIndex!])
-              : null,
+          onPressed:
+              selectedIndex != null
+                  ? () =>
+                      widget.onOptionSelected(widget.options[selectedIndex!])
+                  : null,
           style: ElevatedButton.styleFrom(
             backgroundColor: const Color(0xFF00BCD4),
             disabledBackgroundColor: Colors.grey[300],
@@ -361,11 +687,14 @@ class _DishSelectionScreenState extends State<DishSelectionScreen> {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Text(
-                selectedIndex != null ? 'Confirm Selection' : 'Select a dish to continue',
+                selectedIndex != null
+                    ? 'Confirm Selection'
+                    : 'Select a dish to continue',
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w700,
-                  color: selectedIndex != null ? Colors.white : Colors.grey[500],
+                  color:
+                      selectedIndex != null ? Colors.white : Colors.grey[500],
                 ),
               ),
               if (selectedIndex != null) ...[

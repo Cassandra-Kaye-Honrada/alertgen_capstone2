@@ -12,6 +12,7 @@ class IngredientChip extends StatelessWidget {
   final bool isFromHistory;
   final Map<String, double>? historicalSeverityData;
   final List<IngredientColorInfo>? ingredientColors;
+  final IngredientBenefitsMap? ingredientBenefitsMap;
 
   const IngredientChip({
     Key? key,
@@ -24,6 +25,7 @@ class IngredientChip extends StatelessWidget {
     this.isFromHistory = false,
     this.historicalSeverityData,
     this.ingredientColors,
+    this.ingredientBenefitsMap,
   }) : super(key: key);
 
   List<String> getHistoricalMatchedAllergens() {
@@ -116,15 +118,22 @@ class IngredientChip extends StatelessWidget {
     return severityMap;
   }
 
+  String? getIngredientBenefit() {
+    if (ingredientBenefitsMap == null) return null;
+    return ingredientBenefitsMap!.getBenefit(ingredient);
+  }
+
   @override
   Widget build(BuildContext context) {
     bool isSafe = color == const Color(0xFFDFDFDF);
+
 
     return GestureDetector(
       onTap: () {
         List<String>? historicalMatched;
         Map<String, double>? severityToPass;
 
+        final benefits = getIngredientBenefit();
         if (isFromHistory && ingredientColors != null) {
           historicalMatched = getHistoricalMatchedAllergens();
           severityToPass = buildSeverityMapForIngredient();
@@ -133,6 +142,8 @@ class IngredientChip extends StatelessWidget {
             historicalMatched = getHistoricalMatchedAllergens();
           }
         }
+
+        print('Opening modal for "$ingredient" with benefits: $benefits');
 
         showModalBottomSheet(
           context: context,
@@ -155,6 +166,7 @@ class IngredientChip extends StatelessWidget {
                         historicalSeverityData:
                             severityToPass ?? historicalSeverityData,
                         historicalMatchedAllergens: historicalMatched,
+                        ingredientBenefits: benefits,
                       ),
                     ),
               ),

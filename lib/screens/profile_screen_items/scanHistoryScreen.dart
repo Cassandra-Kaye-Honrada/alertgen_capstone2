@@ -424,6 +424,21 @@ class _ScanHistoryScreenState extends State<ScanHistoryScreen> {
       data,
     );
 
+    IngredientBenefitsMap? benefitsMap;
+    if (data.containsKey('ingredientBenefits')) {
+      benefitsMap = IngredientBenefitsMap();
+      var benefitsData = data['ingredientBenefits'];
+
+      if (benefitsData is Map) {
+        Map<String, dynamic> benefits = Map<String, dynamic>.from(benefitsData);
+        benefits.forEach((key, value) {
+          String ingredientKey = key.toString();
+          String benefitValue = value.toString();
+          benefitsMap!.addBenefit(ingredientKey, benefitValue);
+        });
+      }
+    }
+
     Navigator.push(
       context,
       MaterialPageRoute(
@@ -451,6 +466,7 @@ class _ScanHistoryScreenState extends State<ScanHistoryScreen> {
               },
               isFromHistory: true,
               historicalSeverityData: historicalSeverity,
+              ingredientBenefitsMap: benefitsMap,
             ),
       ),
     );

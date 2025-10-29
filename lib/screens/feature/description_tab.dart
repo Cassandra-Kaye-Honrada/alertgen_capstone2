@@ -18,6 +18,7 @@ class DescriptionTab extends StatefulWidget {
   final Function(List<String>) onIngredientsChanged;
   final bool isFromHistory;
   final Map<String, double>? historicalSeverityData;
+  final IngredientBenefitsMap? ingredientBenefitsMap;
 
   const DescriptionTab({
     Key? key,
@@ -33,6 +34,7 @@ class DescriptionTab extends StatefulWidget {
     required this.onIngredientsChanged,
     this.isFromHistory = false,
     this.historicalSeverityData,
+    this.ingredientBenefitsMap,
   }) : super(key: key);
 
   @override
@@ -59,6 +61,19 @@ class _DescriptionTabState extends State<DescriptionTab>
     super.initState();
     editableIngredients = List.from(widget.currentIngredients);
     updateIngredientColorMap();
+
+    print('🔍 DescriptionTab initState:');
+    if (widget.ingredientBenefitsMap != null) {
+      print('  - Benefits map is NOT null');
+      print(
+        '  - Contains ${widget.ingredientBenefitsMap!.benefitsMap.length} benefits',
+      );
+      print(
+        '  - Keys: ${widget.ingredientBenefitsMap!.benefitsMap.keys.toList()}',
+      );
+    } else {
+      print('  - Benefits map is NULL');
+    }
   }
 
   void updateIngredientColorMap() {
@@ -381,6 +396,7 @@ class _DescriptionTabState extends State<DescriptionTab>
                       isFromHistory: widget.isFromHistory,
                       historicalSeverityData: widget.historicalSeverityData,
                       ingredientColors: widget.ingredientColors,
+                      ingredientBenefitsMap: widget.ingredientBenefitsMap,
                     ),
                   ],
                 ),

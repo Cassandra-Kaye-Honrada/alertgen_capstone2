@@ -12,6 +12,7 @@ class IngredientChipsList extends StatelessWidget {
   final bool isFromHistory;
   final Map<String, double>? historicalSeverityData;
   final List<IngredientColorInfo>? ingredientColors;
+    final IngredientBenefitsMap? ingredientBenefitsMap;
 
   const IngredientChipsList({
     Key? key,
@@ -24,6 +25,7 @@ class IngredientChipsList extends StatelessWidget {
     this.isFromHistory = false,
     this.historicalSeverityData,
     this.ingredientColors,
+      this.ingredientBenefitsMap,
   }) : super(key: key);
 
   @override
@@ -45,6 +47,7 @@ class IngredientChipsList extends StatelessWidget {
             isFromHistory: isFromHistory,
             historicalSeverityData: historicalSeverityData,
             ingredientColors: ingredientColors,
+            ingredientBenefitsMap: ingredientBenefitsMap, 
           );
         }).toList(),
         if (isEditing && !isFromHistory)

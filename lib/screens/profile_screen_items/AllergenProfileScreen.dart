@@ -1081,6 +1081,10 @@ class _AllergenProfileScreenState extends State<AllergenProfileScreen> {
                                     : allergen;
 
                             if (finalAllergen.isNotEmpty) {
+                              Navigator.of(context, rootNavigator: true).pop();
+
+                              FocusScope.of(context).unfocus();
+
                               setState(() {
                                 selectedAllergens.add(finalAllergen);
                                 allergenSeverity[finalAllergen] =
@@ -1102,9 +1106,6 @@ class _AllergenProfileScreenState extends State<AllergenProfileScreen> {
                               );
 
                               searchController.clear();
-                            }
-                            if (mounted) {
-                              Navigator.of(context, rootNavigator: true).pop();
                             }
                           },
                           style: ElevatedButton.styleFrom(
