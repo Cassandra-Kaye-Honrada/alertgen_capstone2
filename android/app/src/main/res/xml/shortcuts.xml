@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?><shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+    <shortcut
+        android:shortcutId="start_scanning"
+        android:enabled="true"
+        android:icon="@android:drawable/ic_menu_camera"
+        android:shortcutShortLabel="@string/shortcut_start_scanning"
+        android:shortcutLongLabel="@string/shortcut_scan_product"
+        android:shortcutDisabledMessage="@string/shortcut_disabled">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:targetPackage="com.example.allergen"
+            android:targetClass="com.example.allergen.MainActivity"
+            android:data="allergen://scan" />
+        <categories android:name="android.shortcut.conversation" />
+    </shortcut>
+
+    <shortcut
+        android:shortcutId="call_emergency"
+        android:enabled="true"
+        android:icon="@drawable/ic_emergency"
+        android:shortcutShortLabel="@string/shortcut_call_emergency"
+        android:shortcutLongLabel="@string/shortcut_emergency_call"
+        android:shortcutDisabledMessage="@string/shortcut_disabled">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:targetPackage="com.example.allergen"
+            android:targetClass="com.example.allergen.MainActivity"
+            android:data="allergen://emergency" />
+        <categories android:name="android.shortcut.conversation" />
+    </shortcut>
+</shortcuts>

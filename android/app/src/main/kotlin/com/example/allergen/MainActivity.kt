@@ -3,6 +3,7 @@ package com.example.allergen
 
 import android.Manifest
 import android.content.Context
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
 import android.telecom.TelecomManager
@@ -20,6 +21,7 @@ import io.flutter.plugin.common.MethodChannel
 class MainActivity: FlutterActivity() {
     private val SMS_CHANNEL = "emergency_sms"
     private val CALL_CHANNEL = "emergency_call_manager"
+    private val SHORTCUT_CHANNEL = "com.example.allergen/shortcuts"
     private val SMS_PERMISSION_REQUEST = 101
     private val CALL_PERMISSION_REQUEST = 102
     private val TAG = "EmergencyApp"
@@ -32,6 +34,7 @@ class MainActivity: FlutterActivity() {
     private var currentPhoneNumber: String? = null
     private var callStartTime: Long = 0
     private var callMethodChannel: MethodChannel? = null
+    private var shortcutMethodChannel: MethodChannel? = null
 
     override fun configureFlutterEngine(@NonNull flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
@@ -39,25 +42,24 @@ class MainActivity: FlutterActivity() {
         Log.d(TAG, "🔧 Configuring Flutter engine...")
         
         // SMS Channel
-     MethodChannel(flutterEngine.dartExecutor.binaryMessenger, SMS_CHANNEL).setMethodCallHandler { call, result ->
-    Log.d(TAG, "📱 SMS Channel - Method: ${call.method}")
-    when (call.method) {
-        "sendSMS", "sendDirectSMS" -> {
-            val phoneNumber = call.argument<String>("phoneNumber")
-            val message = call.argument<String>("message")
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, SMS_CHANNEL).setMethodCallHandler { call, result ->
+            Log.d(TAG, "📱 SMS Channel - Method: ${call.method}")
+            when (call.method) {
+                "sendSMS", "sendDirectSMS" -> {
+                    val phoneNumber = call.argument<String>("phoneNumber")
+                    val message = call.argument<String>("message")
 
-            if (phoneNumber != null && message != null) {
-                sendSMS(phoneNumber, message, result)
-            } else {
-                result.error("INVALID_ARGUMENTS", "Phone number and message are required", null)
+                    if (phoneNumber != null && message != null) {
+                        sendSMS(phoneNumber, message, result)
+                    } else {
+                        result.error("INVALID_ARGUMENTS", "Phone number and message are required", null)
+                    }
+                }
+                else -> {
+                    result.notImplemented()
+                }
             }
         }
-        else -> {
-            result.notImplemented()
-        }
-    }
-}
-
 
         // Call Management Channel
         callMethodChannel = MethodChannel(flutterEngine.dartExecutor.binaryMessenger, CALL_CHANNEL)
@@ -94,6 +96,13 @@ class MainActivity: FlutterActivity() {
                 }
             }
         }
+
+        // Shortcut Channel
+        shortcutMethodChannel = MethodChannel(flutterEngine.dartExecutor.binaryMessenger, SHORTCUT_CHANNEL)
+        shortcutMethodChannel?.setMethodCallHandler { call, result ->
+            Log.d(TAG, "🔗 Shortcut Channel - Method: ${call.method}")
+            result.notImplemented()
+        }
         
         // Initialize telephony managers
         try {
@@ -106,6 +115,53 @@ class MainActivity: FlutterActivity() {
             }
         } catch (e: Exception) {
             Log.e(TAG, "❌ Error initializing managers: ${e.message}")
+        }
+
+        // Handle initial intent (app launch from shortcut)
+        handleIntent(intent)
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        Log.d(TAG, "🔗 onNewIntent called")
+        handleIntent(intent)
+    }
+
+    private fun handleIntent(intent: Intent?) {
+        intent?.let {
+            Log.d(TAG, "🔗 Handling intent - Action: ${it.action}, Data: ${it.data}")
+            
+            val route = it.getStringExtra("route")
+            if (route != null) {
+                Log.d(TAG, "🔗 Route from extra: $route")
+                notifyFlutterRoute(route)
+                return
+            }
+
+            // Handle deep link data
+            it.data?.let { uri ->
+                Log.d(TAG, "🔗 URI received: $uri")
+                when (uri.toString()) {
+                    "allergen://scan" -> {
+                        Log.d(TAG, "🔗 Navigating to scan")
+                        notifyFlutterRoute("/scan")
+                    }
+                    "allergen://emergency" -> {
+                        Log.d(TAG, "🔗 Navigating to emergency")
+                        notifyFlutterRoute("/emergency")
+                    }
+                }
+            }
+        }
+    }
+
+    private fun notifyFlutterRoute(route: String) {
+        Log.d(TAG, "🔗 Notifying Flutter about route: $route")
+        try {
+            shortcutMethodChannel?.invokeMethod("navigate", route)
+            Log.d(TAG, "✅ Route notification sent to Flutter")
+        } catch (e: Exception) {
+            Log.e(TAG, "❌ Failed to notify Flutter: ${e.message}")
         }
     }
 
@@ -395,5 +451,6 @@ class MainActivity: FlutterActivity() {
             Log.d(TAG, "✅ Call state listener unregistered")
         }
         callMethodChannel?.setMethodCallHandler(null)
+        shortcutMethodChannel?.setMethodCallHandler(null)
     }
 }

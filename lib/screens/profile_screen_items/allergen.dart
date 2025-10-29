@@ -7,14 +7,14 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'dart:async';
 
-class AllergenProfileScreen extends StatefulWidget {
-  const AllergenProfileScreen({Key? key}) : super(key: key);
+class AllergenProfile extends StatefulWidget {
+  const AllergenProfile({Key? key}) : super(key: key);
 
   @override
-  State<AllergenProfileScreen> createState() => _AllergenProfileScreenState();
+  State<AllergenProfile> createState() => _AllergenProfileState();
 }
 
-class _AllergenProfileScreenState extends State<AllergenProfileScreen> {
+class _AllergenProfileState extends State<AllergenProfile> {
   final TextEditingController searchController = TextEditingController();
   Set<String> selectedAllergens = {};
   Map<String, double> allergenSeverity = {};
@@ -31,7 +31,7 @@ class _AllergenProfileScreenState extends State<AllergenProfileScreen> {
 
   Timer? _debounceTimer;
 
-  String GEMINI_API_KEY = 'AIzaSyBcZAh281Ld4r3N8xD4bVP0bnwRb1wdfK0';
+  String GEMINI_API_KEY = 'AIzaSyAz_4OJJAquRuUYMnpjOyWZK5sn4cjawF8';
 
   static const double MILD = 0.0;
   static const double MODERATE = 0.5;
@@ -1081,10 +1081,6 @@ class _AllergenProfileScreenState extends State<AllergenProfileScreen> {
                                     : allergen;
 
                             if (finalAllergen.isNotEmpty) {
-                              Navigator.of(context, rootNavigator: true).pop();
-
-                              FocusScope.of(context).unfocus();
-
                               setState(() {
                                 selectedAllergens.add(finalAllergen);
                                 allergenSeverity[finalAllergen] =
@@ -1106,6 +1102,9 @@ class _AllergenProfileScreenState extends State<AllergenProfileScreen> {
                               );
 
                               searchController.clear();
+                            }
+                            if (mounted) {
+                              Navigator.of(context, rootNavigator: true).pop();
                             }
                           },
                           style: ElevatedButton.styleFrom(

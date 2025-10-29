@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:allergen/screens/community/CommunityForumScreen.dart';
 import 'package:allergen/screens/feature/chatbot/floating_chatbot.dart';
+import 'package:allergen/screens/profile_screen_items/allergen.dart';
 import 'package:allergen/screens/profile_screen_items/scanHistoryScreen.dart';
 import 'package:allergen/screens/profile_screen_items/ProfileScreen.dart';
 import 'package:allergen/screens/first_Aid_screens/FirstAidScreen.dart';
@@ -791,7 +792,9 @@ class HomescreenState extends State<Homescreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      AirQualityWidget(),
+                      AirQualityWidget(
+                        apiKey: 'AIzaSyCWva81wgqeq5qIShLvoO9hs20ejk73gCE',
+                      ),
                       SizedBox(height: 30),
                       buildEmergencySection(),
                       SizedBox(height: 30),
@@ -827,49 +830,49 @@ class HomescreenState extends State<Homescreen> {
         ),
         Row(
           children: [
-            GestureDetector(
-              onTap: () async {
-                final result = await Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder:
-                        (context) =>
-                            UserProfile(emergencyService: EmergencyService()),
-                  ),
-                );
-                if (result == true) {
-                  await fetchUserProfile();
-                }
-              },
-              child: Container(
-                padding: EdgeInsets.all(3),
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  border: Border.all(color: Color(0xFF0B8FAC), width: 2),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.1),
-                      blurRadius: 4,
-                      offset: Offset(0, 2),
-                    ),
-                  ],
-                ),
-                child: buildProfileAvatar(),
-              ),
-            ),
-            IconButton(
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const CommunityForumScreen(),
-                  ),
-                );
-              },
-              icon: const Icon(Icons.chat),
-              tooltip: 'Community Forum',
-              color: AppColors.primary,
-            ),
+            // GestureDetector(
+            //   onTap: () async {
+            //     final result = await Navigator.push(
+            //       context,
+            //       MaterialPageRoute(
+            //         builder:
+            //             (context) =>
+            //                 UserProfile(emergencyService: EmergencyService()),
+            //       ),
+            //     );
+            //     if (result == true) {
+            //       await fetchUserProfile();
+            //     }
+            //   },
+            //   child: Container(
+            //     padding: EdgeInsets.all(3),
+            //     decoration: BoxDecoration(
+            //       shape: BoxShape.circle,
+            //       border: Border.all(color: Color(0xFF0B8FAC), width: 2),
+            //       boxShadow: [
+            //         BoxShadow(
+            //           color: Colors.black.withOpacity(0.1),
+            //           blurRadius: 4,
+            //           offset: Offset(0, 2),
+            //         ),
+            //       ],
+            //     ),
+            //     child: buildProfileAvatar(),
+            //   ),
+            // ),
+            // IconButton(
+            //   onPressed: () {
+            //     Navigator.push(
+            //       context,
+            //       MaterialPageRoute(
+            //         builder: (context) => const AllergenProfile(),
+            //       ),
+            //     );
+            //   },
+            //   icon: const Icon(Icons.chat),
+            //   tooltip: 'Community Forum',
+            //   color: AppColors.primary,
+            // ),
           ],
         ),
       ],

@@ -3,4 +3,10 @@
     <string name="facebook_app_id">603475422280095</string>
     <string name="facebook_client_token">b1d42838dd8c102f917dc1b26a970eee</string>
     <string name="fb_login_protocol_scheme">fb603475422280095</string>
+
+    <string name="shortcut_start_scanning">Start Scanning</string>
+    <string name="shortcut_scan_product">Scan a product for allergens</string>
+    <string name="shortcut_call_emergency">Call for Emergency</string>
+    <string name="shortcut_emergency_call">Make an emergency call</string>
+    <string name="shortcut_disabled">Disabled</string>
 </resources>
