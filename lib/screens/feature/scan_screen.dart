@@ -822,6 +822,28 @@ CRITICAL REQUIREMENTS:
 ''';
 
   String get imageIngredientExtractionPrompt => '''
+CRITICAL INSTRUCTION - READ FIRST 
+
+**ABSOLUTE RULE: NEVER GROUP INGREDIENTS - LIST EACH ONE SEPARATELY**
+
+WRONG EXAMPLES:
+- "mixed seafood (shrimp, crab, mussels)" 
+- "assorted vegetables (carrots, peas, beans)"
+- "various nuts (cashews, almonds)"
+- "seafood mix"
+
+ CORRECT EXAMPLES:
+- "shrimp" (separate entry)
+- "crab" (separate entry)
+- "mussels" (separate entry)
+- "carrots" (separate entry)
+- "peas" (separate entry)
+
+**MANDATORY REQUIREMENT:**
+Each visible ingredient = One separate entry in the ingredients array
+If you see 5 different seafood items, you MUST create 5 separate ingredient entries.
+
+
 You are an expert Filipino food identification system with PRIMARY FOCUS on Filipino cuisine. Your goal is ACCURATE DISH IDENTIFICATION and COMPLETE, DETAILED INGREDIENT LIST.
 
 FILIPINO CUISINE PRIORITY: You are PRIMARILY specialized in Filipino dishes and cuisine. While you can identify international foods, your main expertise and focus should be on Filipino food.
@@ -838,12 +860,29 @@ CRITICAL IDENTIFICATION RULES:
    - For soy-based sauces, you MUST list "soy sauce"
    - For creamy soups, you MUST list "milk" or "cream"
 
+**CRITICAL RULE #1: NEVER GROUP INGREDIENTS**
+- WRONG: "mixed seafood (shrimp, crab, mussels)"
+- CORRECT: List each as separate ingredients: "shrimp", "crab", "mussels"
+- WRONG: "assorted vegetables (carrots, peas)"
+- CORRECT: List each separately: "carrots", "peas"
+
+**CRITICAL RULE #2: ONE INGREDIENT PER ENTRY**
+Each ingredient MUST be its own separate entry in the ingredients array.
+If you see multiple seafood items, create SEPARATE ingredient entries for EACH ONE.
+
+SEAFOOD DISHES - LIST EACH ITEM SEPARATELY:
+- If you see shrimp → add ingredient entry: "shrimp"
+- If you see crab → add ingredient entry: "crab"  
+- If you see mussels → add ingredient entry: "mussels"
+- If you see lobster → add ingredient entry: "lobster"
+- **NEVER combine them as "mixed seafood" or "seafood mix"**
+
 **CRITICAL: LIST EACH INGREDIENT INDIVIDUALLY**
 - **NEVER use generic terms like "mixed seafood", "mixed vegetables", "assorted vegetables", or "various seafood"**
 - **ALWAYS list each specific ingredient separately:** 
-  - Instead of "mixed seafood" → list "shrimp, squid, mussels, fish"
-  - Instead of "mixed vegetables" → list "cabbage, carrots, green beans, eggplant"
-  - Instead of "assorted nuts" → list "cashews, almonds, peanuts"
+  - Instead of "mixed seafood" → list "shrimp", "squid", "mussels", "fish" (as separate entries)
+  - Instead of "mixed vegetables" → list "cabbage", "carrots", "green beans", "eggplant" (as separate entries)
+  - Instead of "assorted nuts" → list "cashews", "almonds", "peanuts" (as separate entries)
 - **Be as specific as possible with each ingredient you can visually identify**
 
 FILIPINO DISHES - VISUAL IDENTIFICATION WITH ALLERGEN FOCUS (PRIMARY FOCUS):
@@ -879,20 +918,31 @@ PINAKBET:
 
 BICOL EXPRESS:
 - Creamy, spicy dish - **MUST list "coconut milk" and "chili peppers"**
-- List other ingredients: "pork", "shrimp paste", "garlic", "onions"
+- List other ingredients: "pork", "shrimp paste", "garlic", "onions" (as separate entries)
 
 LAING:
 - Taro leaves in coconut milk - **MUST list "coconut milk" and "taro leaves"**
-- List other ingredients: "coconut cream", "chili peppers", "ginger"
+- List other ingredients: "coconut cream", "chili peppers", "ginger" (as separate entries)
 
-SEAFOOD DISHES:
+SEAFOOD DISHES - CRITICAL SEPARATION RULES:
 - **NEVER say "mixed seafood" or "assorted seafood"**
-- **ALWAYS list each type separately:** "shrimp", "squid", "mussels", "clams", "fish", "crab"
+- **ALWAYS list each type separately as individual entries:**
+  - "shrimp" (separate entry)
+  - "squid" (separate entry)
+  - "mussels" (separate entry)
+  - "clams" (separate entry)
+  - "fish" (separate entry)
+  - "crab" (separate entry)
 - Be specific with fish types if identifiable: "tilapia", "bangus", "tuna"
 
-VEGETABLE DISHES:
+VEGETABLE DISHES - CRITICAL SEPARATION RULES:
 - **NEVER say "mixed vegetables" or "assorted vegetables"**
-- **ALWAYS list each vegetable separately:** "cabbage", "carrots", "green beans", "bell peppers", "onions"
+- **ALWAYS list each vegetable separately as individual entries:**
+  - "cabbage" (separate entry)
+  - "carrots" (separate entry)
+  - "green beans" (separate entry)
+  - "bell peppers" (separate entry)
+  - "onions" (separate entry)
 
 INTERNATIONAL FOODS (Secondary focus):
 - If you identify chocolate cake, croissant, pasta, etc., still analyze thoroughly
@@ -905,7 +955,49 @@ INGREDIENT IDENTIFICATION RULES:
 3. **List EVERY ingredient separately - no grouping or generic terms**
 4. **Your most important task is to ensure allergenic components are explicitly named.** Do not just say "sauce"; specify "peanut sauce" or "peanut butter"
 5. For international dishes, research typical ingredients used
-6. **If you can see multiple vegetables or seafood items, list each one individually**
+6. **If you can see multiple vegetables or seafood items, list each one individually as separate entries**
+
+CORRECT JSON STRUCTURE EXAMPLE:
+
+WRONG:
+{
+  "dishName": "Seafood Paella",
+  "description": "Spanish rice dish with mixed seafood",
+  "ingredients": [
+    {
+      "name": "mixed seafood (shrimp, mussels, squid)",
+      "benefits": "Rich in protein and omega-3..."
+    },
+    {
+      "name": "rice",
+      "benefits": "Source of carbohydrates..."
+    }
+  ]
+}
+
+CORRECT:
+{
+  "dishName": "Seafood Paella",
+  "description": "Spanish rice dish with various seafood",
+  "ingredients": [
+    {
+      "name": "shrimp",
+      "benefits": "Excellent source of protein, omega-3 fatty acids, and selenium. Low in calories..."
+    },
+    {
+      "name": "mussels",
+      "benefits": "High in protein, iron, zinc, and vitamin B12. Supports immune function..."
+    },
+    {
+      "name": "squid",
+      "benefits": "Rich in protein, vitamins, and minerals. Contains copper and selenium..."
+    },
+    {
+      "name": "rice",
+      "benefits": "Source of carbohydrates for energy. Contains B vitamins..."
+    }
+  ]
+}
 
 Return JSON with this exact structure (DO NOT include allergens):
 {
@@ -918,6 +1010,10 @@ Return JSON with this exact structure (DO NOT include allergens):
     },
     {
       "name": "ingredient2",
+      "benefits": "Nutritional value, health benefits, and educational information for health-conscious individuals"
+    },
+    {
+      "name": "ingredient3",
       "benefits": "Nutritional value, health benefits, and educational information for health-conscious individuals"
     }
   ]
@@ -938,6 +1034,12 @@ EXAMPLES OF PROPER ALLERGENIC INGREDIENT BENEFITS:
 - Peanuts: "Excellent source of plant-based protein, healthy monounsaturated fats, and vitamin E. Rich in niacin, folate, and magnesium which support heart health and energy metabolism. Contains resveratrol, a powerful antioxidant. Major allergen - can cause severe reactions in sensitive individuals."
 
 - Shrimp: "Excellent source of high-quality protein and omega-3 fatty acids. Rich in selenium, vitamin B12, and astaxanthin (powerful antioxidant). Low in calories and supports heart, brain, and immune health. Contains iodine for thyroid function. Shellfish allergen - avoid if allergic."
+
+- Crab: "High-quality protein source with omega-3 fatty acids. Rich in vitamin B12, selenium, and zinc. Supports immune function and metabolism. Contains copper for bone health. Shellfish allergen - can cause severe allergic reactions."
+
+- Mussels: "Excellent source of protein, iron, zinc, and vitamin B12. Rich in omega-3 fatty acids and selenium. Supports immune function, energy production, and red blood cell formation. Shellfish allergen."
+
+- Lobster: "High-quality protein with minimal fat. Rich in vitamin B12, zinc, copper, and selenium. Supports immune health and metabolism. Contains omega-3 fatty acids. Premium shellfish allergen."
 
 - Eggs: "Complete protein source with all essential amino acids. Rich in choline for brain health, vitamin D for bones, and lutein for eye health. Contains B vitamins and selenium. One of the most nutritious foods available. Common allergen, especially in children."
 
@@ -961,10 +1063,12 @@ CRITICAL REQUIREMENTS:
 1. PRIMARY FOCUS on Filipino cuisine identification
 2. Focus ONLY on dish identification and ingredient extraction
 3. Do NOT analyze allergens in this step
-4. **List EVERY ingredient individually - absolutely NO generic terms like "mixed vegetables" or "mixed seafood"**
-5. **Ensure base allergenic ingredients (peanuts, shrimp, fish, soy, milk, etc.) are explicitly listed in the ingredients array.** This is mandatory
-6. **Provide health benefits for EACH individual ingredient**
-7. If international dish, still analyze but note in description
+4. **List EVERY ingredient individually - absolutely NO generic terms like "mixed vegetables", "mixed seafood", "assorted vegetables", "various seafood", "seafood mix", etc.**
+5. **Each visible ingredient must be a separate entry in the ingredients array**
+6. **Ensure base allergenic ingredients (peanuts, shrimp, fish, soy, milk, etc.) are explicitly listed in the ingredients array.** This is mandatory
+7. **Provide health benefits for EACH individual ingredient**
+8. If international dish, still analyze but note in description
+9. **When you see multiple seafood or vegetables, count them and create that many separate ingredient entries**
 ''';
   String getAllergenAnalysisPrompt(List<String> userAllergens) {
     String userAllergensText =
@@ -1337,7 +1441,11 @@ Return only the product name.
       String possibleDishName = (quickResponse.text ?? '').trim();
 
       String cacheKey = allergenAnalysis.generateCacheKey(possibleDishName);
-      var cachedData = await allergenAnalysis.checkFoodCache(cacheKey);
+      var cachedData = await allergenAnalysis.checkFoodCache(
+        cacheKey,
+        imageFile: imageFile,
+        apiKey: apiKey,
+      );
 
       if (cachedData != null) {
         setState(() {
@@ -1465,7 +1573,11 @@ Generate 3-4 possible dish interpretations with confidence scores.
         String cacheKey = allergenAnalysis.generateCacheKey(
           dishOptions.first.dishName,
         );
-        var cachedData = await allergenAnalysis.checkFoodCache(cacheKey);
+        var cachedData = await allergenAnalysis.checkFoodCache(
+          cacheKey,
+          imageFile: imageFile,
+          apiKey: apiKey,
+        );
 
         if (cachedData != null) {
           setState(() {
@@ -1583,10 +1695,22 @@ Generate 3-4 possible dish interpretations with confidence scores.
     });
 
     try {
+      List<IngredientWithBenefits> processedIngredients =
+          splitGroupedIngredients(selectedOption.ingredientsWithBenefits);
+
+      print(
+        'Original ingredients count: ${selectedOption.ingredientsWithBenefits.length}',
+      );
+      print('After splitting: ${processedIngredients.length}');
+
       ingredientBenefitsMap = IngredientBenefitsMap();
-      for (var ingWithBenefits in selectedOption.ingredientsWithBenefits) {
+      for (var ingWithBenefits in processedIngredients) {
         ingredientBenefitsMap.addBenefit(
           ingWithBenefits.name,
+          ingWithBenefits.benefits,
+        );
+        ingredientBenefitsMap.addBenefit(
+          ingWithBenefits.name.toLowerCase().trim(),
           ingWithBenefits.benefits,
         );
       }
@@ -1595,7 +1719,7 @@ Generate 3-4 possible dish interpretations with confidence scores.
         selectedOption.dishName,
       );
       print(
-        ' Generated cache key: $cacheKey for dish: ${selectedOption.dishName}',
+        'Generated cache key: $cacheKey for dish: ${selectedOption.dishName}',
       );
 
       var cachedData = await allergenAnalysis.checkFoodCache(cacheKey);
@@ -1639,15 +1763,19 @@ Generate 3-4 possible dish interpretations with confidence scores.
       setState(() {
         analysisStatus = 'Simplifying ingredients...';
       });
+
       List<String> originalIngredients =
-          selectedOption.ingredientsWithBenefits.map((e) => e.name).toList();
+          processedIngredients.map((e) => e.name).toList();
+
+      logIngredientAnalysis(originalIngredients);
 
       List<String> simplifiedIngredients = await simplifyIngredientNames(
         originalIngredients,
         model,
       );
 
-      IngredientBenefitsMap updatedBenefitsMap = IngredientBenefitsMap();
+      IngredientBenefitsMap finalBenefitsMap = IngredientBenefitsMap();
+
       for (
         int i = 0;
         i < originalIngredients.length && i < simplifiedIngredients.length;
@@ -1655,13 +1783,27 @@ Generate 3-4 possible dish interpretations with confidence scores.
       ) {
         String originalName = originalIngredients[i];
         String simplifiedName = simplifiedIngredients[i];
-        String? benefit = ingredientBenefitsMap.getBenefit(originalName);
 
-        if (benefit != null) {
-          updatedBenefitsMap.addBenefit(simplifiedName, benefit);
+        String? benefit = processedIngredients[i].benefits;
+
+        if (benefit != null && benefit.isNotEmpty) {
+          finalBenefitsMap.addBenefit(simplifiedName, benefit);
+          finalBenefitsMap.addBenefit(
+            simplifiedName.toLowerCase().trim(),
+            benefit,
+          );
+
+          print(
+            'Mapped benefit for "$originalName" -> "$simplifiedName": ${benefit.substring(0, benefit.length > 50 ? 50 : benefit.length)}...',
+          );
+        } else {
+          print(
+            'WARNING: No benefit found for ingredient "$originalName" at index $i',
+          );
         }
       }
-      ingredientBenefitsMap = updatedBenefitsMap;
+
+      ingredientBenefitsMap = finalBenefitsMap;
 
       setState(() {
         ingredients = simplifiedIngredients;
@@ -1676,6 +1818,8 @@ Generate 3-4 possible dish interpretations with confidence scores.
         description,
         ingredients,
         allergens,
+        ingredientBenefitsMap: ingredientBenefitsMap,
+        imageFile: imageFile,
       );
 
       setState(() {
@@ -1695,6 +1839,67 @@ Generate 3-4 possible dish interpretations with confidence scores.
       });
       showSnackBar('Error processing dish: $e', Colors.red);
     }
+  }
+
+  void logIngredientAnalysis(List<String> ingredients) {
+    print('INGREDIENT ANALYSIS');
+    print('Total ingredients detected: ${ingredients.length}');
+
+    for (int i = 0; i < ingredients.length; i++) {
+      String ingredient = ingredients[i];
+      bool isGrouped =
+          ingredient.contains('(') ||
+          ingredient.toLowerCase().contains('mixed') ||
+          ingredient.toLowerCase().contains('assorted');
+
+      print('${i + 1}. "$ingredient" ${isGrouped ? "GROUPED!" : "OK"}');
+    }
+  }
+
+  List<IngredientWithBenefits> splitGroupedIngredients(
+    List<IngredientWithBenefits> ingredients,
+  ) {
+    List<IngredientWithBenefits> result = [];
+
+    for (var ingredient in ingredients) {
+      String name = ingredient.name.toLowerCase();
+
+      if (name.contains('(') ||
+          name.contains('mixed') ||
+          name.contains('assorted')) {
+        RegExp parenRegex = RegExp(r'\((.*?)\)');
+        Match? match = parenRegex.firstMatch(name);
+
+        if (match != null) {
+          String itemsInParen = match.group(1) ?? '';
+          List<String> individualItems =
+              itemsInParen
+                  .split(',')
+                  .map((item) => item.trim())
+                  .where((item) => item.isNotEmpty)
+                  .toList();
+
+          for (String item in individualItems) {
+            result.add(
+              IngredientWithBenefits(name: item, benefits: ingredient.benefits),
+            );
+          }
+
+          print(
+            'Split grouped ingredient: "${ingredient.name}" into: $individualItems',
+          );
+        } else {
+          print(
+            'WARNING: Grouped ingredient without parentheses: "${ingredient.name}"',
+          );
+          result.add(ingredient);
+        }
+      } else {
+        result.add(ingredient);
+      }
+    }
+
+    return result;
   }
 
   Widget buildLoadingOverlay() {
@@ -1833,25 +2038,11 @@ ${originalIngredients.join(', ')}
         return originalIngredients;
       }
 
-      IngredientBenefitsMap updatedBenefitsMap = IngredientBenefitsMap();
-
-      for (String originalIngredient in originalIngredients) {
-        String originalLower = originalIngredient.toLowerCase().trim();
-        String? simplifiedName = originalToSimplified[originalLower];
-
-        if (simplifiedName != null) {
-          String? benefit = ingredientBenefitsMap.getBenefit(
-            originalIngredient,
-          );
-          if (benefit != null && benefit.isNotEmpty) {
-            updatedBenefitsMap.addBenefit(simplifiedName, benefit);
-          } else {
-            print('No benefit found for: "$originalIngredient"');
-          }
-        }
+      for (int i = 0; i < originalIngredients.length; i++) {
+        print(
+          'Simplification: "${originalIngredients[i]}" → "${simplifiedIngredients[i]}"',
+        );
       }
-
-      ingredientBenefitsMap = updatedBenefitsMap;
 
       return simplifiedIngredients;
     } catch (e) {
@@ -2205,6 +2396,7 @@ GUIDELINES:
         description,
         ingredients,
         allergens,
+        ingredientBenefitsMap: ingredientBenefitsMap,
       );
 
       setState(() {
@@ -2292,6 +2484,10 @@ GUIDELINES:
         }
       }
 
+      Map<String, double> userSeverities = Map<String, double>.from(
+        allergenData['severities'] ?? {},
+      );
+
       final scanData = {
         'dishName': dishName.isNotEmpty ? dishName : 'Unknown Product',
         'description':
@@ -2307,6 +2503,10 @@ GUIDELINES:
                     'sources': a.sources,
                     'category': a.category,
                     'isUserAllergen': a.isUserAllergen,
+                    'severity':
+                        a.isUserAllergen
+                            ? userSeverities[a.name.toLowerCase()]
+                            : null,
                   },
                 )
                 .toList(),
@@ -2364,13 +2564,13 @@ GUIDELINES:
                 double severity;
                 switch (riskLevel) {
                   case 'severe':
-                    severity = 0.8;
+                    severity = 1.0;
                     break;
                   case 'moderate':
                     severity = 0.5;
                     break;
-                  case 'mild':
-                    severity = 0.2;
+                  case 'mild': //
+                    severity = 0.0;
                     break;
                   default:
                     severity = 0.5;
@@ -2430,9 +2630,6 @@ GUIDELINES:
 
       if (benefitsData is Map) {
         Map<String, dynamic> benefits = Map<String, dynamic>.from(benefitsData);
-        print(
-          'Converted to Map<String, dynamic> with ${benefits.length} entries',
-        );
 
         benefits.forEach((key, value) {
           String ingredientKey = key.toString();

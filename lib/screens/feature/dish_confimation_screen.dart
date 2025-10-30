@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-
 class DishOption {
   final String dishName;
   final String description;
@@ -12,41 +11,31 @@ class DishOption {
     required this.description,
     required this.ingredients,
     List<IngredientWithBenefits>? ingredientsWithBenefits,
-    required this.confidence,
+    this.confidence = 1.0,
   }) : ingredientsWithBenefits = ingredientsWithBenefits ?? [];
 
   factory DishOption.fromJson(Map<String, dynamic> json) {
     List<IngredientWithBenefits> ingredientsWithBenefits = [];
-    List<String> ingredientNames = [];
-
-    // Parse ingredients with benefits
+    
     if (json['ingredients'] is List) {
       for (var item in json['ingredients']) {
         if (item is Map<String, dynamic>) {
-          String name = item['name']?.toString() ?? '';
-          String benefits = item['benefits']?.toString() ?? '';
-
-          if (name.isNotEmpty) {
-            ingredientNames.add(name);
-            ingredientsWithBenefits.add(
-              IngredientWithBenefits(name: name, benefits: benefits),
-            );
-          }
-        } else if (item is String) {
-          ingredientNames.add(item);
           ingredientsWithBenefits.add(
-            IngredientWithBenefits(name: item, benefits: ''),
+            IngredientWithBenefits(
+              name: item['name']?.toString().trim() ?? '',
+              benefits: item['benefits']?.toString() ?? '',
+            ),
           );
         }
       }
     }
-
+    
     return DishOption(
-      dishName: json['dishName']?.toString() ?? 'Unknown',
-      description: json['description']?.toString() ?? '',
-      ingredients: ingredientNames,
+      dishName: json['dishName'] ?? '',
+      description: json['description'] ?? '',
+      ingredients: ingredientsWithBenefits.map((e) => e.name).toList(),
       ingredientsWithBenefits: ingredientsWithBenefits,
-      confidence: (json['confidence'] ?? 0.5).toDouble(),
+      confidence: (json['confidence'] ?? 1.0).toDouble(),
     );
   }
 }
@@ -55,7 +44,10 @@ class IngredientWithBenefits {
   final String name;
   final String benefits;
 
-  IngredientWithBenefits({required this.name, required this.benefits});
+  IngredientWithBenefits({
+    required this.name,
+    required this.benefits,
+  });
 }
 
 class DishSelectionScreen extends StatefulWidget {

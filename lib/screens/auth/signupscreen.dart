@@ -28,7 +28,52 @@ class SignUpScreenState extends State<SignUpScreen> {
   bool isLoading = false;
   bool acceptTerms = false;
 
-  final GoogleSignIn _googleSignIn = GoogleSignIn();
+  final GoogleSignIn googleSignIn = GoogleSignIn();
+
+  bool hasMinLength = false;
+  bool hasUppercase = false;
+  bool hasLowercase = false;
+  bool hasNumber = false;
+  bool hasSpecialChar = false;
+
+  @override
+  void initState() {
+    super.initState();
+    passwordController.addListener(checkPasswordStrength);
+  }
+
+  void checkPasswordStrength() {
+    final password = passwordController.text;
+    setState(() {
+      hasMinLength = password.length >= 8;
+      hasUppercase = password.contains(RegExp(r'[A-Z]'));
+      hasLowercase = password.contains(RegExp(r'[a-z]'));
+      hasNumber = password.contains(RegExp(r'[0-9]'));
+      hasSpecialChar = password.contains(RegExp(r'[!@#$%^&*(),.?":{}|<>]'));
+    });
+  }
+
+  String? validatePassword(String? value) {
+    if (value == null || value.isEmpty) {
+      return 'Please enter password';
+    }
+    if (value.length < 8) {
+      return 'Password must be at least 8 characters';
+    }
+    if (!value.contains(RegExp(r'[A-Z]'))) {
+      return 'Password must contain at least one uppercase letter';
+    }
+    if (!value.contains(RegExp(r'[a-z]'))) {
+      return 'Password must contain at least one lowercase letter';
+    }
+    if (!value.contains(RegExp(r'[0-9]'))) {
+      return 'Password must contain at least one number';
+    }
+    if (!value.contains(RegExp(r'[!@#$%^&*(),.?":{}|<>]'))) {
+      return 'Password must contain at least one special character';
+    }
+    return null;
+  }
 
   Future<void> signUp() async {
     if (!acceptTerms) {
@@ -86,13 +131,13 @@ class SignUpScreenState extends State<SignUpScreen> {
         String message;
         switch (e.code) {
           case 'email-already-in-use':
-            message = 'Email is already in use';
+            message = 'Email is already in use. Please log in instead.';
             break;
           case 'invalid-email':
             message = 'Invalid email address';
             break;
           case 'weak-password':
-            message = 'Password should be at least 6 characters';
+            message = 'Password should be at least 8 characters';
             break;
           default:
             message = 'An error occurred. Please try again';
@@ -113,7 +158,9 @@ class SignUpScreenState extends State<SignUpScreen> {
     setState(() => isLoading = true);
 
     try {
-      final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
+      await googleSignIn.signOut();
+
+      final GoogleSignInAccount? googleUser = await googleSignIn.signIn();
       if (googleUser == null) {
         setState(() => isLoading = false);
         return;
@@ -131,6 +178,34 @@ class SignUpScreenState extends State<SignUpScreen> {
           .signInWithCredential(credential);
 
       bool isNewUser = userCredential.additionalUserInfo?.isNewUser ?? false;
+
+      DocumentSnapshot userDoc =
+          await FirebaseFirestore.instance
+              .collection('users')
+              .doc(userCredential.user!.uid)
+              .get();
+
+      if (userDoc.exists && !isNewUser) {
+        await FirebaseAuth.instance.signOut();
+        await googleSignIn.signOut();
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'This email is already exists. Please log in instead.',
+            ),
+            backgroundColor: Colors.red,
+            duration: Duration(seconds: 3),
+          ),
+        );
+
+        setState(() => isLoading = false);
+
+        Navigator.of(
+          context,
+        ).pushReplacement(MaterialPageRoute(builder: (_) => LoginScreen()));
+        return;
+      }
 
       if (isNewUser) {
         await FirebaseFirestore.instance
@@ -173,19 +248,23 @@ class SignUpScreenState extends State<SignUpScreen> {
     super.dispose();
   }
 
-  Widget socialButton(String asset, VoidCallback onTap) {
-    return InkWell(
-      onTap: onTap,
-      child: Container(
-        width: 50,
-        height: 50,
-        padding: const EdgeInsets.all(8),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: Colors.grey.shade300),
+  Widget buildPasswordRequirement(String text, bool isMet) {
+    return Row(
+      children: [
+        Icon(
+          isMet ? Icons.check_circle : Icons.cancel,
+          size: 16,
+          color: isMet ? Colors.green : Colors.grey,
         ),
-        child: Image.asset(asset),
-      ),
+        const SizedBox(width: 8),
+        Text(
+          text,
+          style: TextStyle(
+            fontSize: 12,
+            color: isMet ? Colors.green : Colors.grey,
+          ),
+        ),
+      ],
     );
   }
 
@@ -378,13 +457,7 @@ class SignUpScreenState extends State<SignUpScreen> {
                 TextFormField(
                   controller: passwordController,
                   obscureText: obscurePassword,
-                  validator:
-                      (value) =>
-                          value == null || value.isEmpty
-                              ? 'Please enter password'
-                              : value.length < 6
-                              ? 'Password must be at least 6 characters'
-                              : null,
+                  validator: validatePassword,
                   decoration: InputDecoration(
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(8),
@@ -416,6 +489,53 @@ class SignUpScreenState extends State<SignUpScreen> {
                     ),
                   ),
                 ),
+
+                if (passwordController.text.isNotEmpty) ...[
+                  const SizedBox(height: 12),
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade50,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.grey.shade200),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Password must contain:',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.black87,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        buildPasswordRequirement(
+                          'At least 8 characters',
+                          hasMinLength,
+                        ),
+                        const SizedBox(height: 4),
+                        buildPasswordRequirement(
+                          'One uppercase letter (A-Z)',
+                          hasUppercase,
+                        ),
+                        const SizedBox(height: 4),
+                        buildPasswordRequirement(
+                          'One lowercase letter (a-z)',
+                          hasLowercase,
+                        ),
+                        const SizedBox(height: 4),
+                        buildPasswordRequirement('One number (0-9)', hasNumber),
+                        const SizedBox(height: 4),
+                        buildPasswordRequirement(
+                          'One special character (!@#\$%^&*)',
+                          hasSpecialChar,
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
 
                 const SizedBox(height: 20),
                 const Text(

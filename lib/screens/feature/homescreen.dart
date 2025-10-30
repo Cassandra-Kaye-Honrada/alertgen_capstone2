@@ -439,145 +439,82 @@ class HomescreenState extends State<Homescreen> {
   ) {
     Map<String, double> severityMap = {};
 
-    List<dynamic> allergenData = historyItem['allergens'] ?? [];
+    List<dynamic> userAllergensAtScanTime =
+        historyItem['userAllergensAtScanTime'] ?? [];
 
-    for (var allergen in allergenData) {
-      if (allergen is Map<String, dynamic> &&
-          allergen['isUserAllergen'] == true) {
-        String allergenName =
-            allergen['name']?.toString().toLowerCase().trim() ?? '';
-        String riskLevel =
-            allergen['riskLevel']?.toString().toLowerCase() ?? 'moderate';
+    print(userAllergensAtScanTime);
 
-        double severity;
-        switch (riskLevel) {
-          case 'severe':
-            severity = 0.8;
-            break;
-          case 'moderate':
-            severity = 0.5;
-            break;
-          case 'mild':
-            severity = 0.2;
-            break;
-          default:
-            severity = 0.5;
+    if (userAllergensAtScanTime.isNotEmpty) {
+      print('Loading from userAllergensAtScanTime');
+      for (var allergenData in userAllergensAtScanTime) {
+        if (allergenData is Map<String, dynamic>) {
+          String name =
+              allergenData['name']?.toString().toLowerCase().trim() ?? '';
+          double severity = (allergenData['severity'] ?? 0.5).toDouble();
+          if (name.isNotEmpty) {
+            severityMap[name] = severity;
+            print(' $name: $severity');
+          }
+        } else if (allergenData is String) {
+          String allergenName = allergenData.toLowerCase().trim();
+
+          List<dynamic> allergens = historyItem['allergens'] ?? [];
+          for (var allergen in allergens) {
+            if (allergen is Map<String, dynamic>) {
+              String name =
+                  allergen['name']?.toString().toLowerCase().trim() ?? '';
+              if (name == allergenName && allergen['isUserAllergen'] == true) {
+                double severity = (allergen['severity'] ?? 0.5).toDouble();
+                severityMap[allergenName] = severity;
+                print('$allergenName: $severity (from allergen data)');
+              }
+            }
+          }
         }
+      }
+    } else {
+      print('Loading from allergens array (fallback)');
+      List<dynamic> allergens = historyItem['allergens'] ?? [];
+      for (var allergen in allergens) {
+        if (allergen is Map<String, dynamic> &&
+            allergen['isUserAllergen'] == true) {
+          String allergenName =
+              allergen['name']?.toString().toLowerCase().trim() ?? '';
 
-        if (allergenName.isNotEmpty) {
-          severityMap[allergenName] = severity;
+          double severity;
+          if (allergen.containsKey('severity')) {
+            severity = (allergen['severity'] ?? 0.5).toDouble();
+            print(' $allergenName: $severity (from severity field)');
+          } else {
+            String riskLevel =
+                allergen['riskLevel']?.toString().toLowerCase() ?? 'moderate';
+
+            switch (riskLevel) {
+              case 'severe':
+                severity = 1.0;
+                break;
+              case 'moderate':
+                severity = 0.5;
+                break;
+              case 'mild':
+                severity = 0.0;
+                break;
+              default:
+                severity = 0.5;
+            }
+            print('$allergenName: $severity (from riskLevel: $riskLevel)');
+          }
+
+          if (allergenName.isNotEmpty) {
+            severityMap[allergenName] = severity;
+          }
         }
       }
     }
 
+    print('📊 Final severity map: $severityMap');
     return severityMap;
   }
-
-  // Future<void> navigateToFoodResult(Map<String, dynamic> historyItem) async {
-  //   final dishName = historyItem['dishName'] ?? 'Unknown Dish';
-  //   final description =
-  //       historyItem['description'] ?? 'No description available';
-  //   final ingredients = List<String>.from(historyItem['ingredients'] ?? []);
-  //   final allergenData = historyItem['allergens'] as List<dynamic>? ?? [];
-  //   final bool isOCRAnalysis = historyItem['isOCRAnalysis'] as bool? ?? false;
-
-  //   final List<IngredientColorInfo> ingredientColors =
-  //       historyItem['ingredientColors'] as List<IngredientColorInfo>? ?? [];
-
-  //   String? fileName = historyItem['fileName'] as String?;
-
-  //   if (fileName == null || fileName.isEmpty) {
-  //     final imagePath = historyItem['imagePath'] as String?;
-  //     if (imagePath != null) {
-  //       fileName = imagePath.split('/').last;
-  //     }
-  //   }
-
-  //   final List<AllergenInfo> allergens =
-  //       allergenData.map((allergen) {
-  //         final allergenMap = allergen as Map<String, dynamic>;
-  //         return AllergenInfo(
-  //           name: allergenMap['name'] ?? 'Unknown',
-  //           riskLevel: allergenMap['riskLevel'] ?? 'mild',
-  //           symptoms: List<String>.from(allergenMap['symptoms'] ?? []),
-  //           sources:
-  //               allergen['source'] is List
-  //                   ? List<String>.from(allergen['source'])
-  //                   : (allergen['source'] != null
-  //                       ? [allergen['source'].toString()]
-  //                       : []),
-  //           category: allergenMap['category'] ?? 'FDA_MAJOR',
-  //           isUserAllergen: allergenMap['isUserAllergen'] ?? false,
-  //         );
-  //       }).toList();
-
-  //   File? imageFile = historyItem['cachedImage'];
-
-  //   if (imageFile == null && fileName != null && fileName.isNotEmpty) {
-  //     showDialog(
-  //       context: context,
-  //       barrierDismissible: false,
-  //       builder:
-  //           (context) => Center(
-  //             child: CircularProgressIndicator(
-  //               valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF0B8FAC)),
-  //             ),
-  //           ),
-  //     );
-
-  //     imageFile = await downloadAndCacheImage(fileName, 'food');
-
-  //     if (Navigator.canPop(context)) {
-  //       Navigator.of(context).pop();
-  //     }
-  //   }
-
-  //   Map<String, double> historicalSeverity = extractHistoricalSeverityData(
-  //     historyItem,
-  //   );
-
-  //   IngredientBenefitsMap? benefitsMap;
-  //   if (historyItem.containsKey('ingredientBenefits')) {
-  //     benefitsMap = IngredientBenefitsMap();
-  //     Map<String, dynamic> benefits =
-  //         historyItem['ingredientBenefits'] as Map<String, dynamic>;
-  //     benefits.forEach((key, value) {
-  //       benefitsMap!.addBenefit(key, value.toString());
-  //     });
-  //   }
-
-  //   Navigator.push(
-  //     context,
-  //     MaterialPageRoute(
-  //       builder:
-  //           (context) => ResultScreen(
-  //             image: imageFile,
-  //             dishName: dishName,
-  //             description: description,
-  //             ingredients: ingredients,
-  //             allergens: allergens,
-  //             isOCRAnalysis: isOCRAnalysis,
-  //             ingredientColors: ingredientColors,
-  //             onIngredientsChanged: (updatedIngredients) {
-  //               if (context.mounted) {
-  //                 ScaffoldMessenger.of(context).showSnackBar(
-  //                   const SnackBar(
-  //                     content: Text(
-  //                       'This is historical data. To update allergen analysis with your current profile, please scan again.',
-  //                     ),
-  //                     backgroundColor: Colors.orange,
-  //                     duration: Duration(seconds: 4),
-  //                   ),
-  //                 );
-  //               }
-  //             },
-  //             isFromHistory: true,
-  //             historicalSeverityData: historicalSeverity,
-  //             ingredientBenefitsMap: benefitsMap,
-  //           ),
-  //     ),
-  //   );
-  // }
 
   Future<void> navigateToFoodResult(Map<String, dynamic> historyItem) async {
     final dishName = historyItem['dishName'] ?? 'Unknown Dish';

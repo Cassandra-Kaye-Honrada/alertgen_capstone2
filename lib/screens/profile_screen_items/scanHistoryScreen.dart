@@ -244,13 +244,13 @@ class _ScanHistoryScreenState extends State<ScanHistoryScreen> {
                 double severity;
                 switch (riskLevel) {
                   case 'severe':
-                    severity = 0.8;
+                    severity = 1.0;
                     break;
                   case 'moderate':
                     severity = 0.5;
                     break;
                   case 'mild':
-                    severity = 0.2;
+                    severity = 0.0;
                     break;
                   default:
                     severity = 0.5;

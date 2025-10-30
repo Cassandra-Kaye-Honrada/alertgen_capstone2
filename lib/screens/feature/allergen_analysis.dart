@@ -1,16 +1,21 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:allergen/screens/feature/scan_screen.dart';
 import 'package:allergen/services/translation/translation.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:crypto/crypto.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:google_generative_ai/google_generative_ai.dart';
 
 class AllergenAnalysis {
+  final FirebaseFirestore firestore = FirebaseFirestore.instance;
+  final FirebaseStorage storage = FirebaseStorage.instance;
+
   String generateCacheKey(String dishName) {
     String original = dishName.toLowerCase().trim();
-
     String mainProtein = extractMainProtein(original);
-
     String normalized =
         original
             .replaceAll(
@@ -35,6 +40,17 @@ class AllergenAnalysis {
     }
 
     return baseDish;
+  }
+
+  String generateImageHash(File imageFile) {
+    try {
+      final bytes = imageFile.readAsBytesSync();
+      final digest = sha256.convert(bytes);
+      return digest.toString();
+    } catch (e) {
+      print('Error generating image hash: $e');
+      return '';
+    }
   }
 
   String extractMainProtein(String dishName) {
@@ -84,7 +100,7 @@ class AllergenAnalysis {
         'keywords': ['beef', 'baka'],
         'value': 'beef',
       },
-      {   
+      {
         'keywords': ['oxtail', 'buntot'],
         'value': 'oxtail',
       },
@@ -192,16 +208,25 @@ class AllergenAnalysis {
     return cleaned.replaceAll(RegExp(r'\s+'), '_');
   }
 
-  Future<Map<String, dynamic>?> checkFoodCache(String cacheKey) async {
+  Future<Map<String, dynamic>?> checkExactFoodCache(String cacheKey) async {
     try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) return null;
+
       final doc =
-          await FirebaseFirestore.instance
+          await firestore
+              .collection('users')
+              .doc(user.uid)
               .collection('food_cache')
               .doc(cacheKey)
               .get();
 
       if (doc.exists) {
-        FirebaseFirestore.instance
+        print('✓ Found exact cache match for: $cacheKey');
+
+        firestore
+            .collection('users')
+            .doc(user.uid)
             .collection('food_cache')
             .doc(cacheKey)
             .update({
@@ -212,9 +237,235 @@ class AllergenAnalysis {
 
         return doc.data();
       }
+
       return null;
     } catch (e) {
-      print('Error checking cache: $e');
+      print('Error checking exact food cache: $e');
+      return null;
+    }
+  }
+
+  Future<Map<String, dynamic>?> checkExactImageMatch(String imageHash) async {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) return null;
+
+      final querySnapshot =
+          await firestore
+              .collection('users')
+              .doc(user.uid)
+              .collection('food_cache')
+              .where('imageHash', isEqualTo: imageHash)
+              .limit(1)
+              .get();
+
+      if (querySnapshot.docs.isNotEmpty) {
+        print('✓ Found exact image match');
+        final data = querySnapshot.docs.first.data();
+
+        firestore
+            .collection('users')
+            .doc(user.uid)
+            .collection('food_cache')
+            .doc(querySnapshot.docs.first.id)
+            .update({
+              'lastAccessed': FieldValue.serverTimestamp(),
+              'accessCount': FieldValue.increment(1),
+            })
+            .catchError((e) => print('Error updating cache stats: $e'));
+
+        return data;
+      }
+
+      return null;
+    } catch (e) {
+      print('Error checking exact image match: $e');
+      return null;
+    }
+  }
+
+  Future<Map<String, dynamic>?> checkSimilarFoodImage(
+    File imageFile,
+    String apiKey,
+  ) async {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) return null;
+
+      final querySnapshot =
+          await firestore
+              .collection('users')
+              .doc(user.uid)
+              .collection('food_cache')
+              .where('thumbnailUrl', isNull: false)
+              .orderBy('timestamp', descending: true)
+              .limit(15)
+              .get();
+
+      if (querySnapshot.docs.isEmpty) {
+        print('No cached food images to compare');
+        return null;
+      }
+
+      print(
+        'Comparing with ${querySnapshot.docs.length} cached food images...',
+      );
+
+      final currentImageBytes = await imageFile.readAsBytes();
+      final model = GenerativeModel(model: 'gemini-2.5-pro', apiKey: apiKey);
+
+      for (var doc in querySnapshot.docs) {
+        final cachedData = doc.data();
+        final cachedImageUrl = cachedData['thumbnailUrl'] as String?;
+        final cachedDishName = cachedData['dishName'] as String? ?? 'Unknown';
+
+        if (cachedImageUrl == null || cachedImageUrl.isEmpty) continue;
+
+        try {
+          final ref = storage.refFromURL(cachedImageUrl);
+          final cachedImageBytes = await ref.getData();
+
+          if (cachedImageBytes == null) continue;
+
+          print('Comparing with cached dish: $cachedDishName');
+
+          final comparisonPrompt = '''
+Compare these two food images and determine if they show the SAME DISH.
+
+CRITICAL COMPARISON RULES:
+1. Focus on the DISH TYPE and KEY INGREDIENTS, not presentation or plating
+2. Consider: main ingredients, cooking method, color, texture, sauce/broth characteristics
+3. Images can be from different angles, portions, or lighting but show the same dish
+4. Filipino dishes: prioritize traditional characteristics (e.g., Kare-Kare has peanut sauce, Adobo has dark soy-based sauce)
+5. Return a confidence score (0.0 to 1.0) indicating similarity of the DISH
+
+Return ONLY JSON:
+{
+  "isSameDish": true/false,
+  "confidence": 0.XX,
+  "reasoning": "Brief explanation of why they match or don't match"
+}
+
+THRESHOLDS:
+- confidence >= 0.85: Definitely same dish
+- confidence >= 0.70: Likely same dish
+- confidence < 0.70: Different dishes
+''';
+
+          final response = await model.generateContent([
+            Content.multi([
+              TextPart(comparisonPrompt),
+              TextPart("Current Image:"),
+              DataPart('image/jpeg', currentImageBytes),
+              TextPart("Previous Cached Image ($cachedDishName):"),
+              DataPart('image/jpeg', cachedImageBytes),
+            ]),
+          ]);
+
+          final comparisonResult = parseComparisonResponse(response.text ?? '');
+
+          print(
+            'Comparison result: ${comparisonResult['confidence']} - ${comparisonResult['reasoning']}',
+          );
+
+          if (comparisonResult['isSameDish'] == true &&
+              comparisonResult['confidence'] >= 0.70) {
+            print(
+              'Found similar food match! Confidence: ${comparisonResult['confidence']}',
+            );
+
+            firestore
+                .collection('users')
+                .doc(user.uid)
+                .collection('food_cache')
+                .doc(doc.id)
+                .update({
+                  'lastAccessed': FieldValue.serverTimestamp(),
+                  'accessCount': FieldValue.increment(1),
+                  'lastMatchConfidence': comparisonResult['confidence'],
+                })
+                .catchError((e) => print('Error updating cache: $e'));
+
+            return {
+              ...cachedData,
+              'fromCache': true,
+              'matchType': 'visual_similarity',
+              'matchConfidence': comparisonResult['confidence'],
+              'matchReasoning': comparisonResult['reasoning'],
+            };
+          }
+        } catch (e) {
+          print('Error comparing with cached image: $e');
+          continue;
+        }
+      }
+
+      print('No similar food images found in cache');
+      return null;
+    } catch (e) {
+      print('Error checking similar food image: $e');
+      return null;
+    }
+  }
+
+  Map<String, dynamic> parseComparisonResponse(String response) {
+    try {
+      String cleanResponse = response;
+      if (response.contains('```json')) {
+        cleanResponse = response.split('```json')[1].split('```')[0];
+      } else if (response.contains('```')) {
+        cleanResponse = response.split('```')[1];
+      }
+
+      return json.decode(cleanResponse.trim());
+    } catch (e) {
+      print('Error parsing comparison response: $e');
+      return {
+        'isSameDish': false,
+        'confidence': 0.0,
+        'reasoning': 'Failed to parse comparison result',
+      };
+    }
+  }
+
+  Future<Map<String, dynamic>?> checkFoodCache(
+    String cacheKey, {
+    File? imageFile,
+    String? apiKey,
+  }) async {
+    try {
+      print('Checking food cache for: $cacheKey');
+
+      final exactMatch = await checkExactFoodCache(cacheKey);
+      if (exactMatch != null) {
+        print('Using exact cache match');
+        return {...exactMatch, 'matchType': 'exact_key'};
+      }
+
+      if (imageFile != null) {
+        final imageHash = generateImageHash(imageFile);
+        if (imageHash.isNotEmpty) {
+          final exactImageMatch = await checkExactImageMatch(imageHash);
+          if (exactImageMatch != null) {
+            print('Using exact image match');
+            return {...exactImageMatch, 'matchType': 'exact_image'};
+          }
+        }
+      }
+
+      if (imageFile != null && apiKey != null && apiKey.isNotEmpty) {
+        print('Checking visual similarity...');
+        final similarMatch = await checkSimilarFoodImage(imageFile, apiKey);
+        if (similarMatch != null) {
+          print('Using visually similar match');
+          return similarMatch;
+        }
+      }
+
+      print('No cache match found');
+      return null;
+    } catch (e) {
+      print('Error in comprehensive cache check: $e');
       return null;
     }
   }
@@ -224,23 +475,76 @@ class AllergenAnalysis {
     String dishName,
     String description,
     List<String> ingredients,
-    List<AllergenInfo> allergens,
-  ) async {
+    List<dynamic> allergens, {
+    IngredientBenefitsMap? ingredientBenefitsMap,
+    File? imageFile,
+  }) async {
     try {
-      await FirebaseFirestore.instance
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) return;
+
+      String? imageHash;
+      String? thumbnailUrl;
+
+      if (imageFile != null) {
+        imageHash = generateImageHash(imageFile);
+
+        try {
+          final thumbnailFileName =
+              'food_thumb_${DateTime.now().millisecondsSinceEpoch}.jpg';
+          final thumbnailRef = storage
+              .ref()
+              .child('food_thumbnails')
+              .child(user.uid)
+              .child(thumbnailFileName);
+
+          await thumbnailRef.putFile(imageFile);
+          thumbnailUrl = await thumbnailRef.getDownloadURL();
+          print('✓ Thumbnail uploaded successfully');
+        } catch (e) {
+          print('Error uploading thumbnail: $e');
+        }
+      }
+
+      Map<String, dynamic> cacheData = {
+        'dishName': dishName,
+        'description': description,
+        'ingredients': ingredients,
+        'allergens': allergens.map((a) => a is Map ? a : a.toJson()).toList(),
+        'timestamp': FieldValue.serverTimestamp(),
+        'lastAccessed': FieldValue.serverTimestamp(),
+        'cacheKey': cacheKey,
+        'accessCount': 1,
+      };
+
+      if (imageHash != null) {
+        cacheData['imageHash'] = imageHash;
+      }
+      if (thumbnailUrl != null) {
+        cacheData['thumbnailUrl'] = thumbnailUrl;
+      }
+
+      if (ingredientBenefitsMap != null) {
+        Map<String, String> benefitsToSave = {};
+        for (String ingredient in ingredients) {
+          String? benefit = ingredientBenefitsMap.getBenefit(ingredient);
+          if (benefit != null && benefit.isNotEmpty) {
+            benefitsToSave[ingredient] = benefit;
+          }
+        }
+        cacheData['ingredientBenefits'] = benefitsToSave;
+      }
+
+      await firestore
+          .collection('users')
+          .doc(user.uid)
           .collection('food_cache')
           .doc(cacheKey)
-          .set({
-            'dishName': dishName,
-            'description': description,
-            'ingredients': ingredients,
-            'allergens': allergens.map((a) => a.toJson()).toList(),
-            'timestamp': FieldValue.serverTimestamp(),
-            'lastAccessed': FieldValue.serverTimestamp(),
-            'accessCount': 1,
-          });
+          .set(cacheData, SetOptions(merge: true));
+
+      print('✓ Food analysis cached successfully: $cacheKey');
     } catch (e) {
-      print('Error saving to cache: $e');
+      print('Error saving food cache: $e');
     }
   }
 
@@ -292,8 +596,6 @@ class AllergenAnalysis {
     }
   }
 
-
-
   Future<List<IngredientColorInfo>> computeIngredientColors(
     List<String> ingredients,
     List<AllergenInfo> allergens,
@@ -303,15 +605,15 @@ class AllergenAnalysis {
       allergenData['severity'],
     );
 
-
-     Map<String, double> translatedSeverity = {};
-  for (var entry in userAllergenSeverity.entries) {
-    String tagalogName = entry.key;
-    String englishName = await TranslationService.instance.translateToEnglish(tagalogName);
-    translatedSeverity[englishName.toLowerCase().trim()] = entry.value;
-    translatedSeverity[tagalogName.toLowerCase().trim()] = entry.value;
-  }
-
+    Map<String, double> translatedSeverity = {};
+    for (var entry in userAllergenSeverity.entries) {
+      String tagalogName = entry.key;
+      String englishName = await TranslationService.instance.translateToEnglish(
+        tagalogName,
+      );
+      translatedSeverity[englishName.toLowerCase().trim()] = entry.value;
+      translatedSeverity[tagalogName.toLowerCase().trim()] = entry.value;
+    }
 
     List<IngredientColorInfo> computedIngredientColors = [];
     for (String ingredient in ingredients) {
@@ -329,10 +631,11 @@ class AllergenAnalysis {
           String allergenName = allergenInfo.name.toLowerCase();
           String? matchedUserAllergen = await findMatchingUserAllergen(
             allergenName,
-  translatedSeverity.keys.toList(),          );
+            translatedSeverity.keys.toList(),
+          );
 
           if (matchedUserAllergen != null) {
-          double severity = translatedSeverity[matchedUserAllergen]!;
+            double severity = translatedSeverity[matchedUserAllergen]!;
             if (severity > maxSeverity) {
               maxSeverity = severity;
               matchedAllergens = [allergenInfo.name];
@@ -410,10 +713,10 @@ class AllergenAnalysis {
     return false;
   }
 
-  Future<String?> findMatchingUserAllergen (
+  Future<String?> findMatchingUserAllergen(
     String allergenName,
     List<String> userAllergens,
-  ) async{
+  ) async {
     String cleanAllergenName = allergenName.toLowerCase().trim();
 
     for (String userAllergen in userAllergens) {
@@ -421,11 +724,11 @@ class AllergenAnalysis {
 
       if (cleanAllergenName == cleanUserAllergen) return userAllergen;
 
-          bool areEquivalent = await TranslationService.instance.areTermsEquivalent(
-      cleanAllergenName,
-      cleanUserAllergen,
-    );
-    if (areEquivalent) return userAllergen;
+      bool areEquivalent = await TranslationService.instance.areTermsEquivalent(
+        cleanAllergenName,
+        cleanUserAllergen,
+      );
+      if (areEquivalent) return userAllergen;
 
       if (isSingularPlural(cleanAllergenName, cleanUserAllergen))
         return userAllergen;
