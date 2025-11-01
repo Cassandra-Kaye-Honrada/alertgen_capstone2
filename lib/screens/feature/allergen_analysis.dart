@@ -319,7 +319,14 @@ class AllergenAnalysis {
         final cachedImageUrl = cachedData['thumbnailUrl'] as String?;
         final cachedDishName = cachedData['dishName'] as String? ?? 'Unknown';
 
-        if (cachedImageUrl == null || cachedImageUrl.isEmpty) continue;
+        final cachedIngredients = List<String>.from(
+          cachedData['ingredients'] ?? [],
+        );
+
+        if (cachedImageUrl == null ||
+            cachedImageUrl.isEmpty ||
+            cachedIngredients.isEmpty)
+          continue;
 
         try {
           final ref = storage.refFromURL(cachedImageUrl);
@@ -327,38 +334,47 @@ class AllergenAnalysis {
 
           if (cachedImageBytes == null) continue;
 
-          print('Comparing with cached dish: $cachedDishName');
+          print(
+            'Comparing with cached dish: $cachedDishName with ${cachedIngredients.length} ingredients',
+          );
 
           final comparisonPrompt = '''
-Compare these two food images and determine if they show the SAME DISH.
+You are a visual food inspector. Your task is to compare a new food image against a cached dish analysis (which includes an old image and an ingredient list).
 
-CRITICAL COMPARISON RULES:
-1. Focus on the DISH TYPE and KEY INGREDIENTS, not presentation or plating
-2. Consider: main ingredients, cooking method, color, texture, sauce/broth characteristics
-3. Images can be from different angles, portions, or lighting but show the same dish
-4. Filipino dishes: prioritize traditional characteristics (e.g., Kare-Kare has peanut sauce, Adobo has dark soy-based sauce)
-5. Return a confidence score (0.0 to 1.0) indicating similarity of the DISH
+You must determine if the new image represents the EXACT SAME DISH, including its key ingredients, as the cached version.
+
+**Cached Dish Name:** $cachedDishName
+**Cached Dish Ingredients:** ${cachedIngredients.join(', ')}
+
+**CRITICAL COMPARISON RULES:**
+1.  **Base Dish Match:** First, do both images show the same *base dish* (e.g., both are Menudo, both are Adobo)?
+2.  **Key Ingredient Verification (MOST IMPORTANT):** Look at the **New Image**. Can you VISUALLY CONFIRM the presence of the key ingredients from the **Cached Dish Ingredients** list?
+    * Pay special attention to *defining* or *variable* ingredients (e.g., 'hotdog', 'shrimp', 'peanuts', 'egg').
+    * If the cached dish has 'hotdog' but the new image clearly *lacks* 'hotdog', they are NOT an exact match.
+    * If the cached dish has 'shrimp' but the new image has 'chicken', they are NOT an exact match.
+3.  **Angle vs. Content:** Do NOT be fooled by different angles, lighting, or plating. If the *food content and key ingredients* are the same, it's a match. If the *key ingredients* are different, it is NOT a match.
+
+**Stricter Rule:** A new image is only a "match" if it shows the same base dish AND *does not visibly contradict* the cached ingredient list. If a cached ingredient is *visibly missing* from the new image, it is NOT a match.
 
 Return ONLY JSON:
 {
-  "isSameDish": true/false,
-  "confidence": 0.XX,
-  "reasoning": "Brief explanation of why they match or don't match"
+  "isSameDish": true/false, // Are they the same dish with the same key ingredients?
+  "confidence": 0.XX, // Confidence of the *entire* match (base dish + ingredients)
+  "reasoning": "Brief explanation. MUST mention if key ingredients were matched or are missing."
 }
 
-THRESHOLDS:
-- confidence >= 0.85: Definitely same dish
-- confidence >= 0.70: Likely same dish
-- confidence < 0.70: Different dishes
+**THRESHOLDS (Be Strict):**
+- confidence >= 0.85: Definitely same dish AND same key ingredients.
+- confidence < 0.85: Treat as different dishes (e.g., missing hotdog).
 ''';
 
           final response = await model.generateContent([
             Content.multi([
               TextPart(comparisonPrompt),
-              TextPart("Current Image:"),
-              DataPart('image/jpeg', currentImageBytes),
-              TextPart("Previous Cached Image ($cachedDishName):"),
+              TextPart("Cached Image:"),
               DataPart('image/jpeg', cachedImageBytes),
+              TextPart("New Image to Analyze:"),
+              DataPart('image/jpeg', currentImageBytes),
             ]),
           ]);
 
@@ -369,9 +385,9 @@ THRESHOLDS:
           );
 
           if (comparisonResult['isSameDish'] == true &&
-              comparisonResult['confidence'] >= 0.70) {
+              comparisonResult['confidence'] >= 0.85) {
             print(
-              'Found similar food match! Confidence: ${comparisonResult['confidence']}',
+              'Found SIMILAR and INGREDIENT-MATCHED food! Confidence: ${comparisonResult['confidence']}',
             );
 
             firestore
@@ -393,6 +409,10 @@ THRESHOLDS:
               'matchConfidence': comparisonResult['confidence'],
               'matchReasoning': comparisonResult['reasoning'],
             };
+          } else {
+            print(
+              'Visually similar dish BUT ingredients mismatch or low confidence. Not using cache.',
+            );
           }
         } catch (e) {
           print('Error comparing with cached image: $e');
@@ -454,10 +474,10 @@ THRESHOLDS:
       }
 
       if (imageFile != null && apiKey != null && apiKey.isNotEmpty) {
-        print('Checking visual similarity...');
+        print('Checking visual similarity with ingredient verification...');
         final similarMatch = await checkSimilarFoodImage(imageFile, apiKey);
         if (similarMatch != null) {
-          print('Using visually similar match');
+          print('Using visually similar and ingredient-matched cache');
           return similarMatch;
         }
       }
@@ -578,6 +598,36 @@ THRESHOLDS:
     } catch (e) {
       print('Error fetching user allergen data: $e');
       return {'names': <String>[], 'severity': <String, double>{}};
+    }
+  }
+
+  Future<void> updateAllergenHighlighting(List<AllergenInfo> allergens) async {
+    final allergenData = await getUserAllergenData();
+    List<String> currentUserAllergens = List<String>.from(allergenData['names']);
+    
+    Map<String, double> translatedSeverity = {};
+    for (var entry in (allergenData['severity'] as Map<String, double>).entries) {
+      String tagalogName = entry.key;
+      String englishName = await TranslationService.instance.translateToEnglish(
+        tagalogName,
+      );
+      translatedSeverity[englishName.toLowerCase().trim()] = entry.value;
+      translatedSeverity[tagalogName.toLowerCase().trim()] = entry.value;
+    }
+
+    for (AllergenInfo allergen in allergens) {
+      String allergenName = allergen.name.toLowerCase().trim();
+      
+      String? matchedUserAllergen = await findMatchingUserAllergen(
+        allergenName,
+        translatedSeverity.keys.toList(),
+      );
+      
+      if (matchedUserAllergen != null) {
+        allergen.isUserAllergen = true;
+      } else {
+        allergen.isUserAllergen = false;
+      }
     }
   }
 
@@ -787,6 +837,33 @@ THRESHOLDS:
         (specific) => cleanAllergenName.contains(specific),
       );
 
+      bool userIsPeanut = cleanUserAllergen.contains('peanut');
+      bool detectedIsPeanut = cleanAllergenName.contains('peanut');
+      bool userIsGenericNut =
+          (cleanUserAllergen == 'nut' ||
+              cleanUserAllergen == 'nuts' ||
+              cleanUserAllergen == 'tree nut' ||
+              cleanUserAllergen == 'tree nuts') &&
+          !userIsPeanut;
+      bool detectedIsGenericNut =
+          (cleanAllergenName == 'nut' ||
+              cleanAllergenName == 'nuts' ||
+              cleanAllergenName == 'tree nut' ||
+              cleanAllergenName == 'tree nuts') &&
+          !detectedIsPeanut;
+
+      if (userIsGenericNut && detectedIsPeanut) {
+        continue;
+      }
+
+      if (userIsPeanut && detectedIsGenericNut) {
+        continue;
+      }
+
+      if (userIsPeanut && detectedIsPeanut) {
+        return userAllergen;
+      }
+
       if (userIsSpecificNut && detectedIsSpecificNut) {
         bool sameType = specificNuts.any((type) {
           return cleanUserAllergen.contains(type) &&
@@ -933,6 +1010,9 @@ THRESHOLDS:
       ['macadamia', 'nut'],
       ['brazil nut', 'nut'],
       ['peanut', 'nut'],
+      ['peanut', 'nuts'],
+      ['peanuts', 'nut'],
+      ['peanuts', 'nuts'],
       ['coconut', 'nut'],
       ['nutmeg', 'nut'],
       ['butternut', 'nut'],
@@ -940,6 +1020,11 @@ THRESHOLDS:
       ['water chestnut', 'nut'],
       ['donut', 'nut'],
       ['doughnut', 'nut'],
+      ['peanut', 'tree nut'],
+      ['peanuts', 'tree nuts'],
+      ['peanut', 'tree nuts'],
+      ['peanuts', 'tree nut'],
+
       // Fish
       ['bagoong', 'fish'],
       ['patis', 'fish'],
@@ -993,7 +1078,18 @@ THRESHOLDS:
       'crab': ['crab', 'crabs'],
       'lobster': ['lobster', 'lobsters'],
       'wheat': ['wheat', 'gluten'],
-      'soy': ['soy', 'soya', 'soybean', 'soybeans'],
+      'tofu': ['tofu', 'tokwa'],
+      'soy': [
+        'soy',
+        'soya',
+        'soybean',
+        'soybeans',
+        'soy sauce',
+        'soybean oil',
+        'toyo',
+        'edamame',
+        'soy protein',
+      ],
       'nuts': ['nuts', 'tree nuts'],
       'cashew': ['cashew', 'cashews'],
       'almond': ['almond', 'almonds'],

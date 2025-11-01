@@ -26,7 +26,7 @@ class _ChatbotModalState extends State<ChatbotModal>
   late AnimationController typingAnimationController;
   late Animation<double> typingAnimation;
   bool showScrollToBottom = false;
-  double _scrollPosition = 0;
+  double scrollPosition = 0;
 
   @override
   void initState() {
@@ -57,7 +57,7 @@ class _ChatbotModalState extends State<ChatbotModal>
     if (shouldShow != showScrollToBottom) {
       setState(() {
         showScrollToBottom = shouldShow;
-        _scrollPosition = currentPosition;
+        scrollPosition = currentPosition;
       });
     }
   }

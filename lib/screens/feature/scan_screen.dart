@@ -1084,153 +1084,157 @@ CRITICAL DETECTION RULES:
 FDA MAJOR ALLERGENS - DETECT SPECIFICALLY:
 
 1. MILK ALLERGEN:
-   - Name as: "Milk"
-   - Detect in: dairy, casein, whey, lactose, gatas, milk powder, cheese, butter, cream, yogurt, ghee, condensed milk, evaporated milk
+    - Name as: "Milk"
+    - Detect in: dairy, casein, whey, lactose, gatas, milk powder, cheese, butter, cream, yogurt, ghee, condensed milk, evaporated milk
 
 2. EGGS ALLERGEN:
-   - Name as: "Eggs"
-   - Detect in: egg, albumin, lecithin (if egg-derived), ovalbumin, itlog, egg powder, egg whites, egg yolk, mayonnaise, meringue
+    - Name as: "Eggs"
+    - Detect in: egg, albumin, lecithin (if egg-derived), ovalbumin, itlog, egg powder, egg whites, egg yolk, mayonnaise, meringue
 
 3. FISH ALLERGENS (detect each fish type separately):
-   - Name as specific fish: "Anchovies", "Tilapia", "Bangus", "Galunggong", "Tuna", "Salmon", "Sardines", "Mackerel", "Cod", "Haddock", "Pollock"
-   - Also detect: dried fish, isda, fish sauce/patis, bagoong isda, fish paste (specify fish type if known)
-   - If fish type unknown, use "Fish Sauce" or "Fish Paste" or "Fish"
+    - Name as specific fish: "Anchovies", "Tilapia", "Bangus", "Galunggong", "Tuna", "Salmon", "Sardines", "Mackerel", "Cod", "Haddock", "Pollock"
+    - Also detect: dried fish, isda, fish sauce/patis, bagoong isda, fish paste (specify fish type if known)
+    - If fish type unknown, use "Fish Sauce" or "Fish Paste" or "Fish"
 
 4. CRUSTACEAN SHELLFISH (detect each type separately):
-   - Name as: "Shrimp" (hipon, alamang, shrimp paste, bagoong alamang, dried shrimp)
-   - Name as: "Crab" (alimango, crab paste, crab stick)
-   - Name as: "Lobster" 
-   - Name as: "Prawns"
-   - Name as: "Crayfish"
+    - Name as: "Shrimp" (hipon, alamang, shrimp paste, bagoong alamang, dried shrimp)
+    - Name as: "Crab" (alimango, crab paste, crab stick)
+    - Name as: "Lobster" 
+    - Name as: "Prawns"
+    - Name as: "Crayfish"
 
 5. MOLLUSK SHELLFISH (detect each type separately):
-   - Name as: "Clams" (halaan)
-   - Name as: "Mussels" (tahong)
-   - Name as: "Scallops"
-   - Name as: "Oysters" (talaba, oyster sauce)
-   - Name as: "Squid" (pusit, calamari)
-   - Name as: "Octopus"
-   - Name as: "Snails"
+    - Name as: "Clams" (halaan)
+    - Name as: "Mussels" (tahong)
+    - Name as: "Scallops"
+    - Name as: "Oysters" (talaba, oyster sauce)
+    - Name as: "Squid" (pusit, calamari)
+    - Name as: "Octopus"
+    - Name as: "Snails"
 
 6. TREE NUT ALLERGENS (detect each nut separately - NOT peanuts, NOT coconut):
-   - Name as: "Cashew" (kasuy, cashew nuts)
-   - Name as: "Almonds"
-   - Name as: "Walnuts"
-   - Name as: "Pecans"
-   - Name as: "Hazelnuts"
-   - Name as: "Pistachios"
-   - Name as: "Macadamia"
-   - Name as: "Pine Nuts"
-   - Name as: "Brazil Nuts"
-   - Name as: "Chestnuts"
+    - Name as: "Cashew" (kasuy, cashew nuts)
+    - Name as: "Almonds"
+    - Name as: "Walnuts"
+    - Name as: "Pecans"
+    - Name as: "Hazelnuts"
+    - Name as: "Pistachios"
+    - Name as: "Macadamia"
+    - Name as: "Pine Nuts"
+    - Name as: "Brazil Nuts"
+    - Name as: "Chestnuts"
 
 7. PEANUTS ALLERGEN:
    - Name as: "Peanuts"
    - Detect in: mani, peanut oil, peanut butter, groundnuts, peanut sauce, peanut flour
+   - CRITICAL: Peanuts are legumes, NOT tree nuts. If user allergen is "nuts" or "tree nuts", DO NOT match peanuts.
+   - Only match peanuts if user specifically has "peanut" or "peanuts" as their allergen.
 
 8. WHEAT ALLERGEN:
-   - Name as: "Wheat"
-   - Detect in: gluten, flour, wheat flour, bread crumbs, harina, lumpia wrapper, spring roll wrapper, wheat noodles, pasta, bread, couscous, semolina, farro
+    - Name as: "Wheat"
+    - Detect in: gluten, flour, wheat flour, bread crumbs, harina, lumpia wrapper, spring roll wrapper, wheat noodles, pasta, bread, couscous, semolina, farro
 
 9. SOY ALLERGEN:
-   - Name as: "Soy"
-   - Detect in: soybean, soy sauce, tofu, soybean oil, toyo, miso, tempeh, edamame, soy protein, soy lecithin
+    - Name as: "Soy"
+    - Detect in: soybean, soy sauce, soybean oil, toyo, miso, tempeh, edamame, soy protein, soy lecithin
+    - CRITICAL: If the user's allergen list contains "tofu," identify the allergen as **"Tofu"** instead of **"Soy"** for tofu-specific ingredients/sources. **Tofu** itself can be a distinct user-allergen.
 
 10. SESAME ALLERGEN:
-   - Name as: "Sesame"
-   - Detect in: sesame oil, tahini, linga, sesame seeds, benne, sesame paste
+    - Name as: "Sesame"
+    - Detect in: sesame oil, tahini, linga, sesame seeds, benne, sesame paste
 
 USER'S CUSTOM ALLERGENS (also check for these): ${userAllergensText.isNotEmpty ? userAllergensText : 'None specified'}
 
 ENHANCED ALLERGEN DETECTION RULES WITH INTELLIGENT MATCHING:
 
 1. **SPECIFIC ALLERGEN NAMING**: Always use the most specific allergen name:
-   - If ingredient is "shrimp paste" → allergen name is "Shrimp" (NOT "Shellfish")
-   - If ingredient is "oyster sauce" → allergen name is "Oysters" (NOT "Shellfish")
-   - If ingredient is "cashew nuts" → allergen name is "Cashew" (NOT "Tree Nuts")
-   - If ingredient is "tuna" → allergen name is "Tuna" (NOT "Fish")
-   - If ingredient is "soy sauce" → allergen name is "Soy" (NOT just listing ingredient)
-   - If ingredient is "bagoong alamang" → allergen name is "Shrimp" (NOT "Shellfish")
+    - If ingredient is "shrimp paste" → allergen name is "Shrimp" (NOT "Shellfish")
+    - If ingredient is "oyster sauce" → allergen name is "Oysters" (NOT "Shellfish")
+    - If ingredient is "cashew nuts" → allergen name is "Cashew" (NOT "Tree Nuts")
+    - If ingredient is "tuna" → allergen name is "Tuna" (NOT "Fish")
+    - If ingredient is "soy sauce" → allergen name is "Soy" (NOT just listing ingredient)
+    - If ingredient is "bagoong alamang" → allergen name is "Shrimp" (NOT "Shellfish")
+    - **SPECIAL SOY RULE**: If the ingredient is **"tofu"** and **"tofu"** is in the user's custom allergens, name the allergen as **"Tofu"**. Otherwise, name it **"Soy"**.
 
 2. **MULTIPLE SPECIFIC ALLERGENS**: If dish contains multiple specific allergens from same FDA category, list each separately:
-   - Example: If dish has both "shrimp paste" and "oyster sauce" → list TWO allergens: "Shrimp" and "Oysters"
-   - Example: If dish has both "cashews" and "almonds" → list TWO allergens: "Cashew" and "Almonds"
-   - Example: If dish has "tuna" and "anchovies" → list TWO allergens: "Tuna" and "Anchovies"
+    - Example: If dish has both "shrimp paste" and "oyster sauce" → list TWO allergens: "Shrimp" and "Oysters"
+    - Example: If dish has both "cashews" and "almonds" → list TWO allergens: "Cashew" and "Almonds"
+    - Example: If dish has "tuna" and "anchovies" → list TWO allergens: "Tuna" and "Anchovies"
 
 3. **SMART LINGUISTIC MATCHING**: Use AI intelligence to match allergens with variations:
-   - SINGULAR/PLURAL: "egg" matches "eggs", "shrimp" matches "shrimps", "cashew" matches "cashews"
-   - SYNONYM MATCHING: "soy" matches "soybean"/"soya", "milk" matches "dairy", "gatas" matches "milk"
-   - DERIVATIVE MATCHING: "wheat" matches "flour"/"gluten", "soy" matches "tofu"/"soy sauce"
-   - FILIPINO TERMS: 
-     * "gatas" = "Milk"
-     * "hipon" = "Shrimp"
-     * "isda" = "Fish"
-     * "mani" = "Peanuts"
-     * "kasuy" = "Cashew"
-     * "itlog" = "Eggs"
-     * "toyo" = "Soy"
-     * "patis" = "Fish Sauce"
-     * "bagoong alamang" = "Shrimp"
-     * "bagoong isda" = "Fish Paste"
-     * "alimango" = "Crab"
-     * "talaba" = "Oysters"
-     * "tahong" = "Mussels"
-     * "halaan" = "Clams"
-     * "pusit" = "Squid"
+    - SINGULAR/PLURAL: "egg" matches "eggs", "shrimp" matches "shrimps", "cashew" matches "cashews"
+    - SYNONYM MATCHING: "soy" matches "soybean"/"soya", "milk" matches "dairy", "gatas" matches "milk"
+    - DERIVATIVE MATCHING: "wheat" matches "flour"/"gluten", "soy" matches "tofu"/"soy sauce"
+    - FILIPINO TERMS: 
+      * "gatas" = "Milk"
+      * "hipon" = "Shrimp"
+      * "isda" = "Fish"
+      * "mani" = "Peanuts"
+      * "kasuy" = "Cashew"
+      * "itlog" = "Eggs"
+      * "toyo" = "Soy"
+      * "patis" = "Fish Sauce"
+      * "bagoong alamang" = "Shrimp"
+      * "bagoong isda" = "Fish Paste"
+      * "alimango" = "Crab"
+      * "talaba" = "Oysters"
+      * "tahong" = "Mussels"
+      * "halaan" = "Clams"
+      * "pusit" = "Squid"
 
 4. **DEDUPLICATE ALLERGENS**: If same allergen found in multiple ingredients, list it ONCE with ALL sources:
-   - Example: "soy sauce" and "tofu" both contain soy → ONE "Soy" allergen with sources: "soy sauce, tofu"
-   - Example: "shrimp" and "shrimp paste" → ONE "Shrimp" allergen with sources: "shrimp, shrimp paste"
-   - Example: "milk" and "cheese" → ONE "Milk" allergen with sources: "milk, cheese"
+    - Example: "soy sauce" and "tofu" both contain soy → ONE "Soy" allergen with sources: "soy sauce, tofu"
+    - Example: "shrimp" and "shrimp paste" → ONE "Shrimp" allergen with sources: "shrimp, shrimp paste"
+    - Example: "milk" and "cheese" → ONE "Milk" allergen with sources: "milk, cheese"
 
 5. **CONTEXT-AWARE DETECTION**:
-   - Fish sauce (patis) → detect as "Fish Sauce"
-   - Bagoong isda → detect as "Fish Paste"  
-   - Bagoong alamang → detect as "Shrimp"
-   - Oyster sauce → detect as "Oysters"
-   - Lumpia wrapper → detect as "Wheat"
-   - Soy sauce (toyo) → detect as "Soy"
-   - Shrimp paste (alamang) → detect as "Shrimp"
+    - Fish sauce (patis) → detect as "Fish Sauce"
+    - Bagoong isda → detect as "Fish Paste"  
+    - Bagoong alamang → detect as "Shrimp"
+    - Oyster sauce → detect as "Oysters"
+    - Lumpia wrapper → detect as "Wheat"
+    - Soy sauce (toyo) → detect as "Soy"
+    - Shrimp paste (alamang) → detect as "Shrimp"
 
 6. **USER ALLERGEN MATCHING**: For custom allergens, be MORE inclusive and specific:
-   - Use linguistic intelligence to find related ingredients
-   - Match root words and common variations
-   - Consider both English and Filipino terms
-   - **IMPORTANT**: If user allergen is "shellfish" → detect ALL specific shellfish separately (Shrimp, Crab, Oysters, Clams, etc.) and mark each as isUserAllergen: true
-   - **IMPORTANT**: If user allergen is "nut" or "nuts" → detect ALL specific nuts separately (Cashew, Almonds, Walnuts, Peanuts, etc.) and mark each as isUserAllergen: true
-   - **IMPORTANT**: If user allergen is "fish" → detect ALL specific fish separately (Tuna, Salmon, Bangus, etc.) and mark each as isUserAllergen: true
-   - If user allergen is specific (e.g., "shrimp") → only detect that specific allergen
+    - Use linguistic intelligence to find related ingredients
+    - Match root words and common variations
+    - Consider both English and Filipino terms
+    - **IMPORTANT**: If user allergen is "shellfish" → detect ALL specific shellfish separately (Shrimp, Crab, Oysters, Clams, etc.) and mark each as isUserAllergen: true
+    - **IMPORTANT**: If user allergen is "nut" or "nuts" → detect ALL specific nuts separately (Cashew, Almonds, Walnuts, Peanuts, etc.) and mark each as isUserAllergen: true
+    - **IMPORTANT**: If user allergen is "fish" → detect ALL specific fish separately (Tuna, Salmon, Bangus, etc.) and mark each as isUserAllergen: true
+    - If user allergen is specific (e.g., "shrimp") → only detect that specific allergen
 
 7. **WHOLE-WORD MATCHING**: Avoid false positives:
-   - "Eggplant" does NOT contain eggs
-   - "Butternut squash" does NOT contain butter/milk
-   - "Coconut" is NOT a tree nut (it's a fruit)
-   - Use context to avoid matching unrelated words
+    - "Eggplant" does NOT contain eggs
+    - "Butternut squash" does NOT contain butter/milk
+    - "Coconut" is NOT a tree nut (it's a fruit)
+    - Use context to avoid matching unrelated words
 
 8. **RISK LEVEL ASSIGNMENT**:
-   - severe: Life-threatening allergens, common severe reactions (peanuts, shellfish, tree nuts, fish)
-   - moderate: Can cause significant reactions (milk, eggs, soy, wheat, sesame)
-   - mild: Generally mild reactions
-   - safe: No allergen detected or trace amounts
+    - severe: Life-threatening allergens, common severe reactions (peanuts, shellfish, tree nuts, fish)
+    - moderate: Can cause significant reactions (milk, eggs, soy, wheat, sesame)
+    - mild: Generally mild reactions
+    - safe: No allergen detected or trace amounts
 
 9. **SYMPTOMS ASSIGNMENT**: Provide specific, relevant symptoms for each allergen:
-   - Severe allergens: anaphylaxis, difficulty breathing, swelling of throat, severe hives, drop in blood pressure
-   - Moderate allergens: hives, itching, nausea, stomach cramps, diarrhea, vomiting
-   - All: Always include relevant symptoms based on the specific allergen
+    - Severe allergens: anaphylaxis, difficulty breathing, swelling of throat, severe hives, drop in blood pressure
+    - Moderate allergens: hives, itching, nausea, stomach cramps, diarrhea, vomiting
+    - All: Always include relevant symptoms based on the specific allergen
 
 Return JSON with this exact structure:
 {
-  "allergens": [
-    {
-      "name": "Specific allergen name (e.g., 'Shrimp', 'Cashew', 'Tuna', 'Milk', 'Eggs' - NOT 'Shellfish' or 'Tree Nuts')",
-      "riskLevel": "severe|moderate|mild|safe",
-      "symptoms": ["specific symptom1", "specific symptom2", "specific symptom3"],
-      "sources": ["ingredient1", "ingredient2", "ingredient3"],
-      "category": "FDA_MAJOR|USER_CUSTOM",
-      "isUserAllergen": true/false,
-      "matchingReason": "Brief explanation of detection"
-    }
-  ]
+    "allergens": [
+        {
+            "name": "Specific allergen name (e.g., 'Shrimp', 'Cashew', 'Tuna', 'Milk', 'Eggs' - NOT 'Shellfish' or 'Tree Nuts')",
+            "riskLevel": "severe|moderate|mild|safe",
+            "symptoms": ["specific symptom1", "specific symptom2", "specific symptom3"],
+            "sources": ["ingredient1", "ingredient2", "ingredient3"],
+            "category": "FDA_MAJOR|USER_CUSTOM",
+            "isUserAllergen": true/false,
+            "matchingReason": "Brief explanation of detection"
+        }
+    ]
 }
 
 CRITICAL REQUIREMENTS:
@@ -1355,60 +1359,226 @@ CRITICAL REQUIREMENTS:
 ''';
 
   String get multiOptionImagePrompt => '''
+
 You are an expert Filipino food identification system with PRIMARY FOCUS on Filipino cuisine.
 
-CRITICAL: Generate 3-4 DIFFERENT possible dish interpretations with confidence scores. Consider:
-1. Most likely Filipino dish based on visual characteristics
-2. Similar-looking Filipino dishes
-3. Regional variations of the same dish
-4. Alternative interpretations if visual characteristics are ambiguous
 
-Return JSON with this exact structure (DO NOT include allergens):
+
+CRITICAL: Generate 3-4 DIFFERENT possible dish interpretations with confidence scores. For EACH option, you MUST follow all the rules below.
+
+
+
+**ABSOLUTE RULE: NEVER GROUP INGREDIENTS - LIST EACH ONE SEPARATELY**
+
+WRONG: "mixed seafood (shrimp, crab, mussels)"
+
+CORRECT: "shrimp" (separate entry), "crab" (separate entry), "mussels" (separate entry)
+
+
+
+**CRITICAL RULE #1: VISUALS TRUMP TRADITION (THE "MENUDO WITH HOTDOG" RULE)**
+
+- You MUST identify ingredients that are **VISUALLY PRESENT**, even if they are **NOT in the traditional recipe.**
+
+- **EXAMPLE:** If you identify "Menudo" but you ALSO visually see "hotdog" slices, **YOU MUST ADD "hotdog" as a separate ingredient.**
+
+- Do not ignore visible ingredients. Your job is to analyze the image, not just a recipe book.
+
+
+
+**CRITICAL RULE #2: ONE INGREDIENT PER ENTRY**
+
+- Each ingredient MUST be its own separate entry in the ingredients array.
+
+- If you see multiple seafood items, create SEPARATE ingredient entries for EACH ONE.
+
+
+
+**CRITICAL RULE #3: ALLERGENIC BASE INGREDIENTS**
+
+- When identifying sauces, pastes, or broths, you MUST list their primary allergenic base ingredient.
+
+- Kare-Kare sauce -> MUST list "peanut butter" or "peanuts"
+
+- Bagoong -> MUST specify "shrimp paste" or "fish paste"
+
+- Soy-based sauces -> MUST list "soy sauce"
+
+- Creamy soups -> MUST list "milk" or "cream"
+
+- Oyster sauce -> MUST list "oyster sauce" or "oysters"
+
+
+
+**FILIPINO DISHES - VISUAL IDENTIFICATION WITH ALLERGEN FOCUS:**
+
+
+
+- **KARE-KARE:**
+
+  - Thick, peanut-based sauce - **MUST include "peanut butter"**
+
+  - List vegetables individually: "bok choy", "string beans", "eggplant"
+
+  - Served with bagoong - **MUST specify "shrimp paste" or "fish paste"**
+
+
+
+- **ADOBO:**
+
+  - Dark, soy sauce-colored - **MUST list "soy sauce"**
+
+
+
+- **SINIGANG:**
+
+  - Clear, sour broth - may contain **fish sauce (patis)**
+
+  - List vegetables individually: "radish", "tomatoes", "water spinach" (NOT "mixed vegetables")
+
+
+
+- **MENUDO (Filipino Pork Stew):**
+
+  - Reddish-orange tomato-based sauce - **MUST list "tomato sauce"**
+
+  - Traditional ingredients: "pork", "pork liver"
+
+  - Traditional vegetables: List individually: "carrots", "potatoes", "bell peppers"
+
+  - **VISUAL RULE:** Look for "hotdog" (often bright red) or "raisins". If you see them, **YOU MUST LIST "hotdog" and "raisins"** as separate ingredients.
+
+
+
+- **BICOL EXPRESS:**
+
+  - Creamy, spicy dish - **MUST list "coconut milk" and "chili peppers"**
+
+
+
+- **SEAFOOD DISHES - CRITICAL SEPARATION RULES:**
+
+  - **NEVER say "mixed seafood" or "assorted seafood"**
+
+  - **ALWAYS list each type separately as individual entries:** "shrimp", "squid", "mussels", "clams", "fish", "crab"
+
+
+
+- **VEGETABLE DISHES - CRITICAL SEPARATION RULES:**
+
+  - **NEVER say "mixed vegetables" or "assorted vegetables"**
+
+  - **ALWAYS list each vegetable separately as individual entries:** "cabbage", "carrots", "green beans", "bell peppers", "onions"
+
+
+
+**INGREDIENT IDENTIFICATION RULES FOR EACH OPTION:**
+
+1. **PRIORITIZE VISIBLE INGREDIENTS:** Your list **MUST** include every single ingredient you can visually identify (like hotdogs in Menudo).
+
+2. **SUPPLEMENT WITH TRADITIONAL RECIPE:** For ingredients you *cannot* see (like soy sauce, oil, salt), infer them based on the *known traditional recipe* of the dish.
+
+3. **COMBINE BOTH:** The final ingredient list is a combination of (1) all visible items and (2) all inferred non-visible items.
+
+4. **List EVERY ingredient separately** - no grouping.
+
+
+
+**INGREDIENT BENEFITS GUIDELINES:**
+
+- For each ingredient, provide: "Nutritional value, health benefits, and educational information for health-conscious individuals"
+
+- **For allergenic ingredients, ALWAYS provide BOTH health benefits AND allergen warning**
+
+- Peanuts: "Excellent source of plant-based protein, healthy fats, and vitamin E. Major allergen."
+
+- Shrimp: "Excellent source of protein and selenium. Shellfish allergen."
+
+- Eggs: "Complete protein source with choline for brain health. Common allergen."
+
+- Milk: "Excellent source of calcium and vitamin D. Dairy allergen."
+
+- Soy sauce: "Adds umami flavor. High in sodium. Contains soy allergen."
+
+- Wheat flour: "Source of carbohydrates. Contains gluten - wheat allergen."
+
+
+
+
+
+**RETURN JSON WITH THIS EXACT STRUCTURE:**
+
 {
+
   "options": [
+
     {
+
       "dishName": "Most likely Filipino dish name",
-      "description": "Brief description of visual characteristics",
- "ingredients": [
+
+      "description": "Brief description of visual characteristics, following all rules.",
+
+      "ingredients": [
+
         {
-          "name": "ingredient1",
+
+          "name": "ingredient1 (e.g., 'pork')",
+
           "benefits": "Nutritional value and health benefits"
+
         },
+
         {
-          "name": "ingredient2",
+
+          "name": "ingredient2 (e.g., 'hotdog')",
+
           "benefits": "Nutritional value and health benefits"
+
         }
+
       ],
-            "confidence": 0.90
+
+      "confidence": 0.90
+
     },
+
     {
+
       "dishName": "Alternative Filipino dish interpretation",
-      "description": "Different possible dish identification",
- "ingredients": [
+
+      "description": "Different possible dish, still following all rules.",
+
+      "ingredients": [
+
         {
+
           "name": "ingredient1",
+
           "benefits": "Nutritional value and health benefits"
-        },
-        {
-          "name": "ingredient2",
-          "benefits": "Nutritional value and health benefits"
+
         }
+
       ],
-            "confidence": 0.75
+
+      "confidence": 0.75
+
     }
+
   ]
+
 }
 
-CONFIDENCE SCORING RULES:
-- 0.90-1.00: Very clear visual match
-- 0.70-0.89: Good match but could be similar dish variant
-- 0.50-0.69: Moderate match, some ambiguity
+
 
 CRITICAL REQUIREMENTS:
-1. Generate 3-4 distinct options ordered by confidence
-2. PRIMARY FOCUS on Filipino cuisine identification
-3. Focus ONLY on dish identification and ingredient extraction
-4. Do NOT analyze allergens in this step
+
+1. Generate 3-4 distinct options ordered by confidence.
+
+2. PRIMARY FOCUS on Filipino cuisine identification.
+3. For EACH option, you MUST follow all rules (VISUALS TRUMP TRADITION, NO GROUPING, etc.).
+4. Do NOT analyze allergens in this step (that's the next prompt).
+5. **Ensure hotdogs, if visible in Menudo, are listed.**
+
 ''';
 
   Future<void> analyzeOCRText(String ocrText, File imageFile) async {
@@ -1475,6 +1645,8 @@ Return only the product name.
             (cachedData['allergens'] as List? ?? [])
                 .map((a) => AllergenInfo.fromJson(a))
                 .toList();
+
+        await allergenAnalysis.updateAllergenHighlighting(cachedAllergens);
 
         List<IngredientColorInfo> ingredientColors = await allergenAnalysis
             .computeIngredientColors(ingredients, cachedAllergens);
@@ -1608,6 +1780,8 @@ Generate 3-4 possible dish interpretations with confidence scores.
                   .map((a) => AllergenInfo.fromJson(a))
                   .toList();
 
+          await allergenAnalysis.updateAllergenHighlighting(cachedAllergens);
+
           List<IngredientColorInfo> ingredientColors = await allergenAnalysis
               .computeIngredientColors(ingredients, cachedAllergens);
 
@@ -1698,11 +1872,6 @@ Generate 3-4 possible dish interpretations with confidence scores.
       List<IngredientWithBenefits> processedIngredients =
           splitGroupedIngredients(selectedOption.ingredientsWithBenefits);
 
-      print(
-        'Original ingredients count: ${selectedOption.ingredientsWithBenefits.length}',
-      );
-      print('After splitting: ${processedIngredients.length}');
-
       ingredientBenefitsMap = IngredientBenefitsMap();
       for (var ingWithBenefits in processedIngredients) {
         ingredientBenefitsMap.addBenefit(
@@ -1718,9 +1887,6 @@ Generate 3-4 possible dish interpretations with confidence scores.
       String cacheKey = allergenAnalysis.generateCacheKey(
         selectedOption.dishName,
       );
-      print(
-        'Generated cache key: $cacheKey for dish: ${selectedOption.dishName}',
-      );
 
       var cachedData = await allergenAnalysis.checkFoodCache(cacheKey);
 
@@ -1734,6 +1900,8 @@ Generate 3-4 possible dish interpretations with confidence scores.
             (cachedData['allergens'] as List? ?? [])
                 .map((a) => AllergenInfo.fromJson(a))
                 .toList();
+
+        await allergenAnalysis.updateAllergenHighlighting(cachedAllergens);
 
         List<IngredientColorInfo> ingredientColors = await allergenAnalysis
             .computeIngredientColors(ingredients, cachedAllergens);
@@ -3464,7 +3632,7 @@ class AllergenInfo {
   final List<String> symptoms;
   final List<String> sources;
   final String category;
-  final bool isUserAllergen;
+  bool isUserAllergen;
   List<IngredientColorInfo> ingredientColors;
 
   AllergenInfo({

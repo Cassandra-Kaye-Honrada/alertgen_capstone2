@@ -31,7 +31,7 @@ class _AllergenProfileScreenState extends State<AllergenProfileScreen> {
 
   Timer? _debounceTimer;
 
-  String GEMINI_API_KEY = 'AIzaSyBcZAh281Ld4r3N8xD4bVP0bnwRb1wdfK0';
+  String GEMINI_API_KEY =  dotenv.env['API_KEY'] ?? '';
 
   static const double MILD = 0.0;
   static const double MODERATE = 0.5;
@@ -325,7 +325,7 @@ class _AllergenProfileScreenState extends State<AllergenProfileScreen> {
   Future<String> translateWithGemini(String tagalogWord) async {
     try {
       final url = Uri.parse(
-        'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=$GEMINI_API_KEY',
+        'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=$GEMINI_API_KEY',
       );
 
       final response = await http.post(
@@ -459,7 +459,6 @@ class _AllergenProfileScreenState extends State<AllergenProfileScreen> {
     try {
       Set<String> foundIngredients = {};
 
-      // STEP 1: Search the Tagalog dictionary for exact matches
       print('Step 1: Searching dictionary for "$searchTerm"');
       await searchTagalogDictionary(
         searchTerm,
@@ -474,13 +473,11 @@ class _AllergenProfileScreenState extends State<AllergenProfileScreen> {
         );
       }
 
-      // Store dictionary results
       if (foundIngredients.isNotEmpty) {
         dictionaryResults = Set<String>.from(foundIngredients);
         print('Dictionary results: $dictionaryResults');
       }
 
-      // STEP 2: Search USDA (regardless of dictionary results)
       print('Step 2: Searching USDA for "$searchTerm"');
       String usdaApiKey = dotenv.env['USDA_API_KEY'] ?? '';
 
@@ -525,7 +522,6 @@ class _AllergenProfileScreenState extends State<AllergenProfileScreen> {
         }
       }
 
-      // STEP 3: If USDA returned nothing, translate with AI and search again
       if (!searchedUSDA ||
           (foundIngredients.isEmpty && dictionaryResults.isEmpty)) {
         print(

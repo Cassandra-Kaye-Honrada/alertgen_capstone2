@@ -24,7 +24,7 @@ class ResultScreen extends StatefulWidget {
   final List<IngredientColorInfo> ingredientColors;
   final bool isFromHistory;
   final Map<String, double>? historicalSeverityData;
-   final IngredientBenefitsMap? ingredientBenefitsMap;
+  final IngredientBenefitsMap? ingredientBenefitsMap;
 
   const ResultScreen({
     Key? key,
@@ -38,7 +38,7 @@ class ResultScreen extends StatefulWidget {
     required this.ingredientColors,
     this.isFromHistory = false,
     this.historicalSeverityData,
-     this.ingredientBenefitsMap,
+    this.ingredientBenefitsMap,
   }) : super(key: key);
 
   @override
@@ -68,6 +68,9 @@ class _ResultScreenState extends State<ResultScreen>
     currentIngredients = List.from(widget.ingredients);
     currentAllergens = List.from(widget.allergens);
     currentIngredientColors = List.from(widget.ingredientColors);
+    
+    // DO NOT update allergen highlighting if viewing from history
+    // History should preserve the original allergen status at scan time
   }
 
   @override
@@ -625,8 +628,7 @@ CRITICAL REQUIREMENTS:
                   onIngredientsChanged: performAllergenAnalysis,
                   isFromHistory: widget.isFromHistory,
                   historicalSeverityData: widget.historicalSeverityData,
-                    ingredientBenefitsMap: widget.ingredientBenefitsMap,
-
+                  ingredientBenefitsMap: widget.ingredientBenefitsMap,
                 ),
               ],
             ),
