@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 class DishOption {
   final String dishName;
   final String description;
@@ -16,7 +17,7 @@ class DishOption {
 
   factory DishOption.fromJson(Map<String, dynamic> json) {
     List<IngredientWithBenefits> ingredientsWithBenefits = [];
-    
+
     if (json['ingredients'] is List) {
       for (var item in json['ingredients']) {
         if (item is Map<String, dynamic>) {
@@ -29,7 +30,7 @@ class DishOption {
         }
       }
     }
-    
+
     return DishOption(
       dishName: json['dishName'] ?? '',
       description: json['description'] ?? '',
@@ -44,10 +45,7 @@ class IngredientWithBenefits {
   final String name;
   final String benefits;
 
-  IngredientWithBenefits({
-    required this.name,
-    required this.benefits,
-  });
+  IngredientWithBenefits({required this.name, required this.benefits});
 }
 
 class DishSelectionScreen extends StatefulWidget {
@@ -342,25 +340,25 @@ class _DishSelectionScreenState extends State<DishSelectionScreen> {
                               color: Colors.blue[50],
                               borderRadius: BorderRadius.circular(8),
                             ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(
-                                  Icons.info_outline,
-                                  size: 14,
-                                  color: Colors.blue[700],
-                                ),
-                                const SizedBox(width: 4),
-                                Text(
-                                  'View benefits',
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w600,
-                                    color: Colors.blue[700],
-                                  ),
-                                ),
-                              ],
-                            ),
+                            // child: Row(
+                            //   mainAxisSize: MainAxisSize.min,
+                            //   children: [
+                            //     // Icon(
+                            //     //   Icons.info_outline,
+                            //     //   size: 14,
+                            //     //   color: Colors.blue[700],
+                            //     // ),
+                            //     // const SizedBox(width: 4),
+                            //     // Text(
+                            //     //   'View benefits',
+                            //     //   style: TextStyle(
+                            //     //     fontSize: 11,
+                            //     //     fontWeight: FontWeight.w600,
+                            //     //     color: Colors.blue[700],
+                            //     //   ),
+                            //     // ),
+                            //   ],
+                            // ),
                           ),
                         ),
                     ],

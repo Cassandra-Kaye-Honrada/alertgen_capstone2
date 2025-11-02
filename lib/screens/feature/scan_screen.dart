@@ -2008,11 +2008,6 @@ Generate 3-4 possible dish interpretations with confidence scores.
             analysisStatus = '';
           });
 
-          showSnackBar(
-            'Found previous analysis - loading instantly!',
-            Colors.green,
-          );
-
           navigateToResults();
 
           saveToFirebase(imageFile).catchError((e) {
@@ -2077,7 +2072,7 @@ Generate 3-4 possible dish interpretations with confidence scores.
       loading = true;
       dishName = selectedOption.dishName;
       description = selectedOption.description;
-      analysisStatus = 'Checking cache...';
+      analysisStatus = 'Analyzing...';
     });
 
     try {
@@ -2115,7 +2110,7 @@ Generate 3-4 possible dish interpretations with confidence scores.
         final matchLevel = cachedData['matchLevel'] ?? 0;
         final matchType = cachedData['matchType'] ?? 'unknown';
 
-        print('✓ Cache hit (Level $matchLevel: $matchType)');
+        print('Cache hit (Level $matchLevel: $matchType)');
 
         setState(() {
           analysisStatus = 'Loading from cache...';

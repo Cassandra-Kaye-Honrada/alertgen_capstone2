@@ -21,11 +21,14 @@ class AllergenAnalysis {
   }) async {
     try {
       print('Enhanced cache check for: $cacheKey');
+      print('Current ingredients: ${ingredients?.join(", ")}');
 
       final exactMatch = await checkExactFoodCache(cacheKey);
       if (exactMatch != null) {
         print('Level 1: Exact cache key match');
         return {...exactMatch, 'matchType': 'exact_key', 'matchLevel': 1};
+      } else {
+        print('Level 1: No exact cache key match');
       }
 
       if (imageFile != null) {
@@ -34,21 +37,32 @@ class AllergenAnalysis {
           final exactImageMatch = await checkExactImageMatch(imageHash);
           if (exactImageMatch != null) {
             print('Level 2: Exact image hash match');
-            return {...exactImageMatch, 'matchType': 'exact_image', 'matchLevel': 2};
+            return {
+              ...exactImageMatch,
+              'matchType': 'exact_image',
+              'matchLevel': 2,
+            };
+          } else {
+            print('Level 2: No exact image hash match');
           }
         }
       }
 
-      if (imageFile != null && apiKey != null && apiKey.isNotEmpty && ingredients != null) {
+      if (imageFile != null &&
+          apiKey != null &&
+          apiKey.isNotEmpty &&
+          ingredients != null) {
         print('Level 3: Checking visual similarity...');
         final similarMatch = await checkSimilarFoodImage(
-          imageFile, 
-          apiKey, 
+          imageFile,
+          apiKey,
           ingredients,
         );
         if (similarMatch != null) {
           print('Level 3: Visual similarity match with smart ingredient merge');
           return similarMatch;
+        } else {
+          print('Level 3: No visual similarity match');
         }
       }
 
@@ -69,14 +83,15 @@ class AllergenAnalysis {
       final user = FirebaseAuth.instance.currentUser;
       if (user == null) return null;
 
-      final querySnapshot = await firestore
-          .collection('users')
-          .doc(user.uid)
-          .collection('food_cache')
-          .where('thumbnailUrl', isNull: false)
-          .orderBy(' ', descending: true)
-          .limit(15)
-          .get();
+      final querySnapshot =
+          await firestore
+              .collection('users')
+              .doc(user.uid)
+              .collection('food_cache')
+              .where('thumbnailUrl', isNull: false)
+              .orderBy('timestamp', descending: true)
+              .limit(15)
+              .get();
 
       if (querySnapshot.docs.isEmpty) {
         print('No cached images found for comparison');
@@ -93,10 +108,14 @@ class AllergenAnalysis {
         final cachedData = doc.data();
         final cachedImageUrl = cachedData['thumbnailUrl'] as String?;
         final cachedDishName = cachedData['dishName'] as String? ?? 'Unknown';
-        final cachedIngredients = List<String>.from(cachedData['ingredients'] ?? []);
+        final cachedIngredients = List<String>.from(
+          cachedData['ingredients'] ?? [],
+        );
         final cachedAllergens = cachedData['allergens'] as List? ?? [];
 
-        if (cachedImageUrl == null || cachedImageUrl.isEmpty || cachedIngredients.isEmpty) {
+        if (cachedImageUrl == null ||
+            cachedImageUrl.isEmpty ||
+            cachedIngredients.isEmpty) {
           continue;
         }
 
@@ -155,18 +174,23 @@ Return ONLY JSON:
           final baseDishMatch = comparisonResult['baseDishMatch'] == true;
           final proteinMatch = comparisonResult['mainProteinMatch'] == true;
 
-          if (isSameDish && confidence >= 0.75 && baseDishMatch && proteinMatch) {
+          print(
+            'Comparison result for $cachedDishName: confidence=$confidence, isSameDish=$isSameDish',
+          );
+
+          if (isSameDish &&
+              confidence >= 0.75 &&
+              baseDishMatch &&
+              proteinMatch) {
             print('Visual similarity detected (confidence: $confidence)');
-            
+
             final ingredientComparison = compareIngredients(
-              cachedIngredients, 
+              cachedIngredients,
               currentIngredients,
               cachedAllergens,
             );
 
             if (ingredientComparison['canReuseCache'] == true) {
-              print('Safe to reuse cache: ${ingredientComparison['reason']}');
-              
               await firestore
                   .collection('users')
                   .doc(user.uid)
@@ -190,7 +214,7 @@ Return ONLY JSON:
               };
             } else if (ingredientComparison['shouldMerge'] == true) {
               print('Merging new ingredients with cached data');
-              
+
               return await mergeCachedDataWithNewIngredients(
                 cachedData,
                 currentIngredients,
@@ -220,14 +244,37 @@ Return ONLY JSON:
     List<String> currentIngredients,
     List<dynamic> cachedAllergens,
   ) {
-    final cachedAllergenIngredients = extractAllergenContainingIngredients(cachedIngredients);
-    final currentAllergenIngredients = extractAllergenContainingIngredients(currentIngredients);
+    final cachedAllergenIngredients = extractAllergenContainingIngredients(
+      cachedIngredients,
+    );
+    final currentAllergenIngredients = extractAllergenContainingIngredients(
+      currentIngredients,
+    );
 
     print('Ingredient Comparison:');
-    print('Cached allergen ingredients: ${cachedAllergenIngredients.join(", ")}');
-    print('Current allergen ingredients: ${currentAllergenIngredients.join(", ")}');
+    print(
+      'Cached allergen ingredients: ${cachedAllergenIngredients.join(", ")}',
+    );
+    print(
+      'Current allergen ingredients: ${currentAllergenIngredients.join(", ")}',
+    );
 
-    if (isSubsetOrEqual(currentAllergenIngredients, cachedAllergenIngredients)) {
+    if (areIngredientsEquivalent(
+      currentAllergenIngredients,
+      cachedAllergenIngredients,
+    )) {
+      return {
+        'canReuseCache': true,
+        'shouldMerge': false,
+        'reason': 'Ingredients are semantically equivalent',
+        'action': 'reuse_cache',
+      };
+    }
+
+    if (isSubsetOrEqual(
+      currentAllergenIngredients,
+      cachedAllergenIngredients,
+    )) {
       return {
         'canReuseCache': true,
         'shouldMerge': false,
@@ -236,31 +283,49 @@ Return ONLY JSON:
       };
     }
 
-    if (hasNewAllergenIngredients(currentAllergenIngredients, cachedAllergenIngredients)) {
-      final newIngredients = currentAllergenIngredients
-          .where((ing) => !cachedAllergenIngredients.any(
-              (cached) => ingredientsMatch(ing, cached)))
-          .toList();
-      
+    if (hasNewAllergenIngredients(
+      currentAllergenIngredients,
+      cachedAllergenIngredients,
+    )) {
+      final newIngredients =
+          currentAllergenIngredients
+              .where(
+                (ing) =>
+                    !cachedAllergenIngredients.any(
+                      (cached) => ingredientsMatch(ing, cached),
+                    ),
+              )
+              .toList();
+
       return {
         'canReuseCache': false,
         'shouldMerge': true,
-        'reason': 'New allergen ingredients detected: ${newIngredients.join(", ")}',
+        'reason':
+            'New allergen ingredients detected: ${newIngredients.join(", ")}',
         'action': 'merge_and_reanalyze',
         'newIngredients': newIngredients,
       };
     }
 
-    if (hasMissingAllergenIngredients(currentAllergenIngredients, cachedAllergenIngredients)) {
-      final missingIngredients = cachedAllergenIngredients
-          .where((cached) => !currentAllergenIngredients.any(
-              (ing) => ingredientsMatch(cached, ing)))
-          .toList();
-      
+    if (hasMissingAllergenIngredients(
+      currentAllergenIngredients,
+      cachedAllergenIngredients,
+    )) {
+      final missingIngredients =
+          cachedAllergenIngredients
+              .where(
+                (cached) =>
+                    !currentAllergenIngredients.any(
+                      (ing) => ingredientsMatch(cached, ing),
+                    ),
+              )
+              .toList();
+
       return {
         'canReuseCache': false,
         'shouldMerge': false,
-        'reason': 'Missing allergen ingredients: ${missingIngredients.join(", ")}',
+        'reason':
+            'Missing allergen ingredients: ${missingIngredients.join(", ")}',
         'action': 'create_new_variant',
       };
     }
@@ -273,31 +338,85 @@ Return ONLY JSON:
     };
   }
 
+  bool areIngredientsEquivalent(List<String> list1, List<String> list2) {
+    if (list1.isEmpty && list2.isEmpty) return true;
+
+    if ((list1.length - list2.length).abs() > 2) return false;
+
+    int matchCount = 0;
+    for (var ing1 in list1) {
+      for (var ing2 in list2) {
+        if (ingredientsMatch(ing1, ing2)) {
+          matchCount++;
+          break;
+        }
+      }
+    }
+
+    double matchPercentage =
+        matchCount /
+        (list1.length > list2.length ? list1.length : list2.length);
+    return matchPercentage >= 0.8;
+  }
+
   bool isSubsetOrEqual(List<String> a, List<String> b) {
-    return a.every((item) => b.any((cached) => ingredientsMatch(item, cached)));
+    for (var ingredientA in a) {
+      bool foundMatch = false;
+      for (var ingredientB in b) {
+        if (ingredientsMatch(ingredientA, ingredientB)) {
+          foundMatch = true;
+          break;
+        }
+      }
+      if (!foundMatch) return false;
+    }
+    return true;
   }
 
   bool hasNewAllergenIngredients(List<String> current, List<String> cached) {
-    return current.any((item) => !cached.any((cached) => ingredientsMatch(item, cached)));
+    for (var newIngredient in current) {
+      bool isNew = true;
+      for (var cachedIngredient in cached) {
+        if (ingredientsMatch(newIngredient, cachedIngredient)) {
+          isNew = false;
+          break;
+        }
+      }
+      if (isNew) return true;
+    }
+    return false;
   }
 
-  bool hasMissingAllergenIngredients(List<String> current, List<String> cached) {
-    return cached.any((item) => !current.any((curr) => ingredientsMatch(item, curr)));
+  bool hasMissingAllergenIngredients(
+    List<String> current,
+    List<String> cached,
+  ) {
+    for (var cachedIngredient in cached) {
+      bool isMissing = true;
+      for (var currentIngredient in current) {
+        if (ingredientsMatch(cachedIngredient, currentIngredient)) {
+          isMissing = false;
+          break;
+        }
+      }
+      if (isMissing) return true;
+    }
+    return false;
   }
 
   bool ingredientsMatch(String ing1, String ing2) {
     final clean1 = ing1.toLowerCase().trim();
     final clean2 = ing2.toLowerCase().trim();
-    
+
     if (clean1 == clean2) return true;
-    
+
     if (clean1.contains(clean2) || clean2.contains(clean1)) {
       if (isCompoundWordMismatch(clean1, clean2)) return false;
       return true;
     }
-    
+
     if (isSingularPlural(clean1, clean2)) return true;
-    
+
     return false;
   }
 
@@ -313,11 +432,12 @@ Return ONLY JSON:
       if (user == null) return cachedData;
 
       print('Merging ingredients...');
-      
-      final mergedIngredients = <String>{
-        ...List<String>.from(cachedData['ingredients'] ?? []),
-        ...currentIngredients,
-      }.toList();
+
+      final mergedIngredients =
+          <String>{
+            ...List<String>.from(cachedData['ingredients'] ?? []),
+            ...currentIngredients,
+          }.toList();
 
       print('Merged ingredients: ${mergedIngredients.join(", ")}');
 
@@ -331,11 +451,15 @@ Return ONLY JSON:
         'mergedIngredients': mergedIngredients,
         'requiresAllergenReanalysis': true,
         'originalCachedIngredients': cachedData['ingredients'],
-        'newIngredients': currentIngredients.where(
-          (ing) => !cachedData['ingredients'].any(
-            (cached) => ingredientsMatch(ing, cached)
-          )
-        ).toList(),
+        'newIngredients':
+            currentIngredients
+                .where(
+                  (ing) =>
+                      !cachedData['ingredients'].any(
+                        (cached) => ingredientsMatch(ing, cached),
+                      ),
+                )
+                .toList(),
       };
     } catch (e) {
       print('Error merging cached data: $e');
@@ -345,12 +469,15 @@ Return ONLY JSON:
 
   String generateCacheKey(String dishName, {List<String>? ingredients}) {
     String original = dishName.toLowerCase().trim();
+
+    original = original.replaceAll(RegExp(r'\([^)]*\)'), '').trim();
+
     String mainProtein = extractMainProtein(original);
     String normalized =
         original
             .replaceAll(
               RegExp(
-                r'\b(filipino|pinoy|style|traditional|classic|homemade|authentic|special|deluxe|premium|original)\b',
+                r'\b(filipino|pinoy|style|traditional|classic|homemade|authentic|special|deluxe|premium|original|eggplant|omelet|omelette)\b',
               ),
               '',
             )
@@ -575,6 +702,14 @@ Return ONLY JSON:
       'chocolate_cake': ['chocolate cake', 'choco cake'],
       'sans_rival': ['sans rival', 'sansrival', 'sans-rival'],
       'silvanas': ['silvanas', 'silvana', 'sylvanas'],
+      'tortang_talong': [
+        'tortang talong',
+        'torta talong',
+        'tortang talong filipino eggplant omelet',
+        'tortang talong eggplant omelet',
+        'eggplant omelet',
+        'talong omelet',
+      ],
     };
 
     String cleaned = dishName.toLowerCase().trim();
@@ -699,7 +834,8 @@ Return ONLY JSON:
         'baseDishMatch': false,
         'mainProteinMatch': false,
         'allergenIngredientsMatch': false,
-        'reasoning': 'Failed to parse comparison - treating as different dish for safety',
+        'reasoning':
+            'Failed to parse comparison - treating as different dish for safety',
       };
     }
   }
