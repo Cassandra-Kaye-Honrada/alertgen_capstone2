@@ -369,11 +369,16 @@ class _AirQualityWidgetState extends State<AirQualityWidget> {
       Navigator.of(context).push(
         MaterialPageRoute(
           builder:
-              (context) => AirQualityDetailScreen(
-                airQualityData: _airQualityData!,
-                location: _location,
-                applicablePopulations: _applicablePopulations,
-              ),
+              // (context) => AirQualityForecastScreen(
+              //   location: _location,
+              //   currentAQI: _airQualityData!.aqi,
+              // ),
+
+          (context) => AirQualityDetailScreen(
+            airQualityData: _airQualityData!,
+            location: _location,
+            applicablePopulations: _applicablePopulations,
+          ),
         ),
       );
     }
