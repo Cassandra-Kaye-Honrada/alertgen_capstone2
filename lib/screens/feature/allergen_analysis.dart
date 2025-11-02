@@ -492,22 +492,11 @@ Return ONLY JSON:
 
     String baseDish = normalizeDishName(normalized);
 
-    String allergenSuffix = '';
-    if (ingredients != null && ingredients.isNotEmpty) {
-      List<String> allergenIngredients = extractAllergenContainingIngredients(
-        ingredients,
-      );
-      if (allergenIngredients.isNotEmpty) {
-        allergenIngredients.sort();
-        allergenSuffix = '_${allergenIngredients.join('_')}';
-      }
-    }
-
     if (mainProtein.isNotEmpty) {
-      return '${mainProtein}_$baseDish$allergenSuffix';
+      return '${mainProtein}_$baseDish';
     }
 
-    return '$baseDish$allergenSuffix';
+    return baseDish;
   }
 
   List<String> extractAllergenContainingIngredients(List<String> ingredients) {

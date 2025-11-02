@@ -3,7 +3,7 @@ import 'dart:io';
 import 'package:allergen/screens/feature/allergen_analysis.dart';
 import 'package:allergen/screens/feature/dish_confimation_screen.dart';
 import 'package:allergen/screens/feature/skin_allergy/skin_allergy.dart';
-import 'package:allergen/screens/feature/skin_allergy/skin_catch.dart';
+import 'package:allergen/screens/feature/skin_allergy/skin_cache.dart';
 import 'package:allergen/screens/feature/skin_allergy/skin_result_option.dart';
 import 'package:allergen/screens/feature/trivia/trivia.dart';
 import 'package:allergen/screens/profile_screen_items/ProfileScreen.dart';
