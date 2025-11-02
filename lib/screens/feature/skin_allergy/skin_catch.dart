@@ -124,7 +124,7 @@ THRESHOLDS:
             ]),
           ]);
           
-          final comparisonResult = _parseComparisonResponse(response.text ?? '');
+          final comparisonResult = parseComparisonResponse(response.text ?? '');
           
           if (comparisonResult['isSameCondition'] == true && 
               comparisonResult['confidence'] >= 0.65) {
@@ -161,7 +161,7 @@ THRESHOLDS:
     }
   }
   
-  Map<String, dynamic> _parseComparisonResponse(String response) {
+  Map<String, dynamic> parseComparisonResponse(String response) {
     try {
       String cleanResponse = response;
       if (response.contains('```json')) {

@@ -69,9 +69,9 @@ class _AuthWrapperState extends State<AuthWrapper> {
       if (currentUser == null) {
         targetScreen = LoginScreen();
 
-        authState = FirebaseAuth.instance
-            .authStateChanges()
-            .listen(handleAuthStateChange);
+        authState = FirebaseAuth.instance.authStateChanges().listen(
+          handleAuthStateChange,
+        );
         return;
       }
 

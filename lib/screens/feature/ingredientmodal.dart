@@ -80,12 +80,14 @@ class _IngredientAllergenModalState extends State<IngredientAllergenModal> {
               }
             });
 
-            String riskLevel =
-                severity >= 0.67
-                    ? 'severe'
-                    : severity >= 0.33
-                    ? 'moderate'
-                    : 'mild';
+            String riskLevel;
+            if (severity <= 0.3) {
+              riskLevel = 'mild';
+            } else if (severity <= 0.6) {
+              riskLevel = 'moderate';
+            } else {
+              riskLevel = 'severe';
+            }
 
             foundAllergen = AllergenInfo(
               name: allergenName,
@@ -139,6 +141,7 @@ class _IngredientAllergenModalState extends State<IngredientAllergenModal> {
             String translatedName = await translationService.translateToEnglish(
               allergenName,
             );
+            print(translatedName);
 
             severityMap[translatedName] = severity;
 
@@ -180,8 +183,8 @@ class _IngredientAllergenModalState extends State<IngredientAllergenModal> {
         String lowerAvailableName = allergen.name.toLowerCase().trim();
 
         if (lowerAvailableName == lowerAllergenName ||
-            lowerAvailableName.contains(lowerAllergenName) ||
-            lowerAllergenName.contains(lowerAvailableName)) {
+            isAllergenMatch(lowerAllergenName, [lowerAvailableName]) ||
+            isAllergenMatch(lowerAvailableName, [lowerAllergenName])) {
           foundAllergen = allergen;
           break;
         }
@@ -289,8 +292,8 @@ class _IngredientAllergenModalState extends State<IngredientAllergenModal> {
           String translatedUserAllergen = entry.value.toLowerCase().trim();
 
           if (allergenNameLower == translatedUserAllergen ||
-              allergenNameLower.contains(translatedUserAllergen) ||
-              translatedUserAllergen.contains(allergenNameLower)) {
+              isAllergenMatch(allergenNameLower, [translatedUserAllergen]) ||
+              isAllergenMatch(translatedUserAllergen, [allergenNameLower])) {
             matchedUserAllergen = entry.key;
             break;
           }
@@ -312,6 +315,65 @@ class _IngredientAllergenModalState extends State<IngredientAllergenModal> {
     setState(() {
       matchingAllergens = matchedAllergens;
     });
+  }
+
+  bool isAllergenMatch(
+    String detectedAllergen,
+    List<String> userAllergensList,
+  ) {
+    String cleanDetected = detectedAllergen.toLowerCase().trim();
+
+    for (String userAllergen in userAllergensList) {
+      String cleanUser = userAllergen.toLowerCase().trim();
+
+      if (cleanUser == cleanDetected) return true;
+
+      bool userIsPeanut = cleanUser.contains('peanut');
+      bool detectedIsPeanut = cleanDetected.contains('peanut');
+
+      List<String> treeNuts = [
+        'cashew',
+        'almond',
+        'walnut',
+        'pistachio',
+        'hazelnut',
+        'pecan',
+        'macadamia',
+        'brazil nut',
+      ];
+
+      bool userIsSpecificTreeNut = treeNuts.any(
+        (nut) => cleanUser.contains(nut),
+      );
+      bool detectedIsSpecificTreeNut = treeNuts.any(
+        (nut) => cleanDetected.contains(nut),
+      );
+      bool userIsGenericNut =
+          (cleanUser == 'nut' ||
+              cleanUser == 'nuts' ||
+              cleanUser == 'tree nut' ||
+              cleanUser == 'tree nuts');
+
+      if (userIsGenericNut && detectedIsPeanut) continue;
+      if (userIsPeanut &&
+          (cleanDetected == 'nut' ||
+              cleanDetected == 'nuts' ||
+              cleanDetected == 'tree nut' ||
+              cleanDetected == 'tree nuts')) {
+        continue;
+      }
+
+      if (userIsPeanut && detectedIsPeanut) return true;
+
+      if ((userIsPeanut && detectedIsSpecificTreeNut) ||
+          (userIsSpecificTreeNut && detectedIsPeanut)) {
+        continue;
+      }
+
+      if (userIsGenericNut && detectedIsSpecificTreeNut) return true;
+    }
+
+    return false;
   }
 
   Color getSeverityColor(double severity) {

@@ -90,16 +90,15 @@ class _WelcomeScreenState extends State<WelcomeScreen>
     );
   }
 
-void handleGetStarted() async{
+  void handleGetStarted() async {
+    await AppPreferences.setLaunched();
 
-  await AppPreferences.setLaunched();
-
-  Navigator.pushReplacement(
-    context,
-    MaterialPageRoute(builder: (_) => LoginScreen()),
-  );
-}
-
+    Navigator.pushAndRemoveUntil(
+      context,
+      MaterialPageRoute(builder: (_) => LoginScreen()),
+      (route) => false,
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -114,13 +113,7 @@ void handleGetStarted() async{
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
                   GestureDetector(
-                    onTap: () {
-                      if (currentScreen == screens.length - 1) {
-                        handleGetStarted();
-                      } else {
-                        handleGetStarted(); 
-                      }
-                    },
+                    onTap: handleGetStarted,
                     child: Container(
                       padding: const EdgeInsets.symmetric(
                         horizontal: 16,

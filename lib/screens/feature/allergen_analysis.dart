@@ -13,7 +13,337 @@ class AllergenAnalysis {
   final FirebaseFirestore firestore = FirebaseFirestore.instance;
   final FirebaseStorage storage = FirebaseStorage.instance;
 
-  String generateCacheKey(String dishName) {
+  Future<Map<String, dynamic>?> checkFoodCache(
+    String cacheKey, {
+    File? imageFile,
+    String? apiKey,
+    List<String>? ingredients,
+  }) async {
+    try {
+      print('Enhanced cache check for: $cacheKey');
+
+      final exactMatch = await checkExactFoodCache(cacheKey);
+      if (exactMatch != null) {
+        print('Level 1: Exact cache key match');
+        return {...exactMatch, 'matchType': 'exact_key', 'matchLevel': 1};
+      }
+
+      if (imageFile != null) {
+        final imageHash = generateImageHash(imageFile);
+        if (imageHash.isNotEmpty) {
+          final exactImageMatch = await checkExactImageMatch(imageHash);
+          if (exactImageMatch != null) {
+            print('Level 2: Exact image hash match');
+            return {...exactImageMatch, 'matchType': 'exact_image', 'matchLevel': 2};
+          }
+        }
+      }
+
+      if (imageFile != null && apiKey != null && apiKey.isNotEmpty && ingredients != null) {
+        print('Level 3: Checking visual similarity...');
+        final similarMatch = await checkSimilarFoodImage(
+          imageFile, 
+          apiKey, 
+          ingredients,
+        );
+        if (similarMatch != null) {
+          print('Level 3: Visual similarity match with smart ingredient merge');
+          return similarMatch;
+        }
+      }
+
+      print('No cache match found at any level');
+      return null;
+    } catch (e) {
+      print('Error in enhanced cache check: $e');
+      return null;
+    }
+  }
+
+  Future<Map<String, dynamic>?> checkSimilarFoodImage(
+    File imageFile,
+    String apiKey,
+    List<String> currentIngredients,
+  ) async {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) return null;
+
+      final querySnapshot = await firestore
+          .collection('users')
+          .doc(user.uid)
+          .collection('food_cache')
+          .where('thumbnailUrl', isNull: false)
+          .orderBy(' ', descending: true)
+          .limit(15)
+          .get();
+
+      if (querySnapshot.docs.isEmpty) {
+        print('No cached images found for comparison');
+        return null;
+      }
+
+      final currentImageBytes = await imageFile.readAsBytes();
+      final model = GenerativeModel(
+        model: 'gemini-2.0-flash-exp',
+        apiKey: apiKey,
+      );
+
+      for (var doc in querySnapshot.docs) {
+        final cachedData = doc.data();
+        final cachedImageUrl = cachedData['thumbnailUrl'] as String?;
+        final cachedDishName = cachedData['dishName'] as String? ?? 'Unknown';
+        final cachedIngredients = List<String>.from(cachedData['ingredients'] ?? []);
+        final cachedAllergens = cachedData['allergens'] as List? ?? [];
+
+        if (cachedImageUrl == null || cachedImageUrl.isEmpty || cachedIngredients.isEmpty) {
+          continue;
+        }
+
+        try {
+          final ref = storage.refFromURL(cachedImageUrl);
+          final cachedImageBytes = await ref.getData();
+          if (cachedImageBytes == null) continue;
+
+          final comparisonPrompt = '''
+You are an expert food image comparison AI. Compare these two images to determine if they show THE SAME DISH.
+
+COMPARISON RULES:
+1. ACCEPT (confidence 0.80+) if:
+   - Same base dish (e.g., both are Menudo, Kare-Kare, Adobo)
+   - Same main protein (oxtail, pork, chicken, seafood)
+   - Same visual characteristics (sauce color, texture, consistency)
+   - Different angles, lighting, or plating are OK
+   - Minor garnish differences are OK
+
+2. REJECT (confidence <0.75) if:
+   - Different base dishes
+   - Different main proteins
+   - Significantly different visual appearance
+
+CACHED DISH:
+- Name: $cachedDishName
+- Ingredients: ${cachedIngredients.join(', ')}
+
+CURRENT INGREDIENTS:
+${currentIngredients.join(', ')}
+
+Return ONLY JSON:
+{
+  "isSameDish": true/false,
+  "confidence": 0.XX,
+  "baseDishMatch": true/false,
+  "mainProteinMatch": true/false,
+  "visualSimilarity": 0.XX,
+  "reasoning": "Brief explanation"
+}
+''';
+
+          final response = await model.generateContent([
+            Content.multi([
+              TextPart(comparisonPrompt),
+              TextPart("CACHED IMAGE:"),
+              DataPart('image/jpeg', cachedImageBytes),
+              TextPart("CURRENT IMAGE:"),
+              DataPart('image/jpeg', currentImageBytes),
+            ]),
+          ]);
+
+          final comparisonResult = parseComparisonResponse(response.text ?? '');
+          final confidence = comparisonResult['confidence'];
+          final isSameDish = comparisonResult['isSameDish'] == true;
+          final baseDishMatch = comparisonResult['baseDishMatch'] == true;
+          final proteinMatch = comparisonResult['mainProteinMatch'] == true;
+
+          if (isSameDish && confidence >= 0.75 && baseDishMatch && proteinMatch) {
+            print('Visual similarity detected (confidence: $confidence)');
+            
+            final ingredientComparison = compareIngredients(
+              cachedIngredients, 
+              currentIngredients,
+              cachedAllergens,
+            );
+
+            if (ingredientComparison['canReuseCache'] == true) {
+              print('Safe to reuse cache: ${ingredientComparison['reason']}');
+              
+              await firestore
+                  .collection('users')
+                  .doc(user.uid)
+                  .collection('food_cache')
+                  .doc(doc.id)
+                  .update({
+                    'lastAccessed': FieldValue.serverTimestamp(),
+                    'accessCount': FieldValue.increment(1),
+                    'lastMatchConfidence': confidence,
+                    'lastMatchDate': DateTime.now().toIso8601String(),
+                  });
+
+              return {
+                ...cachedData,
+                'fromCache': true,
+                'matchType': 'visual_similarity',
+                'matchLevel': 3,
+                'matchConfidence': confidence,
+                'matchReasoning': comparisonResult['reasoning'],
+                'ingredientComparison': ingredientComparison,
+              };
+            } else if (ingredientComparison['shouldMerge'] == true) {
+              print('Merging new ingredients with cached data');
+              
+              return await mergeCachedDataWithNewIngredients(
+                cachedData,
+                currentIngredients,
+                doc.id,
+                confidence,
+                comparisonResult['reasoning'],
+              );
+            } else {
+              print('Cache rejected: ${ingredientComparison['reason']}');
+            }
+          }
+        } catch (e) {
+          print('Error comparing with cached image: $e');
+          continue;
+        }
+      }
+
+      return null;
+    } catch (e) {
+      print('Error in enhanced visual similarity check: $e');
+      return null;
+    }
+  }
+
+  Map<String, dynamic> compareIngredients(
+    List<String> cachedIngredients,
+    List<String> currentIngredients,
+    List<dynamic> cachedAllergens,
+  ) {
+    final cachedAllergenIngredients = extractAllergenContainingIngredients(cachedIngredients);
+    final currentAllergenIngredients = extractAllergenContainingIngredients(currentIngredients);
+
+    print('Ingredient Comparison:');
+    print('Cached allergen ingredients: ${cachedAllergenIngredients.join(", ")}');
+    print('Current allergen ingredients: ${currentAllergenIngredients.join(", ")}');
+
+    if (isSubsetOrEqual(currentAllergenIngredients, cachedAllergenIngredients)) {
+      return {
+        'canReuseCache': true,
+        'shouldMerge': false,
+        'reason': 'Current ingredients are subset of cached (no new allergens)',
+        'action': 'reuse_cache',
+      };
+    }
+
+    if (hasNewAllergenIngredients(currentAllergenIngredients, cachedAllergenIngredients)) {
+      final newIngredients = currentAllergenIngredients
+          .where((ing) => !cachedAllergenIngredients.any(
+              (cached) => ingredientsMatch(ing, cached)))
+          .toList();
+      
+      return {
+        'canReuseCache': false,
+        'shouldMerge': true,
+        'reason': 'New allergen ingredients detected: ${newIngredients.join(", ")}',
+        'action': 'merge_and_reanalyze',
+        'newIngredients': newIngredients,
+      };
+    }
+
+    if (hasMissingAllergenIngredients(currentAllergenIngredients, cachedAllergenIngredients)) {
+      final missingIngredients = cachedAllergenIngredients
+          .where((cached) => !currentAllergenIngredients.any(
+              (ing) => ingredientsMatch(cached, ing)))
+          .toList();
+      
+      return {
+        'canReuseCache': false,
+        'shouldMerge': false,
+        'reason': 'Missing allergen ingredients: ${missingIngredients.join(", ")}',
+        'action': 'create_new_variant',
+      };
+    }
+
+    return {
+      'canReuseCache': false,
+      'shouldMerge': false,
+      'reason': 'Different allergen ingredients detected',
+      'action': 'full_reanalysis',
+    };
+  }
+
+  bool isSubsetOrEqual(List<String> a, List<String> b) {
+    return a.every((item) => b.any((cached) => ingredientsMatch(item, cached)));
+  }
+
+  bool hasNewAllergenIngredients(List<String> current, List<String> cached) {
+    return current.any((item) => !cached.any((cached) => ingredientsMatch(item, cached)));
+  }
+
+  bool hasMissingAllergenIngredients(List<String> current, List<String> cached) {
+    return cached.any((item) => !current.any((curr) => ingredientsMatch(item, curr)));
+  }
+
+  bool ingredientsMatch(String ing1, String ing2) {
+    final clean1 = ing1.toLowerCase().trim();
+    final clean2 = ing2.toLowerCase().trim();
+    
+    if (clean1 == clean2) return true;
+    
+    if (clean1.contains(clean2) || clean2.contains(clean1)) {
+      if (isCompoundWordMismatch(clean1, clean2)) return false;
+      return true;
+    }
+    
+    if (isSingularPlural(clean1, clean2)) return true;
+    
+    return false;
+  }
+
+  Future<Map<String, dynamic>> mergeCachedDataWithNewIngredients(
+    Map<String, dynamic> cachedData,
+    List<String> currentIngredients,
+    String docId,
+    double confidence,
+    String reasoning,
+  ) async {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) return cachedData;
+
+      print('Merging ingredients...');
+      
+      final mergedIngredients = <String>{
+        ...List<String>.from(cachedData['ingredients'] ?? []),
+        ...currentIngredients,
+      }.toList();
+
+      print('Merged ingredients: ${mergedIngredients.join(", ")}');
+
+      return {
+        ...cachedData,
+        'fromCache': true,
+        'matchType': 'visual_similarity_merged',
+        'matchLevel': 3,
+        'matchConfidence': confidence,
+        'matchReasoning': reasoning,
+        'mergedIngredients': mergedIngredients,
+        'requiresAllergenReanalysis': true,
+        'originalCachedIngredients': cachedData['ingredients'],
+        'newIngredients': currentIngredients.where(
+          (ing) => !cachedData['ingredients'].any(
+            (cached) => ingredientsMatch(ing, cached)
+          )
+        ).toList(),
+      };
+    } catch (e) {
+      print('Error merging cached data: $e');
+      return cachedData;
+    }
+  }
+
+  String generateCacheKey(String dishName, {List<String>? ingredients}) {
     String original = dishName.toLowerCase().trim();
     String mainProtein = extractMainProtein(original);
     String normalized =
@@ -35,11 +365,71 @@ class AllergenAnalysis {
 
     String baseDish = normalizeDishName(normalized);
 
-    if (mainProtein.isNotEmpty) {
-      return '${mainProtein}_${baseDish}';
+    String allergenSuffix = '';
+    if (ingredients != null && ingredients.isNotEmpty) {
+      List<String> allergenIngredients = extractAllergenContainingIngredients(
+        ingredients,
+      );
+      if (allergenIngredients.isNotEmpty) {
+        allergenIngredients.sort();
+        allergenSuffix = '_${allergenIngredients.join('_')}';
+      }
     }
 
-    return baseDish;
+    if (mainProtein.isNotEmpty) {
+      return '${mainProtein}_$baseDish$allergenSuffix';
+    }
+
+    return '$baseDish$allergenSuffix';
+  }
+
+  List<String> extractAllergenContainingIngredients(List<String> ingredients) {
+    const Map<String, String> allergenKeywords = {
+      'hotdog': 'hotdog',
+      'hot dog': 'hotdog',
+      'sausage': 'sausage',
+      'ham': 'ham',
+      'bacon': 'bacon',
+      'chorizo': 'chorizo',
+      'tocino': 'tocino',
+      'longganisa': 'longganisa',
+      'egg': 'egg',
+      'eggs': 'egg',
+      'tofu': 'tofu',
+      'tokwa': 'tofu',
+      'cheese': 'cheese',
+      'milk': 'milk',
+      'cream': 'cream',
+      'shrimp': 'shrimp',
+      'hipon': 'shrimp',
+      'crab': 'crab',
+      'alimango': 'crab',
+      'fish': 'fish',
+      'peanut': 'peanut',
+      'mani': 'peanut',
+      'cashew': 'cashew',
+      'kasuy': 'cashew',
+      'almond': 'almond',
+      'walnut': 'walnut',
+      'oyster sauce': 'oyster',
+      'bagoong': 'bagoong',
+      'patis': 'patis',
+    };
+
+    List<String> foundAllergens = [];
+    for (String ingredient in ingredients) {
+      String lower = ingredient.toLowerCase().trim();
+      for (var entry in allergenKeywords.entries) {
+        if (lower.contains(entry.key)) {
+          String normalized = entry.value;
+          if (!foundAllergens.contains(normalized)) {
+            foundAllergens.add(normalized);
+          }
+        }
+      }
+    }
+
+    return foundAllergens;
   }
 
   String generateImageHash(File imageFile) {
@@ -87,7 +477,6 @@ class AllergenAnalysis {
         'keywords': ['oyster', 'talaba'],
         'value': 'oyster',
       },
-
       {
         'keywords': ['chicken', 'manok'],
         'value': 'chicken',
@@ -116,7 +505,6 @@ class AllergenAnalysis {
         'keywords': ['lamb', 'tupa'],
         'value': 'lamb',
       },
-
       {
         'keywords': ['vegetable', 'gulay', 'veggie'],
         'value': 'vegetable',
@@ -197,9 +585,9 @@ class AllergenAnalysis {
 
       for (String variation in variations) {
         if (cleaned == variation ||
-            cleaned.startsWith(variation + ' ') ||
-            cleaned.endsWith(' ' + variation) ||
-            cleaned.contains(' ' + variation + ' ')) {
+            cleaned.startsWith('$variation ') ||
+            cleaned.endsWith(' $variation') ||
+            cleaned.contains(' $variation ')) {
           return baseKey;
         }
       }
@@ -222,7 +610,7 @@ class AllergenAnalysis {
               .get();
 
       if (doc.exists) {
-        print('✓ Found exact cache match for: $cacheKey');
+        print('Found exact cache match for: $cacheKey');
 
         firestore
             .collection('users')
@@ -260,7 +648,6 @@ class AllergenAnalysis {
               .get();
 
       if (querySnapshot.docs.isNotEmpty) {
-        print('✓ Found exact image match');
         final data = querySnapshot.docs.first.data();
 
         firestore
@@ -284,150 +671,6 @@ class AllergenAnalysis {
     }
   }
 
-  Future<Map<String, dynamic>?> checkSimilarFoodImage(
-    File imageFile,
-    String apiKey,
-  ) async {
-    try {
-      final user = FirebaseAuth.instance.currentUser;
-      if (user == null) return null;
-
-      final querySnapshot =
-          await firestore
-              .collection('users')
-              .doc(user.uid)
-              .collection('food_cache')
-              .where('thumbnailUrl', isNull: false)
-              .orderBy('timestamp', descending: true)
-              .limit(15)
-              .get();
-
-      if (querySnapshot.docs.isEmpty) {
-        print('No cached food images to compare');
-        return null;
-      }
-
-      print(
-        'Comparing with ${querySnapshot.docs.length} cached food images...',
-      );
-
-      final currentImageBytes = await imageFile.readAsBytes();
-      final model = GenerativeModel(model: 'gemini-2.5-pro', apiKey: apiKey);
-
-      for (var doc in querySnapshot.docs) {
-        final cachedData = doc.data();
-        final cachedImageUrl = cachedData['thumbnailUrl'] as String?;
-        final cachedDishName = cachedData['dishName'] as String? ?? 'Unknown';
-
-        final cachedIngredients = List<String>.from(
-          cachedData['ingredients'] ?? [],
-        );
-
-        if (cachedImageUrl == null ||
-            cachedImageUrl.isEmpty ||
-            cachedIngredients.isEmpty)
-          continue;
-
-        try {
-          final ref = storage.refFromURL(cachedImageUrl);
-          final cachedImageBytes = await ref.getData();
-
-          if (cachedImageBytes == null) continue;
-
-          print(
-            'Comparing with cached dish: $cachedDishName with ${cachedIngredients.length} ingredients',
-          );
-
-          final comparisonPrompt = '''
-You are a visual food inspector. Your task is to compare a new food image against a cached dish analysis (which includes an old image and an ingredient list).
-
-You must determine if the new image represents the EXACT SAME DISH, including its key ingredients, as the cached version.
-
-**Cached Dish Name:** $cachedDishName
-**Cached Dish Ingredients:** ${cachedIngredients.join(', ')}
-
-**CRITICAL COMPARISON RULES:**
-1.  **Base Dish Match:** First, do both images show the same *base dish* (e.g., both are Menudo, both are Adobo)?
-2.  **Key Ingredient Verification (MOST IMPORTANT):** Look at the **New Image**. Can you VISUALLY CONFIRM the presence of the key ingredients from the **Cached Dish Ingredients** list?
-    * Pay special attention to *defining* or *variable* ingredients (e.g., 'hotdog', 'shrimp', 'peanuts', 'egg').
-    * If the cached dish has 'hotdog' but the new image clearly *lacks* 'hotdog', they are NOT an exact match.
-    * If the cached dish has 'shrimp' but the new image has 'chicken', they are NOT an exact match.
-3.  **Angle vs. Content:** Do NOT be fooled by different angles, lighting, or plating. If the *food content and key ingredients* are the same, it's a match. If the *key ingredients* are different, it is NOT a match.
-
-**Stricter Rule:** A new image is only a "match" if it shows the same base dish AND *does not visibly contradict* the cached ingredient list. If a cached ingredient is *visibly missing* from the new image, it is NOT a match.
-
-Return ONLY JSON:
-{
-  "isSameDish": true/false, // Are they the same dish with the same key ingredients?
-  "confidence": 0.XX, // Confidence of the *entire* match (base dish + ingredients)
-  "reasoning": "Brief explanation. MUST mention if key ingredients were matched or are missing."
-}
-
-**THRESHOLDS (Be Strict):**
-- confidence >= 0.85: Definitely same dish AND same key ingredients.
-- confidence < 0.85: Treat as different dishes (e.g., missing hotdog).
-''';
-
-          final response = await model.generateContent([
-            Content.multi([
-              TextPart(comparisonPrompt),
-              TextPart("Cached Image:"),
-              DataPart('image/jpeg', cachedImageBytes),
-              TextPart("New Image to Analyze:"),
-              DataPart('image/jpeg', currentImageBytes),
-            ]),
-          ]);
-
-          final comparisonResult = parseComparisonResponse(response.text ?? '');
-
-          print(
-            'Comparison result: ${comparisonResult['confidence']} - ${comparisonResult['reasoning']}',
-          );
-
-          if (comparisonResult['isSameDish'] == true &&
-              comparisonResult['confidence'] >= 0.85) {
-            print(
-              'Found SIMILAR and INGREDIENT-MATCHED food! Confidence: ${comparisonResult['confidence']}',
-            );
-
-            firestore
-                .collection('users')
-                .doc(user.uid)
-                .collection('food_cache')
-                .doc(doc.id)
-                .update({
-                  'lastAccessed': FieldValue.serverTimestamp(),
-                  'accessCount': FieldValue.increment(1),
-                  'lastMatchConfidence': comparisonResult['confidence'],
-                })
-                .catchError((e) => print('Error updating cache: $e'));
-
-            return {
-              ...cachedData,
-              'fromCache': true,
-              'matchType': 'visual_similarity',
-              'matchConfidence': comparisonResult['confidence'],
-              'matchReasoning': comparisonResult['reasoning'],
-            };
-          } else {
-            print(
-              'Visually similar dish BUT ingredients mismatch or low confidence. Not using cache.',
-            );
-          }
-        } catch (e) {
-          print('Error comparing with cached image: $e');
-          continue;
-        }
-      }
-
-      print('No similar food images found in cache');
-      return null;
-    } catch (e) {
-      print('Error checking similar food image: $e');
-      return null;
-    }
-  }
-
   Map<String, dynamic> parseComparisonResponse(String response) {
     try {
       String cleanResponse = response;
@@ -437,56 +680,27 @@ Return ONLY JSON:
         cleanResponse = response.split('```')[1];
       }
 
-      return json.decode(cleanResponse.trim());
+      final parsed = json.decode(cleanResponse.trim());
+
+      return {
+        'isSameDish': parsed['isSameDish'] ?? false,
+        'confidence': (parsed['confidence'] ?? 0.0).toDouble(),
+        'baseDishMatch': parsed['baseDishMatch'] ?? false,
+        'mainProteinMatch': parsed['mainProteinMatch'] ?? false,
+        'allergenIngredientsMatch': parsed['allergenIngredientsMatch'] ?? false,
+        'reasoning': parsed['reasoning'] ?? 'No reasoning provided',
+      };
     } catch (e) {
       print('Error parsing comparison response: $e');
+      print('Raw response: $response');
       return {
         'isSameDish': false,
         'confidence': 0.0,
-        'reasoning': 'Failed to parse comparison result',
+        'baseDishMatch': false,
+        'mainProteinMatch': false,
+        'allergenIngredientsMatch': false,
+        'reasoning': 'Failed to parse comparison - treating as different dish for safety',
       };
-    }
-  }
-
-  Future<Map<String, dynamic>?> checkFoodCache(
-    String cacheKey, {
-    File? imageFile,
-    String? apiKey,
-  }) async {
-    try {
-      print('Checking food cache for: $cacheKey');
-
-      final exactMatch = await checkExactFoodCache(cacheKey);
-      if (exactMatch != null) {
-        print('Using exact cache match');
-        return {...exactMatch, 'matchType': 'exact_key'};
-      }
-
-      if (imageFile != null) {
-        final imageHash = generateImageHash(imageFile);
-        if (imageHash.isNotEmpty) {
-          final exactImageMatch = await checkExactImageMatch(imageHash);
-          if (exactImageMatch != null) {
-            print('Using exact image match');
-            return {...exactImageMatch, 'matchType': 'exact_image'};
-          }
-        }
-      }
-
-      if (imageFile != null && apiKey != null && apiKey.isNotEmpty) {
-        print('Checking visual similarity with ingredient verification...');
-        final similarMatch = await checkSimilarFoodImage(imageFile, apiKey);
-        if (similarMatch != null) {
-          print('Using visually similar and ingredient-matched cache');
-          return similarMatch;
-        }
-      }
-
-      print('No cache match found');
-      return null;
-    } catch (e) {
-      print('Error in comprehensive cache check: $e');
-      return null;
     }
   }
 
@@ -520,7 +734,7 @@ Return ONLY JSON:
 
           await thumbnailRef.putFile(imageFile);
           thumbnailUrl = await thumbnailRef.getDownloadURL();
-          print('✓ Thumbnail uploaded successfully');
+          print('Thumbnail uploaded successfully');
         } catch (e) {
           print('Error uploading thumbnail: $e');
         }
@@ -562,7 +776,7 @@ Return ONLY JSON:
           .doc(cacheKey)
           .set(cacheData, SetOptions(merge: true));
 
-      print('✓ Food analysis cached successfully: $cacheKey');
+      print('Food analysis cached successfully: $cacheKey');
     } catch (e) {
       print('Error saving food cache: $e');
     }
@@ -601,36 +815,6 @@ Return ONLY JSON:
     }
   }
 
-  Future<void> updateAllergenHighlighting(List<AllergenInfo> allergens) async {
-    final allergenData = await getUserAllergenData();
-    List<String> currentUserAllergens = List<String>.from(allergenData['names']);
-    
-    Map<String, double> translatedSeverity = {};
-    for (var entry in (allergenData['severity'] as Map<String, double>).entries) {
-      String tagalogName = entry.key;
-      String englishName = await TranslationService.instance.translateToEnglish(
-        tagalogName,
-      );
-      translatedSeverity[englishName.toLowerCase().trim()] = entry.value;
-      translatedSeverity[tagalogName.toLowerCase().trim()] = entry.value;
-    }
-
-    for (AllergenInfo allergen in allergens) {
-      String allergenName = allergen.name.toLowerCase().trim();
-      
-      String? matchedUserAllergen = await findMatchingUserAllergen(
-        allergenName,
-        translatedSeverity.keys.toList(),
-      );
-      
-      if (matchedUserAllergen != null) {
-        allergen.isUserAllergen = true;
-      } else {
-        allergen.isUserAllergen = false;
-      }
-    }
-  }
-
   Future<Map<String, dynamic>> parseAllergenResponse(String response) async {
     try {
       String cleanResponse = response;
@@ -666,6 +850,7 @@ Return ONLY JSON:
     }
 
     List<IngredientColorInfo> computedIngredientColors = [];
+
     for (String ingredient in ingredients) {
       double maxSeverity = -1.0;
       List<String> matchedAllergens = [];
@@ -679,6 +864,7 @@ Return ONLY JSON:
 
         if (isSourceMatch) {
           String allergenName = allergenInfo.name.toLowerCase();
+
           String? matchedUserAllergen = await findMatchingUserAllergen(
             allergenName,
             translatedSeverity.keys.toList(),
@@ -716,6 +902,7 @@ Return ONLY JSON:
         ),
       );
     }
+
     return computedIngredientColors;
   }
 
@@ -752,13 +939,13 @@ Return ONLY JSON:
   }
 
   bool isSingularPlural(String word1, String word2) {
-    if (word2 == word1 + 's' || word1 == word2 + 's') return true;
-    if (word2 == word1 + 'es' || word1 == word2 + 'es') return true;
+    if (word2 == '${word1}s' || word1 == '${word2}s') return true;
+    if (word2 == '${word1}es' || word1 == '${word2}es') return true;
     if (word1.endsWith('y') &&
-        word2 == word1.substring(0, word1.length - 1) + 'ies')
+        word2 == '${word1.substring(0, word1.length - 1)}ies')
       return true;
     if (word2.endsWith('y') &&
-        word1 == word2.substring(0, word2.length - 1) + 'ies')
+        word1 == '${word2.substring(0, word2.length - 1)}ies')
       return true;
     return false;
   }
@@ -771,24 +958,102 @@ Return ONLY JSON:
 
     for (String userAllergen in userAllergens) {
       String cleanUserAllergen = userAllergen.toLowerCase().trim();
+      print('Checking user allergen: "$cleanUserAllergen"');
 
-      if (cleanAllergenName == cleanUserAllergen) return userAllergen;
+      if (cleanAllergenName == cleanUserAllergen) {
+        print('EXACT MATCH - returning: $userAllergen');
+        return userAllergen;
+      }
 
       bool areEquivalent = await TranslationService.instance.areTermsEquivalent(
         cleanAllergenName,
         cleanUserAllergen,
       );
-      if (areEquivalent) return userAllergen;
-
-      if (isSingularPlural(cleanAllergenName, cleanUserAllergen))
+      if (areEquivalent) {
         return userAllergen;
+      }
+
+      if (isSingularPlural(cleanAllergenName, cleanUserAllergen)) {
+        return userAllergen;
+      }
+
+      List<String> treeNuts = [
+        'cashew',
+        'almond',
+        'walnut',
+        'pistachio',
+        'hazelnut',
+        'pecan',
+        'macadamia',
+        'brazil nut',
+      ];
+
+      bool userIsPeanut =
+          cleanUserAllergen == 'peanut' || cleanUserAllergen == 'peanuts';
+      bool detectedIsPeanut =
+          cleanAllergenName == 'peanut' || cleanAllergenName == 'peanuts';
+
+      bool userIsGenericNut =
+          cleanUserAllergen == 'nut' ||
+          cleanUserAllergen == 'nuts' ||
+          cleanUserAllergen == 'tree nut' ||
+          cleanUserAllergen == 'tree nuts';
+
+      bool userIsSpecificTreeNut = treeNuts.any(
+        (nut) => cleanUserAllergen == nut || cleanUserAllergen == '${nut}s',
+      );
+      bool detectedIsSpecificTreeNut = treeNuts.any(
+        (nut) => cleanAllergenName == nut || cleanAllergenName == '${nut}s',
+      );
+
+      if (userIsGenericNut && detectedIsPeanut) {
+        continue;
+      }
+
+      if (userIsPeanut &&
+          (cleanAllergenName == 'nut' ||
+              cleanAllergenName == 'nuts' ||
+              cleanAllergenName == 'tree nut' ||
+              cleanAllergenName == 'tree nuts')) {
+        continue;
+      }
+
+      if (userIsPeanut && detectedIsPeanut) {
+        return userAllergen;
+      }
+
+      if (userIsSpecificTreeNut && detectedIsSpecificTreeNut) {
+        for (String nut in treeNuts) {
+          if ((cleanUserAllergen == nut || cleanUserAllergen == '${nut}s') &&
+              (cleanAllergenName == nut || cleanAllergenName == '${nut}s')) {
+            return userAllergen;
+          }
+        }
+        continue;
+      }
+
+      if (userIsSpecificTreeNut &&
+          (cleanAllergenName == 'nut' ||
+              cleanAllergenName == 'nuts' ||
+              cleanAllergenName == 'tree nut' ||
+              cleanAllergenName == 'tree nuts')) {
+        continue;
+      }
+
+      if (userIsGenericNut && detectedIsSpecificTreeNut) {
+        return userAllergen;
+      }
+
+      if ((userIsPeanut && detectedIsSpecificTreeNut) ||
+          (userIsSpecificTreeNut && detectedIsPeanut)) {
+        continue;
+      }
 
       bool userIsSpecificShellfish = [
         'shrimp',
         'crab',
         'lobster',
       ].any((specific) => cleanUserAllergen.contains(specific));
-
       bool detectedIsSpecificShellfish = [
         'shrimp',
         'crab',
@@ -800,7 +1065,6 @@ Return ONLY JSON:
           return cleanUserAllergen.contains(type) &&
               cleanAllergenName.contains(type);
         });
-
         if (sameType) {
           return userAllergen;
         }
@@ -819,75 +1083,6 @@ Return ONLY JSON:
         return userAllergen;
       }
 
-      List<String> specificNuts = [
-        'cashew',
-        'almond',
-        'walnut',
-        'pistachio',
-        'hazelnut',
-        'pecan',
-        'macadamia',
-        'brazil nut',
-      ];
-      bool userIsSpecificNut = specificNuts.any(
-        (specific) => cleanUserAllergen.contains(specific),
-      );
-
-      bool detectedIsSpecificNut = specificNuts.any(
-        (specific) => cleanAllergenName.contains(specific),
-      );
-
-      bool userIsPeanut = cleanUserAllergen.contains('peanut');
-      bool detectedIsPeanut = cleanAllergenName.contains('peanut');
-      bool userIsGenericNut =
-          (cleanUserAllergen == 'nut' ||
-              cleanUserAllergen == 'nuts' ||
-              cleanUserAllergen == 'tree nut' ||
-              cleanUserAllergen == 'tree nuts') &&
-          !userIsPeanut;
-      bool detectedIsGenericNut =
-          (cleanAllergenName == 'nut' ||
-              cleanAllergenName == 'nuts' ||
-              cleanAllergenName == 'tree nut' ||
-              cleanAllergenName == 'tree nuts') &&
-          !detectedIsPeanut;
-
-      if (userIsGenericNut && detectedIsPeanut) {
-        continue;
-      }
-
-      if (userIsPeanut && detectedIsGenericNut) {
-        continue;
-      }
-
-      if (userIsPeanut && detectedIsPeanut) {
-        return userAllergen;
-      }
-
-      if (userIsSpecificNut && detectedIsSpecificNut) {
-        bool sameType = specificNuts.any((type) {
-          return cleanUserAllergen.contains(type) &&
-              cleanAllergenName.contains(type);
-        });
-
-        if (sameType) {
-          return userAllergen;
-        }
-        continue;
-      }
-
-      if (userIsSpecificNut &&
-          (cleanAllergenName.contains('nut') ||
-              cleanAllergenName.contains('tree nut'))) {
-        continue;
-      }
-
-      if ((cleanUserAllergen.contains('nut') ||
-              cleanUserAllergen.contains('tree nut')) &&
-          detectedIsSpecificNut) {
-        return userAllergen;
-      }
-
       List<String> specificFish = [
         'tuna',
         'salmon',
@@ -902,12 +1097,12 @@ Return ONLY JSON:
         'fish sauce',
         'patis',
       ];
-      bool userIsSpecificFish = specificFish.any(
-        (specific) => cleanUserAllergen.contains(specific),
-      );
 
+      bool userIsSpecificFish = specificFish.any(
+        (fish) => cleanUserAllergen.contains(fish),
+      );
       bool detectedIsSpecificFish = specificFish.any(
-        (specific) => cleanAllergenName.contains(specific),
+        (fish) => cleanAllergenName.contains(fish),
       );
 
       if (userIsSpecificFish && detectedIsSpecificFish) {
@@ -915,18 +1110,17 @@ Return ONLY JSON:
           return cleanUserAllergen.contains(type) &&
               cleanAllergenName.contains(type);
         });
-
         if (sameType) {
           return userAllergen;
         }
         continue;
       }
 
-      if (userIsSpecificFish && cleanAllergenName.contains('fish')) {
+      if (userIsSpecificFish && cleanAllergenName == 'fish') {
         continue;
       }
 
-      if (cleanUserAllergen.contains('fish') && detectedIsSpecificFish) {
+      if (cleanUserAllergen == 'fish' && detectedIsSpecificFish) {
         return userAllergen;
       }
 
@@ -940,11 +1134,10 @@ Return ONLY JSON:
         'casein',
       ];
       bool userIsSpecificDairy = specificDairy.any(
-        (specific) => cleanUserAllergen.contains(specific),
+        (dairy) => cleanUserAllergen.contains(dairy),
       );
-
       bool detectedIsSpecificDairy = specificDairy.any(
-        (specific) => cleanAllergenName.contains(specific),
+        (dairy) => cleanAllergenName.contains(dairy),
       );
 
       if (userIsSpecificDairy && detectedIsSpecificDairy) {
@@ -952,23 +1145,23 @@ Return ONLY JSON:
           return cleanUserAllergen.contains(type) &&
               cleanAllergenName.contains(type);
         });
-
         if (sameType) {
           return userAllergen;
         }
         continue;
       }
 
-      if (userIsSpecificDairy && cleanAllergenName.contains('dairy')) {
+      if (userIsSpecificDairy && cleanAllergenName == 'dairy') {
         continue;
       }
 
-      if (cleanUserAllergen.contains('dairy') && detectedIsSpecificDairy) {
+      if (cleanUserAllergen == 'dairy' && detectedIsSpecificDairy) {
         return userAllergen;
       }
 
-      if (areAllergenSynonyms(cleanAllergenName, cleanUserAllergen))
+      if (areAllergenSynonyms(cleanAllergenName, cleanUserAllergen)) {
         return userAllergen;
+      }
 
       if (cleanAllergenName != cleanUserAllergen) {
         RegExp wordBoundary = RegExp(
@@ -990,17 +1183,50 @@ Return ONLY JSON:
         }
       }
     }
+
     return null;
+  }
+
+  Future<void> updateAllergenHighlighting(List<AllergenInfo> allergens) async {
+    final allergenData = await getUserAllergenData();
+    List<String> currentUserAllergens = List<String>.from(
+      allergenData['names'],
+    );
+
+    Map<String, double> translatedSeverity = {};
+    for (var entry
+        in (allergenData['severity'] as Map<String, double>).entries) {
+      String tagalogName = entry.key;
+      String englishName = await TranslationService.instance.translateToEnglish(
+        tagalogName,
+      );
+      translatedSeverity[englishName.toLowerCase().trim()] = entry.value;
+      translatedSeverity[tagalogName.toLowerCase().trim()] = entry.value;
+    }
+
+    for (AllergenInfo allergen in allergens) {
+      String allergenName = allergen.name.toLowerCase().trim();
+      print('Processing allergen: "$allergenName"');
+
+      String? matchedUserAllergen = await findMatchingUserAllergen(
+        allergenName,
+        translatedSeverity.keys.toList(),
+      );
+
+      if (matchedUserAllergen != null) {
+        allergen.isUserAllergen = true;
+      } else {
+        allergen.isUserAllergen = false;
+      }
+    }
   }
 
   bool isCompoundWordMismatch(String compound, String part) {
     const List<List<String>> exclusions = [
-      // Shellfish
       ['shrimp', 'shellfish'],
       ['crab', 'shellfish'],
       ['lobster', 'shellfish'],
       ['shellfish', 'fish'],
-      // Nuts
       ['cashew', 'nut'],
       ['almond', 'nut'],
       ['walnut', 'nut'],
@@ -1010,9 +1236,13 @@ Return ONLY JSON:
       ['macadamia', 'nut'],
       ['brazil nut', 'nut'],
       ['peanut', 'nut'],
-      ['peanut', 'nuts'],
       ['peanuts', 'nut'],
+      ['peanut', 'nuts'],
       ['peanuts', 'nuts'],
+      ['peanut', 'tree nut'],
+      ['peanuts', 'tree nuts'],
+      ['peanut', 'tree nuts'],
+      ['peanuts', 'tree nut'],
       ['coconut', 'nut'],
       ['nutmeg', 'nut'],
       ['butternut', 'nut'],
@@ -1020,12 +1250,6 @@ Return ONLY JSON:
       ['water chestnut', 'nut'],
       ['donut', 'nut'],
       ['doughnut', 'nut'],
-      ['peanut', 'tree nut'],
-      ['peanuts', 'tree nuts'],
-      ['peanut', 'tree nuts'],
-      ['peanuts', 'tree nut'],
-
-      // Fish
       ['bagoong', 'fish'],
       ['patis', 'fish'],
       ['fish sauce', 'fish'],
@@ -1033,13 +1257,11 @@ Return ONLY JSON:
       ['fishball', 'fish'],
       ['jellyfish', 'fish'],
       ['starfish', 'fish'],
-      // Dairy
       ['coconut milk', 'milk'],
       ['almond milk', 'milk'],
       ['soy milk', 'milk'],
       ['oat milk', 'milk'],
       ['rice milk', 'milk'],
-      // Other
       ['eggplant', 'egg'],
       ['eggplant', 'eggs'],
       ['talong', 'egg'],

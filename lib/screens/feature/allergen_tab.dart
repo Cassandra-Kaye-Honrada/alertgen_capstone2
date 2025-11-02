@@ -410,7 +410,6 @@ class AllergenTabState extends State<AllergenTab> {
   }
 
   bool hasUserAllergens() {
-  
     return widget.currentAllergens.any((allergen) => allergen.isUserAllergen);
   }
 
@@ -731,7 +730,6 @@ Requirements:
   }
 
   Color getAllergenColor(AllergenInfo allergen) {
-   
     if (allergen.isUserAllergen) {
       return Colors.red;
     }
@@ -753,7 +751,150 @@ Requirements:
   }
 
   bool isAllergenMatch(String detectedAllergen) {
-    Map<String, List<String>> allergenGroups = {
+    String cleanDetected = detectedAllergen.toLowerCase().trim();
+
+    for (String userAllergen in userAllergens) {
+      String cleanUser = userAllergen.toLowerCase().trim();
+
+      if (cleanUser == cleanDetected) return true;
+
+      if (isSingularPlural(cleanUser, cleanDetected)) return true;
+
+      List<String> treeNuts = [
+        'cashew',
+        'almond',
+        'walnut',
+        'pistachio',
+        'hazelnut',
+        'pecan',
+        'macadamia',
+        'brazil nut',
+      ];
+
+      bool userIsPeanut = cleanUser.contains('peanut');
+      bool detectedIsPeanut = cleanDetected.contains('peanut');
+
+      bool userIsSpecificTreeNut = treeNuts.any(
+        (nut) => cleanUser.contains(nut),
+      );
+
+      bool detectedIsSpecificTreeNut = treeNuts.any(
+        (nut) => cleanDetected.contains(nut),
+      );
+
+      bool userIsGenericNut =
+          (cleanUser == 'nut' ||
+              cleanUser == 'nuts' ||
+              cleanUser == 'tree nut' ||
+              cleanUser == 'tree nuts');
+
+      if (userIsGenericNut && detectedIsPeanut) {
+        continue;
+      }
+
+      if (userIsPeanut &&
+          (cleanDetected == 'nut' ||
+              cleanDetected == 'nuts' ||
+              cleanDetected == 'tree nut' ||
+              cleanDetected == 'tree nuts')) {
+        continue;
+      }
+
+      if (userIsPeanut && detectedIsPeanut) {
+        return true;
+      }
+
+      if (userIsSpecificTreeNut && detectedIsSpecificTreeNut) {
+        bool sameTreeNut = treeNuts.any((nut) {
+          return cleanUser.contains(nut) && cleanDetected.contains(nut);
+        });
+        if (sameTreeNut) return true;
+        continue;
+      }
+
+      if (userIsSpecificTreeNut &&
+          (cleanDetected == 'nut' ||
+              cleanDetected == 'nuts' ||
+              cleanDetected == 'tree nut' ||
+              cleanDetected == 'tree nuts')) {
+        continue;
+      }
+
+      if (userIsGenericNut && detectedIsSpecificTreeNut) {
+        return true;
+      }
+
+      if ((userIsPeanut && detectedIsSpecificTreeNut) ||
+          (userIsSpecificTreeNut && detectedIsPeanut)) {
+        continue;
+      }
+
+      bool userIsSpecificShellfish = [
+        'shrimp',
+        'crab',
+        'lobster',
+      ].any((specific) => cleanUser.contains(specific));
+
+      bool detectedIsSpecificShellfish = [
+        'shrimp',
+        'crab',
+        'lobster',
+      ].any((specific) => cleanDetected.contains(specific));
+
+      if (userIsSpecificShellfish && detectedIsSpecificShellfish) {
+        bool sameType = ['shrimp', 'crab', 'lobster'].any((type) {
+          return cleanUser.contains(type) && cleanDetected.contains(type);
+        });
+        if (sameType) return true;
+        continue;
+      }
+
+      if (userIsSpecificShellfish &&
+          (cleanDetected.contains('shellfish') ||
+              cleanDetected.contains('crustacean'))) {
+        continue;
+      }
+
+      if ((cleanUser.contains('shellfish') ||
+              cleanUser.contains('crustacean')) &&
+          detectedIsSpecificShellfish) {
+        return true;
+      }
+
+      String? userGroup = findAllergenGroup(cleanUser, getAllergenGroups());
+      String? detectedGroup = findAllergenGroup(
+        cleanDetected,
+        getAllergenGroups(),
+      );
+
+      if (userGroup != null &&
+          detectedGroup != null &&
+          userGroup == detectedGroup) {
+        return true;
+      }
+
+      RegExp userPattern = RegExp(r'\b' + RegExp.escape(cleanUser) + r'\b');
+      RegExp detectedPattern = RegExp(
+        r'\b' + RegExp.escape(cleanDetected) + r'\b',
+      );
+
+      if (userPattern.hasMatch(cleanDetected) ||
+          detectedPattern.hasMatch(cleanUser)) {
+        if (cleanUser == 'fish' && cleanDetected.contains('shellfish')) {
+          continue;
+        }
+        if (cleanDetected == 'fish' && cleanUser.contains('shellfish')) {
+          continue;
+        }
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  Map<String, List<String>> getAllergenGroups() {
+    return {
       'milk': ['milk', 'dairy', 'lactose', 'casein', 'whey'],
       'egg': ['egg', 'eggs', 'albumin'],
       'peanut': ['peanut', 'peanuts', 'groundnut', 'groundnuts'],
@@ -764,92 +905,27 @@ Requirements:
       'lobster': ['lobster', 'lobsters'],
       'wheat': ['wheat', 'gluten'],
       'soy': ['soy', 'soya', 'soybean', 'soybeans'],
-      'nuts': [
-        'nuts',
+      'tree_nuts': [
         'tree nuts',
+        'tree nut',
         'almond',
+        'almonds',
         'walnut',
+        'walnuts',
         'cashew',
+        'cashews',
         'hazelnut',
+        'hazelnuts',
         'pecan',
+        'pecans',
         'pistachio',
+        'pistachios',
+        'macadamia',
+        'brazil nut',
+        'brazil nuts',
       ],
       'sesame': ['sesame', 'sesame seed', 'sesame seeds'],
     };
-
-    for (String userAllergen in userAllergens) {
-      if (userAllergen == detectedAllergen) {
-        return true;
-      }
-
-      if (isSingularPlural(userAllergen, detectedAllergen)) {
-        return true;
-      }
-
-      bool userIsSpecificShellfish = [
-        'shrimp',
-        'crab',
-        'lobster',
-      ].any((specific) => userAllergen.contains(specific));
-
-      bool detectedIsSpecificShellfish = [
-        'shrimp',
-        'crab',
-        'lobster',
-      ].any((specific) => detectedAllergen.contains(specific));
-
-      if (userIsSpecificShellfish && detectedIsSpecificShellfish) {
-        bool sameType = ['shrimp', 'crab', 'lobster'].any((type) {
-          return userAllergen.contains(type) && detectedAllergen.contains(type);
-        });
-
-        if (sameType) {
-          return true;
-        }
-        continue;
-      }
-
-      if (userIsSpecificShellfish &&
-          (detectedAllergen.contains('shellfish') ||
-              detectedAllergen.contains('crustacean'))) {
-        continue;
-      }
-
-      if ((userAllergen.contains('shellfish') ||
-              userAllergen.contains('crustacean')) &&
-          detectedIsSpecificShellfish) {
-        return true;
-      }
-
-      String? userGroup = findAllergenGroup(userAllergen, allergenGroups);
-      String? detectedGroup = findAllergenGroup(
-        detectedAllergen,
-        allergenGroups,
-      );
-
-      if (userGroup != null &&
-          detectedGroup != null &&
-          userGroup == detectedGroup) {
-        return true;
-      }
-
-      RegExp userPattern = RegExp(r'\b' + RegExp.escape(userAllergen) + r'\b');
-      RegExp detectedPattern = RegExp(
-        r'\b' + RegExp.escape(detectedAllergen) + r'\b',
-      );
-
-      if (userPattern.hasMatch(detectedAllergen) ||
-          detectedPattern.hasMatch(userAllergen)) {
-        if (userAllergen == 'fish' && detectedAllergen.contains('shellfish')) {
-          continue;
-        }
-        if (detectedAllergen == 'fish' && userAllergen.contains('shellfish')) {
-          continue;
-        }
-        return true;
-      }
-    }
-    return false;
   }
 
   bool isSingularPlural(String word1, String word2) {

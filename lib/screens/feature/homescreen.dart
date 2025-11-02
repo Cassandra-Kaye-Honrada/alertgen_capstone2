@@ -433,6 +433,8 @@ class HomescreenState extends State<Homescreen> {
       ),
     );
   }
+  // Replace the extractHistoricalSeverityData method in homescreen.dart
+  // Starting around line 460
 
   Map<String, double> extractHistoricalSeverityData(
     Map<String, dynamic> historyItem,
@@ -491,16 +493,16 @@ class HomescreenState extends State<Homescreen> {
 
             switch (riskLevel) {
               case 'severe':
-                severity = 1.0;
+                severity = 0.8;
                 break;
               case 'moderate':
                 severity = 0.5;
                 break;
               case 'mild':
-                severity = 0.0;
+                severity = 0.2;
                 break;
               default:
-                severity = 0.5;
+                severity = 0.0;
             }
             print('$allergenName: $severity (from riskLevel: $riskLevel)');
           }
@@ -512,7 +514,7 @@ class HomescreenState extends State<Homescreen> {
       }
     }
 
-    print('📊 Final severity map: $severityMap');
+    print('Final severity map: $severityMap');
     return severityMap;
   }
 
@@ -579,18 +581,15 @@ class HomescreenState extends State<Homescreen> {
       historyItem,
     );
 
-    // FIX: Properly extract and create IngredientBenefitsMap
     IngredientBenefitsMap? benefitsMap;
     if (historyItem.containsKey('ingredientBenefits')) {
       benefitsMap = IngredientBenefitsMap();
       var benefitsData = historyItem['ingredientBenefits'];
 
-      print('📦 Loading ingredientBenefits from history');
-      print('Type: ${benefitsData.runtimeType}');
+   
 
       if (benefitsData is Map) {
         Map<String, dynamic> benefits = Map<String, dynamic>.from(benefitsData);
-        print('✅ Found ${benefits.length} ingredient benefits');
 
         benefits.forEach((key, value) {
           String ingredientKey = key.toString();
@@ -601,21 +600,12 @@ class HomescreenState extends State<Homescreen> {
           );
         });
 
-        print('Successfully loaded ${benefits.length} ingredient benefits');
-      } else {
-        print(
-          'ERROR: ingredientBenefits is not a Map, it is: ${benefitsData.runtimeType}',
-        );
-      }
+      } 
     } else {
       print('Available fields: ${historyItem.keys.join(', ')}');
     }
 
-    if (benefitsMap != null) {
-      print(' Keys: ${benefitsMap.benefitsMap.keys.toList()}');
-    } else {
-      print('NULL (no benefits available)');
-    }
+  
 
     Navigator.push(
       context,

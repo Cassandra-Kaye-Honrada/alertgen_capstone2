@@ -67,9 +67,7 @@ class _ShortcutHandlerState extends State<ShortcutHandler> {
   }
 
   Future<void> handleMethod(MethodCall call) async {
-    print(
-      'Received method call: ${call.method} with args: ${call.arguments}',
-    );
+    print('Received method call: ${call.method} with args: ${call.arguments}');
 
     if (call.method == 'navigate') {
       final String route = call.arguments;

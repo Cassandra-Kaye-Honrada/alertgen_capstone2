@@ -69,8 +69,7 @@ class _ResultScreenState extends State<ResultScreen>
     currentAllergens = List.from(widget.allergens);
     currentIngredientColors = List.from(widget.ingredientColors);
     
-    // DO NOT update allergen highlighting if viewing from history
-    // History should preserve the original allergen status at scan time
+   
   }
 
   @override
