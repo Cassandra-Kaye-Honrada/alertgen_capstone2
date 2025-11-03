@@ -80,7 +80,6 @@ class AllergenAnalysis {
 
   String generateCacheKey(String dishName) {
     String original = dishName.toLowerCase().trim();
-
     original = original.replaceAll(RegExp(r'\([^)]*\)'), '').trim();
 
     String mainProtein = extractMainProtein(original);
@@ -101,6 +100,12 @@ class AllergenAnalysis {
             .replaceAll(RegExp(r'[^\w\s]'), '')
             .replaceAll(RegExp(r'\s+'), ' ')
             .trim();
+
+    if (mainProtein.isNotEmpty) {
+      normalized =
+          normalized.replaceAll(RegExp('\\b$mainProtein\\b'), '').trim();
+      normalized = normalized.replaceAll(RegExp(r'\s+'), ' ').trim();
+    }
 
     String baseDish = normalizeDishName(normalized);
 
@@ -529,7 +534,7 @@ Return ONLY JSON:
         'lastAccessed': FieldValue.serverTimestamp(),
         'cacheKey': cacheKey,
         'accessCount': 1,
-        'createdBy': user.uid, 
+        'createdBy': user.uid,
       };
 
       if (imageHash != null) {
