@@ -206,7 +206,6 @@ class _DishSelectionScreenState extends State<DishSelectionScreen> {
                                     : Colors.black87,
                           ),
                         ),
-                        const SizedBox(height: 4),
                         Row(
                           children: [
                             Container(
@@ -214,40 +213,40 @@ class _DishSelectionScreenState extends State<DishSelectionScreen> {
                                 horizontal: 8,
                                 vertical: 4,
                               ),
-                              decoration: BoxDecoration(
-                                color: getConfidenceColor(
-                                  option.confidence,
-                                ).withOpacity(0.1),
-                                borderRadius: BorderRadius.circular(8),
-                                border: Border.all(
-                                  color: getConfidenceColor(
-                                    option.confidence,
-                                  ).withOpacity(0.3),
-                                ),
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Icon(
-                                    Icons.stars_rounded,
-                                    size: 14,
-                                    color: getConfidenceColor(
-                                      option.confidence,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 4),
-                                  Text(
-                                    '${(option.confidence * 100).toInt()}% match',
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w600,
-                                      color: getConfidenceColor(
-                                        option.confidence,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
+                              // decoration: BoxDecoration(
+                              //   color: getConfidenceColor(
+                              //     option.confidence,
+                              //   ).withOpacity(0.1),
+                              //   borderRadius: BorderRadius.circular(8),
+                              //   border: Border.all(
+                              //     color: getConfidenceColor(
+                              //       option.confidence,
+                              //     ).withOpacity(0.3),
+                              //   ),
+                              // ),
+                              // child: Row(
+                              //   mainAxisSize: MainAxisSize.min,
+                              //   children: [
+                              //     Icon(
+                              //       Icons.stars_rounded,
+                              //       size: 14,
+                              //       color: getConfidenceColor(
+                              //         option.confidence,
+                              //       ),
+                              //     ),
+                              //     const SizedBox(width: 4),
+                              //     Text(
+                              //       '${(option.confidence * 100).toInt()}% match',
+                              //       style: TextStyle(
+                              //         fontSize: 12,
+                              //         fontWeight: FontWeight.w600,
+                              //         color: getConfidenceColor(
+                              //           option.confidence,
+                              //         ),
+                              //       ),
+                              //     ),
+                              //   ],
+                              // ),
                             ),
                             if (hasDetailedBenefits) ...[
                               const SizedBox(width: 8),
@@ -256,32 +255,32 @@ class _DishSelectionScreenState extends State<DishSelectionScreen> {
                                   horizontal: 8,
                                   vertical: 4,
                                 ),
-                                decoration: BoxDecoration(
-                                  color: Colors.green.withOpacity(0.1),
-                                  borderRadius: BorderRadius.circular(8),
-                                  border: Border.all(
-                                    color: Colors.green.withOpacity(0.3),
-                                  ),
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Icon(
-                                      Icons.local_hospital_rounded,
-                                      size: 14,
-                                      color: Colors.green[700],
-                                    ),
-                                    const SizedBox(width: 4),
-                                    Text(
-                                      'Health info',
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.w600,
-                                        color: Colors.green[700],
-                                      ),
-                                    ),
-                                  ],
-                                ),
+                                // decoration: BoxDecoration(
+                                //   color: Colors.green.withOpacity(0.1),
+                                //   borderRadius: BorderRadius.circular(8),
+                                //   border: Border.all(
+                                //     color: Colors.green.withOpacity(0.3),
+                                //   ),
+                                // ),
+                                // child: Row(
+                                //   mainAxisSize: MainAxisSize.min,
+                                //   children: [
+                                //     Icon(
+                                //       Icons.local_hospital_rounded,
+                                //       size: 14,
+                                //       color: Colors.green[700],
+                                //     ),
+                                //     const SizedBox(width: 4),
+                                //     Text(
+                                //       'Health info',
+                                //       style: TextStyle(
+                                //         fontSize: 12,
+                                //         fontWeight: FontWeight.w600,
+                                //         color: Colors.green[700],
+                                //       ),
+                                //     ),
+                                //   ],
+                                // ),
                               ),
                             ],
                           ],

@@ -476,7 +476,7 @@ Each question should be:
           'I apologize, but I couldn\'t generate a response. Please try again.';
 
       aiResponse = cleanAIResponse(aiResponse);
-
+//
       setState(() {
         messages.add(
           ChatMessage(

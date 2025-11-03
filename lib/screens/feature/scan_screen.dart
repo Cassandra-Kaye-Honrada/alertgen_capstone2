@@ -1360,417 +1360,197 @@ CRITICAL REQUIREMENTS:
 ''';
 
   String get multiOptionImagePrompt => '''
-You are an EXPERT Filipino food identification system with CRITICAL RESPONSIBILITY for allergen safety and precise variation detection.
+You are an EXPERT food identification system specializing in Filipino cuisine and regional/international dishes.
 
-PRIMARY MISSION: DETECT SPECIFIC DISH VARIATIONS WITH MAXIMUM ACCURACY
+PRIMARY MISSION: IDENTIFY DISHES WITH CLEAN, RECOGNIZABLE NAMES
 
-Your job is to identify:
-1. The base Filipino dish
-2. The SPECIFIC VARIATION (protein type, optional ingredients, regional variations)
-3. ALL visible and traditional ingredients (separately listed)
-4. Allergen-containing ingredients with explicit warnings
+CRITICAL DISH NAMING RULES:
+- Use BASE DISH NAME + PROTEIN TYPE only
+- NEVER include optional ingredients in dish name (hotdog, raisins, etc.)
+- NEVER include location/region in dish name
+- Keep names SHORT and RECOGNIZABLE (2-3 words maximum)
+- Use generic dish names, not regional variations
 
-PHASE 1: BASE DISH IDENTIFICATION
+CORRECT DISH NAMING EXAMPLES:
 
-Identify the traditional Filipino dish type by visual characteristics:
+FILIPINO DISHES - Base + Protein:
+ "Pork Menudo" (NOT "Pork Menudo with Hotdog")
+ "Oxtail Kare-Kare" (NOT "Oxtail Kare-Kare with Vegetables")
+ "Chicken Adobo" (NOT "Chicken Adobo with Eggs")
+ "Shrimp Sinigang" (NOT "Shrimp Sinigang with Vegetables")
+ "Beef Caldereta" (NOT "Beef Caldereta with Olives")
+ "Dinuguan" (NOT "Ilocos Dinuguan")
+ "Dinardaraan" (NOT "Ilocano Dinardaraan")
 
-TOMATO-BASED STEWS (Red/Orange Sauce):
-- Menudo: Cubed pork, potatoes, carrots, bell peppers in tomato sauce
-- Afritada: Similar to Menudo but larger meat chunks, may have green peas
-- Caldereta: Thicker, darker red sauce with liver paste, often has olives
-- Mechado: Whole meat chunks with soy sauce + tomato base
+GENERIC DISHES - Simple Names:
+ "Seafood Boil" (NOT "Cajun Seafood Boil" or "Louisiana Crawfish Boil")
+ "Crawfish Boil" (NOT "Louisiana Crawfish Boil")
+ "Clam Bake" (NOT "New England Clam Bake")
+ "Paella" (NOT "Spanish Paella")
+ "Cioppino" (NOT "Italian Cioppino")
+ "Tom Yum" (NOT "Thai Tom Yum")
+ "Seafood Platter"
+ "Mixed Grill"
+ "Seafood Pasta"
+ "Fried Chicken"
+
+WRONG DISH NAMES (NEVER USE):
+ "Pork Menudo with Hotdog and Raisins"
+ "Seafood Boil with Crab Mussels Shrimp"
+ "Kare-Kare with Vegetables"
+ "Mixed_Seafood_Crab_Shrimp"
+ "Cajun Seafood Boil"
+ "Louisiana Crawfish Boil"
+ "New England Clam Bake"
+ "Ilocos Dinuguan"
+
+PHASE 1: DISH IDENTIFICATION
+
+FILIPINO DISHES (Primary Focus):
+
+TOMATO-BASED STEWS:
+- Pork Menudo, Beef Menudo, Chicken Menudo
+- Pork Afritada, Chicken Afritada
+- Beef Caldereta, Goat Caldereta
+- Beef Mechado
 
 PEANUT-BASED:
-- Kare-Kare: Thick yellow-orange peanut sauce, vegetables, served with bagoong
+- Oxtail Kare-Kare, Pork Kare-Kare, Seafood Kare-Kare
 
-SOY-BASED (Dark Brown/Black):
-- Adobo: Dark glossy sauce, meat pieces, bay leaves visible
-- Adobo sa Gata: Lighter brown with coconut cream layer
+SOY-BASED:
+- Chicken Adobo, Pork Adobo, Squid Adobo
+- Adobo sa Gata (if coconut milk visible)
 
-SOUR SOUP (Clear/Cloudy Broth):
-- Sinigang: Clear sour broth, vegetables, tamarind/green mango sourness
+SOUR SOUP:
+- Pork Sinigang, Shrimp Sinigang, Fish Sinigang, Beef Sinigang
 
 CREAMY/SPICY:
-- Bicol Express: Red-orange creamy coconut milk sauce with chilies
+- Bicol Express, Laing, Ginataang Gulay
 
-PHASE 2: CRITICAL VARIATION DETECTION
+BLOOD-BASED:
+- Dinuguan, Dinardaraan
 
-RULE: VISUAL EVIDENCE OVERRIDES TRADITIONAL RECIPES
+INTERNATIONAL DISHES (Secondary Focus):
 
-If you see an ingredient that's NOT traditional but IS VISIBLE, you MUST include it.
+SEAFOOD BOILS:
+- Seafood Boil (mixed shellfish with corn and potatoes)
+- Crawfish Boil (crawfish-focused)
+- Clam Bake (clam-focused with seafood)
 
-MENUDO VARIATION SCAN (HIGHEST PRIORITY):
+RICE DISHES:
+- Paella (saffron rice with seafood/meat)
+- Seafood Paella (paella variation)
+- Jambalaya (rice with meat and vegetables)
+- Arroz con Mariscos (seafood rice)
 
-Look for these COMMON VARIATIONS:
+PASTA DISHES:
+- Seafood Pasta (generic)
+- Linguine ai Frutti di Mare (seafood linguine)
+- Pad Thai (rice noodles)
 
-1. HOTDOG CHECK (CRITICAL):
-   Visual cues:
-   - Cylindrical pieces, 1-2cm thick slices
-   - Bright red, pink, or orange color
-   - Smooth, glossy surface texture
-   - Uniform size and shape
-   - Usually mixed among pork chunks
-   
-   DECISION RULE:
-   - Hotdog visible: Dish name: "Pork Menudo with Hotdog"
-   - No hotdog visible: Dish name: "Pork Menudo"
+SOUPS & STEWS:
+- Bouillabaisse (fish stew)
+- Cioppino (seafood stew)
+- Tom Yum (sour and spicy soup)
 
-2. RAISINS CHECK:
-   Visual cues:
-   - Small (5-8mm) dark brown/black pieces
-   - Wrinkled, dried appearance
-   - Scattered throughout sauce
-   
-   DECISION RULE:
-   - Raisins visible: Add "raisins" to ingredients + mention in description
+IDENTIFICATION STRATEGY:
 
-3. LIVER CHECK:
-   Visual cues:
-   - Darker brown/burgundy color than pork
-   - Crumbly, grainy texture (not smooth)
-   - Usually smaller pieces
-   
-   DECISION RULE:
-   - Liver visible: Add "pork liver" to ingredients
-
-4. GREEN PEAS CHECK:
-   Visual cues:
-   - Small green spherical pieces (8-10mm)
-   
-   DECISION RULE:
-   - Peas visible: This might be "Afritada" instead of Menudo
-
-KARE-KARE VARIATION SCAN:
-
-1. PROTEIN TYPE (CRITICAL):
-   - Oxtail: Large bone-in pieces, gelatinous texture around bones
-   - Pork: Leaner meat, no bones or small bones
-   - Seafood: Shrimp (pink curved), squid (white rings), mussels (black shells)
-   - Tripe: Honeycomb pattern, chewy texture
-   
-   DECISION RULE:
-   - Specify protein in dish name: "Oxtail Kare-Kare", "Pork Kare-Kare", "Seafood Kare-Kare"
-
-2. BAGOONG DETECTION (MANDATORY):
-   Visual cues:
-   - Small side bowl/container with dark paste
-   - Purple-brown (shrimp paste) or grayish (fish paste)
-   
-   DECISION RULE:
-   - ALWAYS assume bagoong is served with Kare-Kare
-   - MUST add "shrimp paste" or "fish paste" to ingredients list
-
-ADOBO VARIATION SCAN:
-
-1. COCONUT MILK CHECK:
-   Visual cues:
-   - Lighter brown sauce (not dark black-brown)
-   - Visible coconut cream/oil layer on top
-   - Creamier appearance
-   
-   DECISION RULE:
-   - Coconut milk visible: "Adobo sa Gata" + add "coconut milk" to ingredients
-   - Dark sauce only: Regular "Adobo"
+1. LOOK FOR COOKING STYLE MARKERS:
+   - Red-orange spices, corn, potatoes, sausage → Seafood Boil
+   - Clams, lobster, simple seasoning → Clam Bake
+   - Saffron yellow rice, chorizo, bell peppers → Paella
+   - Tomato-based sauce, white wine, herbs → Cioppino
+   - Lemongrass, galangal, lime leaves, clear broth → Tom Yum
 
 2. PROTEIN TYPE:
-   - Chicken: White/light meat pieces
-   - Pork: Pork belly with fat layers visible
-   - Squid: Dark pieces with tentacles (Adobong Pusit)
-   
-   DECISION RULE:
-   - Specify: "Chicken Adobo", "Pork Adobo", "Adobong Pusit"
+   - Identify primary protein: pork, beef, chicken, oxtail, seafood
+   - Use in dish name: "Pork Menudo", "Oxtail Kare-Kare"
 
-SINIGANG VARIATION SCAN:
+3. SAUCE/BROTH CHARACTERISTICS:
+   - Tomato-based red sauce → Menudo/Afritada/Caldereta
+   - Peanut sauce → Kare-Kare
+   - Dark soy sauce → Adobo
+   - Clear sour broth → Sinigang
+   - Creamy coconut → Bicol Express/Laing
+   - Dark blood-based → Dinuguan/Dinardaraan
 
-1. PROTEIN TYPE:
-   - Pork: Pork ribs or belly pieces - "Sinigang na Baboy"
-   - Shrimp: Pink/orange curved pieces - "Sinigang na Hipon"
-   - Fish: Salmon/bangus/tilapia - "Sinigang na Isda/Salmon"
-   - Beef: Beef shank/short ribs - "Sinigang na Baka"
+PHASE 2: INGREDIENT LISTING
 
-PHASE 3: ALLERGEN INGREDIENT DETECTION (CRITICAL FOR SAFETY)
+LIST ALL VISIBLE AND TRADITIONAL INGREDIENTS SEPARATELY:
 
-MANDATORY VISUAL SCAN - If present, MUST list separately:
+SEAFOOD (list each type):
+- "shrimp" (separate entry)
+- "crab" (separate entry)
+- "mussels" (separate entry)
+- "clams" (separate entry)
+- "crawfish" (separate entry)
+- "lobster" (separate entry)
 
-1. PROCESSED MEATS (HIGH ALLERGEN PRIORITY):
-   Visual markers:
-   - Hotdog/Sausage: Red/pink cylindrical slices
-   - Ham: Pink cubes with white fat marbling
-   - Bacon: Striped brown/white pieces
-   - Chorizo: Red-orange crumbly pieces
-   
-   ALLERGEN WARNING: Contains MILK (milk powder), WHEAT (fillers), SOY (protein)
+VEGETABLES (list each type):
+- "corn" (separate entry)
+- "potatoes" (separate entry)
+- "carrots" (separate entry)
+- "bell peppers" (separate entry)
 
-2. SEAFOOD (MUST LIST INDIVIDUALLY - NEVER GROUP):
-   WRONG: "mixed seafood", "assorted seafood"
-   CORRECT: List each separately
-   
-   Visual identification:
-   - Shrimp: Pink/orange curved pieces with tail
-   - Squid: White rings or tentacle pieces
-   - Fish: Flaky white/pink pieces
-   - Mussels: Black/green shell with orange meat
-   - Clams: Beige/white shell pieces
-   - Crab: Red shell pieces, white meat
-   
-   ALLERGEN WARNING: SHELLFISH allergen (severe reactions possible)
+PROCESSED MEATS (list each type):
+- "hotdog" (if visible)
+- "sausage" (specify type: andouille, chorizo, etc.)
+- "bacon"
 
-3. EGGS:
-   Visual markers:
-   - Hard-boiled: Yellow yolk, white exterior, halved or quartered
-   - Scrambled: Yellow fluffy pieces
-   
-   ALLERGEN WARNING: Common allergen, especially in children
+ALLERGEN INGREDIENTS (must list with warnings):
+- Peanut butter (in Kare-Kare)
+- Shrimp paste (bagoong)
+- Soy sauce
+- Fish sauce
+- Eggs
+- Dairy products
 
-4. PEANUT PRODUCTS:
-   Visual markers:
-   - Kare-Kare sauce: Thick, tan/orange color
-   - Peanut pieces visible
-   
-   ALLERGEN WARNING: PEANUT allergen (can cause severe anaphylaxis)
+CONFIDENCE SCORING:
 
-5. SOY PRODUCTS:
-   Visual markers:
-   - Tofu/Tokwa: White/beige firm cubes
-   - Dark sauce: Adobo, soy-based dishes
-   
-   ALLERGEN WARNING: SOY allergen
+0.90-0.95: Clear identification with cooking style markers visible
+0.75-0.89: Good identification, some details visible
+0.60-0.74: Base category identified, limited details
+0.50-0.59: Generic fallback category
 
-6. DAIRY PRODUCTS:
-   Visual markers:
-   - Cheese: Melted or cubed, yellowish
-   - Cream: White/beige creamy sauce
-   
-   ALLERGEN WARNING: DAIRY/MILK allergen
-
-7. COCONUT MILK:
-   Visual markers:
-   - Creamy white layer on top of sauce
-   - Lighter sauce color
-   
-   ALLERGEN WARNING: Tree nut allergen (some individuals)
-
-PHASE 4: INGREDIENT LISTING RULES (CRITICAL)
-
-ABSOLUTE RULE: ONE INGREDIENT = ONE ENTRY
-
-CORRECT EXAMPLES:
-```json
-"ingredients": [
-  {"name": "pork", "benefits": "..."},
-  {"name": "hotdog", "benefits": "...with allergen warning..."},
-  {"name": "potatoes", "benefits": "..."},
-  {"name": "carrots", "benefits": "..."},
-  {"name": "bell peppers", "benefits": "..."},
-  {"name": "tomato sauce", "benefits": "..."}
-]
-```
-
-WRONG EXAMPLES:
-```json
-"ingredients": [
-  {"name": "mixed vegetables (carrots, potatoes, bell peppers)", ...},
-  {"name": "assorted seafood", ...},
-  {"name": "pork with hotdog", ...}
-]
-```
-
-INGREDIENT SOURCING STRATEGY:
-
-1. VISIBLE INGREDIENTS (Priority 1):
-   - Everything you can clearly see in the image
-   - Include variation ingredients (hotdog, raisins, etc.)
-
-2. TRADITIONAL RECIPE INGREDIENTS (Priority 2):
-   - Non-visible but essential ingredients (oil, soy sauce, garlic, onions)
-   - Based on standard Filipino recipe for identified dish
-
-3. ALLERGEN-CONTAINING BASES (Priority 3):
-   - Peanut butter (in Kare-Kare sauce)
-   - Shrimp paste (served with Kare-Kare)
-   - Soy sauce (in Adobo, Menudo)
-   - Fish sauce (in Sinigang)
-
-BENEFIT WRITING GUIDELINES:
-
-For REGULAR ingredients:
-"[Nutritional value]. [Health benefits]. [Vitamins/minerals]. [Additional benefits]."
-
-Example:
-```
-"potatoes": "Excellent source of complex carbohydrates, vitamin C, and potassium. Provides sustained energy. Supports heart health and blood pressure regulation. Contains resistant starch for gut health."
-```
-
-For ALLERGEN ingredients (MANDATORY FORMAT):
-"[Nutritional value]. [Health benefits]. [ALLERGEN WARNING with severity and details]."
-
-ALLERGEN BENEFIT TEMPLATES:
-
-Hotdog:
-"Processed meat product providing protein and some B vitamins. Convenient protein source. However, contains preservatives (nitrites/nitrates), high sodium (300-500mg per serving), and commonly includes milk powder and wheat flour as binding agents. Contains MILK and WHEAT allergens. May trigger reactions in dairy and gluten-sensitive individuals."
-
-Shrimp:
-"Excellent lean protein source (20g per 100g) with omega-3 fatty acids. Rich in selenium, vitamin B12, iodine, and astaxanthin (powerful antioxidant). Supports heart health, brain function, and immune system. Low calorie (85 calories per 100g). SHELLFISH ALLERGEN - can cause severe anaphylactic reactions in sensitive individuals. One of the top 8 major allergens."
-
-Peanut Butter (in Kare-Kare):
-"Excellent source of plant-based protein (25g per 100g), healthy monounsaturated fats, vitamin E, magnesium, and folate. Supports heart health and provides sustained energy. Rich in antioxidants. PEANUT ALLERGEN - one of the most common and severe food allergens. Can cause life-threatening anaphylaxis."
-
-Eggs:
-"Complete protein with all 9 essential amino acids. Rich in choline (brain development), vitamin D (bone health), vitamin B12, selenium, and lutein/zeaxanthin (eye health). One of the most nutrient-dense foods. COMMON ALLERGEN especially in young children. Usually outgrown but can persist into adulthood."
-
-Tofu:
-"Plant-based protein source made from soybeans with all essential amino acids. Rich in iron, calcium, manganese, and isoflavones. Low in calories and saturated fat. Heart-healthy. Contains SOY allergen. May cause reactions in soy-sensitive individuals."
-
-Soy Sauce:
-"Fermented condiment adding umami (savory) flavor. Contains some protein and antioxidants from fermentation. High in sodium (900-1000mg per tablespoon). Contains SOY allergen and often WHEAT (except tamari). Avoid if sensitive to soy or gluten."
-
-Shrimp Paste (Bagoong):
-"Fermented condiment rich in umami flavor. Provides protein, vitamin B12, and iodine. Traditional flavor enhancer in Filipino cuisine. Very high in sodium. Contains SHELLFISH allergen (fermented shrimp). Can cause severe reactions in shellfish-allergic individuals."
-
-Coconut Milk:
-"Rich source of medium-chain triglycerides (MCTs), which provide quick energy. Contains lauric acid with antimicrobial properties. Dairy-free alternative. Provides iron, magnesium, and potassium. May cause allergic reactions in individuals with tree nut allergies, though coconut allergy is relatively rare."
-
-PHASE 5: GENERATE 3-4 CONFIDENCE-RANKED OPTIONS
-
-CONFIDENCE SCORING SYSTEM:
-
-0.90-0.95 (Very High Confidence):
-- Clear, unobstructed view of dish
-- Multiple distinctive characteristics visible
-- Can identify specific variation ingredients (hotdog, protein type, etc.)
-- Sauce color and texture clearly visible
-- Traditional accompaniments present
-
-0.75-0.89 (High Confidence):
-- Good view of main components
-- Base dish clearly identifiable
-- Some uncertainty about variations
-- Most key ingredients visible
-
-0.60-0.74 (Moderate Confidence):
-- Base dish category identified
-- Limited view or partial obstruction
-- Could be similar dish (e.g., Menudo vs Afritada)
-- Missing some details
-
-0.50-0.59 (Low Confidence):
-- Generic identification only
-- Poor image quality or angle
-- Multiple possible interpretations
-- Fallback option
-
-OPTION GENERATION STRATEGY:
-
-Option 1 (Highest Confidence): Most specific identification
-- Include ALL variations detected
-- Example: "Pork Menudo with Hotdog and Raisins"
-- Confidence: 0.85-0.95
-
-Option 2 (Alternative): Different reasonable interpretation
-- Might be similar dish
-- Example: "Pork Afritada" (if distinguishing is difficult)
-- Confidence: 0.70-0.85
-
-Option 3 (Less Specific): Base category without variations
-- Example: "Pork Menudo" (without specifying variations)
-- Confidence: 0.60-0.75
-
-Option 4 (Fallback): Generic category
-- Example: "Filipino Tomato-Based Pork Stew"
-- Confidence: 0.50-0.65
-
-OUTPUT FORMAT
-
-Return ONLY valid JSON (no markdown, no code blocks):
+OUTPUT FORMAT:
 
 {
   "options": [
     {
-      "dishName": "Specific dish name WITH variations (e.g., 'Pork Menudo with Hotdog')",
-      "description": "Brief 1-2 sentence description mentioning: base dish type, protein, sauce characteristics, and any variation ingredients visible",
+      "dishName": "Seafood Boil",
+      "description": "Mixed shellfish boil with spices, featuring shrimp, crab, mussels, corn, and potatoes in seasoned broth",
       "ingredients": [
-        {
-          "name": "pork",
-          "benefits": "High-quality protein source with B vitamins, zinc, and selenium. Supports muscle growth and immune function. Rich in thiamine for energy metabolism."
-        },
-        {
-          "name": "hotdog",
-          "benefits": "Processed meat product providing protein and some B vitamins. However, contains preservatives, high sodium, and commonly includes milk powder and wheat flour as binding agents. Contains MILK and WHEAT allergens."
-        },
-        {
-          "name": "potatoes",
-          "benefits": "Excellent source of complex carbohydrates, vitamin C, and potassium. Provides sustained energy and supports heart health."
-        },
-        {
-          "name": "carrots",
-          "benefits": "Rich in beta-carotene (vitamin A precursor) for eye health. Contains fiber, vitamin K, and antioxidants. Supports immune function."
-        },
-        {
-          "name": "bell peppers",
-          "benefits": "Extremely high in vitamin C (more than oranges). Rich in antioxidants, vitamin A, and vitamin B6. Supports immune health and skin health."
-        },
-        {
-          "name": "tomato sauce",
-          "benefits": "Rich in lycopene (powerful antioxidant), vitamin C, and potassium. Supports heart health and may reduce cancer risk. Contains vitamin A."
-        },
-        {
-          "name": "soy sauce",
-          "benefits": "Fermented condiment adding umami flavor. Contains some antioxidants. High in sodium. Contains SOY allergen and often WHEAT."
-        },
-        {
-          "name": "garlic",
-          "benefits": "Contains allicin with antimicrobial properties. Supports cardiovascular health and immune function. May help regulate blood pressure."
-        },
-        {
-          "name": "onions",
-          "benefits": "Rich in antioxidants, vitamin C, and quercetin. Anti-inflammatory properties. Supports heart health and bone density."
-        },
-        {
-          "name": "cooking oil",
-          "benefits": "Provides essential fatty acids and helps absorb fat-soluble vitamins (A, D, E, K). Source of energy."
-        }
+        {"name": "shrimp", "benefits": "Excellent lean protein with omega-3 fatty acids. SHELLFISH ALLERGEN."},
+        {"name": "crab", "benefits": "High-quality protein with vitamins. SHELLFISH ALLERGEN."},
+        {"name": "mussels", "benefits": "Rich in iron and protein. SHELLFISH ALLERGEN."},
+        {"name": "corn", "benefits": "Good source of fiber and vitamins."},
+        {"name": "potatoes", "benefits": "Complex carbohydrates and vitamin C."},
+        {"name": "sausage", "benefits": "Protein source. May contain MILK, WHEAT allergens."},
+        {"name": "cajun seasoning", "benefits": "Spice blend with paprika, cayenne, garlic."},
+        {"name": "butter", "benefits": "Fat-soluble vitamins. DAIRY allergen."}
       ],
       "confidence": 0.92
     },
     {
-      "dishName": "Alternative interpretation",
-      "description": "Different possible dish following same rules",
-      "ingredients": [
-        {
-          "name": "ingredient1",
-          "benefits": "Benefits with allergen warning if applicable"
-        }
-      ],
-      "confidence": 0.78
-    },
-    {
-      "dishName": "Less specific option",
-      "description": "More general identification",
+      "dishName": "Crawfish Boil",
+      "description": "Crawfish-focused boil with vegetables and spices",
       "ingredients": [...],
-      "confidence": 0.65
+      "confidence": 0.75
     }
   ]
 }
 
-FINAL PRE-SUBMISSION CHECKLIST
+CRITICAL RULES:
+ Base dish name + protein only
+ NO region/location names in dish name
+ List ALL ingredients separately
+ Include allergen warnings
+ 3-4 options with confidence scores
+ NO optional ingredients in dish name
+ NO ingredient lists as dish names
+ NO underscores or concatenation
 
-Before returning your response, verify:
-
-- Did I check for HOTDOG in tomato-based stews?
-- Did I check for RAISINS in Menudo?
-- Did I specify the PROTEIN TYPE in the dish name?
-- Did I list all SEAFOOD items individually (not "mixed seafood")?
-- Did I list all VEGETABLES individually (not "mixed vegetables")?
-- Did I check for EGGS, TOFU, CHEESE as separate ingredients?
-- Did I include BAGOONG (shrimp paste) for Kare-Kare?
-- Did I include COCONUT MILK for Bicol Express or Adobo sa Gata?
-- Did I write allergen warnings for: hotdog, seafood, eggs, peanuts, soy, dairy?
-- Is each ingredient a SEPARATE entry (no grouping)?
-- Did I include traditional non-visible ingredients (garlic, onions, oil, soy sauce)?
-- Did I provide 3-4 options with different confidence levels?
-- Are dish names SPECIFIC with variations (not generic)?
-
-NOW ANALYZE THE IMAGE AND GENERATE OPTIONS.
+NOW ANALYZE THE IMAGE.
 ''';
   Future<void> analyzeOCRText(String ocrText, File imageFile) async {
     if (apiKey == 'YOUR_API_KEY_HERE') {
@@ -1781,7 +1561,7 @@ NOW ANALYZE THE IMAGE AND GENERATE OPTIONS.
     try {
       setState(() {
         isOCRAnalysis = true;
-        analysisStatus = 'Analyzing...';
+        analysisStatus = 'Analyzing product label...';
       });
 
       final model = GenerativeModel(model: 'gemini-2.5-pro', apiKey: apiKey);
@@ -1799,21 +1579,23 @@ Return only the product name.
         Content.text(quickExtractPrompt),
       ]);
 
-      String possibleDishName = (quickResponse.text ?? '').trim();
+      String possibleProductName = (quickResponse.text ?? '').trim();
 
-      String cacheKey = allergenAnalysis.generateCacheKey(
-        possibleDishName,
-        ingredients: [],
-      );
+      setState(() {
+        analysisStatus = 'Checking cache...';
+      });
+
       var cachedData = await allergenAnalysis.checkFoodCache(
-        cacheKey,
+        possibleProductName,
         imageFile: imageFile,
         apiKey: apiKey,
-        ingredients: [],
       );
+
       if (cachedData != null) {
+        print('Product found in cache');
+
         setState(() {
-          dishName = cachedData['dishName'] ?? possibleDishName;
+          dishName = cachedData['dishName'] ?? possibleProductName;
           description = cachedData['description'] ?? '';
           ingredients = List<String>.from(cachedData['ingredients'] ?? []);
           analysisStatus = 'Loading from cache...';
@@ -1866,7 +1648,7 @@ Return only the product name.
       }
 
       setState(() {
-        analysisStatus = 'Analyzing...';
+        analysisStatus = 'Analyzing ingredients...';
       });
 
       final ingredientPrompt = '''$multiOptionOCRPrompt
@@ -1894,7 +1676,7 @@ Generate 3-4 possible product interpretations with confidence scores.
     } catch (e) {
       setState(() {
         loading = false;
-        analysisStatus = '';
+        analysisStatus = 'Generating dish options';
       });
       showSnackBar('Error analyzing product label: $e', Colors.red);
     }
@@ -1909,7 +1691,7 @@ Generate 3-4 possible product interpretations with confidence scores.
     try {
       setState(() {
         isOCRAnalysis = false;
-        analysisStatus = 'Analyzing...';
+        analysisStatus = 'Analyzing dish...';
       });
 
       final model = GenerativeModel(model: 'gemini-2.5-pro', apiKey: apiKey);
@@ -1936,36 +1718,38 @@ Generate 3-4 possible dish interpretations with confidence scores.
       if (dishOptions.isNotEmpty) {
         dishOptions.sort((a, b) => b.confidence.compareTo(a.confidence));
 
-        String cacheKey = allergenAnalysis.generateCacheKey(
-          dishOptions.first.dishName,
-          ingredients: dishOptions.first.ingredients,
-        );
+        final topDish = dishOptions.first;
+
+        setState(() {
+          analysisStatus = 'Checking cache...';
+        });
 
         var cachedData = await allergenAnalysis.checkFoodCache(
-          cacheKey,
+          topDish.dishName,
           imageFile: imageFile,
           apiKey: apiKey,
-          ingredients: dishOptions.first.ingredients,
         );
 
         if (cachedData != null) {
           final matchLevel = cachedData['matchLevel'] ?? 0;
           final matchType = cachedData['matchType'] ?? 'unknown';
-          final matchConfidence = cachedData['matchConfidence'] ?? 0.0;
+          final matchConfidence = cachedData['matchConfidence'] ?? 1.0;
 
           print(
-            ' Enhanced cache hit (Level $matchLevel: $matchType, confidence: $matchConfidence)',
+            'Cache hit (Level $matchLevel: $matchType, confidence: $matchConfidence)',
           );
 
+          if (matchType == 'visual_similarity') {
+            showSnackBar(
+              'Found similar dish from ${DateTime.now().difference(DateTime.parse(cachedData['timestamp'] ?? DateTime.now().toIso8601String())).inDays} days ago (${(matchConfidence * 100).toInt()}% match)',
+              Colors.blue,
+            );
+          }
+
           setState(() {
-            dishName = cachedData['dishName'] ?? dishOptions.first.dishName;
+            dishName = cachedData['dishName'] ?? topDish.dishName;
             description = cachedData['description'] ?? '';
             ingredients = List<String>.from(cachedData['ingredients'] ?? []);
-
-            if (cachedData['mergedIngredients'] != null) {
-              ingredients = List<String>.from(cachedData['mergedIngredients']);
-            }
-
             analysisStatus = 'Loading from cache...';
           });
 
@@ -2072,7 +1856,7 @@ Generate 3-4 possible dish interpretations with confidence scores.
       loading = true;
       dishName = selectedOption.dishName;
       description = selectedOption.description;
-      analysisStatus = 'Analyzing...';
+      analysisStatus = 'Processing...';
     });
 
     try {
@@ -2085,40 +1869,27 @@ Generate 3-4 possible dish interpretations with confidence scores.
           ingWithBenefits.name,
           ingWithBenefits.benefits,
         );
-        ingredientBenefitsMap.addBenefit(
-          ingWithBenefits.name.toLowerCase().trim(),
-          ingWithBenefits.benefits,
-        );
       }
 
       List<String> currentIngredients =
           processedIngredients.map((e) => e.name).toList();
 
-      String cacheKey = allergenAnalysis.generateCacheKey(
-        selectedOption.dishName,
-        ingredients: currentIngredients,
-      );
+      setState(() {
+        analysisStatus = 'Checking cache...';
+      });
 
       var cachedData = await allergenAnalysis.checkFoodCache(
-        cacheKey,
+        selectedOption.dishName,
         imageFile: imageFile,
         apiKey: apiKey,
-        ingredients: currentIngredients,
       );
 
       if (cachedData != null) {
-        final matchLevel = cachedData['matchLevel'] ?? 0;
-        final matchType = cachedData['matchType'] ?? 'unknown';
-
-        print('Cache hit (Level $matchLevel: $matchType)');
+        print('Cache hit after dish selection');
 
         setState(() {
           analysisStatus = 'Loading from cache...';
           ingredients = List<String>.from(cachedData['ingredients'] ?? []);
-
-          if (cachedData['mergedIngredients'] != null) {
-            ingredients = List<String>.from(cachedData['mergedIngredients']);
-          }
         });
 
         List<AllergenInfo> cachedAllergens =
@@ -2160,8 +1931,6 @@ Generate 3-4 possible dish interpretations with confidence scores.
       List<String> originalIngredients =
           processedIngredients.map((e) => e.name).toList();
 
-      logIngredientAnalysis(originalIngredients);
-
       List<String> simplifiedIngredients = await simplifyIngredientNames(
         originalIngredients,
         model,
@@ -2174,9 +1943,7 @@ Generate 3-4 possible dish interpretations with confidence scores.
         i < originalIngredients.length && i < simplifiedIngredients.length;
         i++
       ) {
-        String originalName = originalIngredients[i];
         String simplifiedName = simplifiedIngredients[i];
-
         String? benefit = processedIngredients[i].benefits;
 
         if (benefit != null && benefit.isNotEmpty) {
@@ -2192,13 +1959,12 @@ Generate 3-4 possible dish interpretations with confidence scores.
 
       setState(() {
         ingredients = simplifiedIngredients;
-        analysisStatus = 'Determining allergens...';
+        analysisStatus = 'Analyzing allergens...';
       });
 
       await analyzeAllergensFromIngredients(simplifiedIngredients);
 
       await allergenAnalysis.saveFoodCache(
-        cacheKey,
         dishName,
         description,
         ingredients,
@@ -2226,20 +1992,6 @@ Generate 3-4 possible dish interpretations with confidence scores.
     }
   }
 
-  void logIngredientAnalysis(List<String> ingredients) {
-    print('INGREDIENT ANALYSIS');
-    print('Total ingredients detected: ${ingredients.length}');
-
-    for (int i = 0; i < ingredients.length; i++) {
-      String ingredient = ingredients[i];
-      bool isGrouped =
-          ingredient.contains('(') ||
-          ingredient.toLowerCase().contains('mixed') ||
-          ingredient.toLowerCase().contains('assorted');
-
-      print('${i + 1}. "$ingredient" ${isGrouped ? "GROUPED!" : ""}');
-    }
-  }
 
   List<IngredientWithBenefits> splitGroupedIngredients(
     List<IngredientWithBenefits> ingredients,
@@ -2648,16 +2400,11 @@ Make the description:
     });
 
     try {
-      final cacheKey = allergenAnalysis.generateCacheKey(
-        dishNameText,
-        ingredients: enteredIngredients,
-      );
-      final cachedData = await allergenAnalysis.checkFoodCache(
-        cacheKey,
-        ingredients: enteredIngredients,
-      );
+      final cachedData = await allergenAnalysis.checkFoodCache(dishNameText);
 
       if (cachedData != null) {
+        print('✅ Manual entry: Cache hit for "$dishNameText"');
+
         final cachedIngredients = List<String>.from(
           cachedData['ingredients'] ?? [],
         );
@@ -2668,6 +2415,22 @@ Make the description:
         for (int i = 0; i < cachedAllergensRaw.length; i++) {
           final allergen = AllergenInfo.fromJson(cachedAllergensRaw[i]);
           cachedAllergens.add(allergen);
+        }
+
+        ingredientBenefitsMap = IngredientBenefitsMap();
+        if (cachedData.containsKey('ingredientBenefits')) {
+          var benefitsData = cachedData['ingredientBenefits'];
+          if (benefitsData is Map) {
+            Map<String, dynamic> benefits = Map<String, dynamic>.from(
+              benefitsData,
+            );
+            benefits.forEach((key, value) {
+              ingredientBenefitsMap.addBenefit(
+                key.toString(),
+                value.toString(),
+              );
+            });
+          }
         }
 
         final ingredientColors = await allergenAnalysis.computeIngredientColors(
@@ -2691,12 +2454,15 @@ Make the description:
           image = null;
         });
 
+        showSnackBar('Loaded from cache', Colors.blue);
         navigateToResults();
         saveToFirebase(null).catchError((_) {});
         dishNameController.clear();
         ingredientController.clear();
         return;
       }
+
+      print('Manual entry: No cache, analyzing "$dishNameText"');
 
       final flashModel = GenerativeModel(
         model: 'gemini-1.5-flash',
@@ -2776,13 +2542,12 @@ GUIDELINES:
 
       setState(() {
         description = generatedDescription;
-        analysisStatus = 'Determining allergens...';
+        analysisStatus = 'Analyzing allergens...';
       });
 
       await analyzeAllergensFromIngredients(simplifiedIngredients);
 
       await allergenAnalysis.saveFoodCache(
-        cacheKey,
         dishName,
         description,
         ingredients,
