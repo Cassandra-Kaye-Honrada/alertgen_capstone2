@@ -86,13 +86,17 @@ class _ChatbotModalState extends State<ChatbotModal>
       model: 'gemini-2.0-flash-exp',
       apiKey: apiKey,
       systemInstruction: Content.system(
-        'You are a professional health assistant that provides reliable information about allergens, possible reactions, and general health guidance. '
-        'Always use a formal, calm, and respectful tone. Address the user directly using "you", but avoid giving medical diagnoses or definitive statements about their condition. '
-        'Provide information in a factual and objective manner, focusing on possible explanations, preventive measures, and when it may be advisable to seek professional care. '
-        'Avoid casual expressions, emotional wording, or exaggerated language. '
-        'Responses should be concise—preferably 2 to 4 sentences—and written in clear, grammatically correct English. '
-        'Never use markdown, bullet points, or emojis. '
-        'Do not offer treatment or medical prescriptions; instead, encourage the user to consult a qualified healthcare professional for personalized advice.',
+        'You are a specialized allergen information assistant. Your ONLY purpose is to provide information about allergens, allergic reactions, cross-reactivity, allergen avoidance, and allergy-related symptoms. '
+        'You must STRICTLY follow these rules:\n'
+        '1. DIAGNOSIS REQUESTS ARE ALLERGEN-RELATED: If the user asks "can you diagnose me", "diagnose my symptoms", "what do I have", or similar diagnosis questions, these ARE allergen-related questions. You MUST respond with: "I cannot provide medical diagnoses, but I strongly recommend consulting a healthcare professional or allergist for proper diagnosis and treatment. They can perform appropriate tests to identify the cause of your symptoms." If symptoms are described, you may briefly mention they could be allergen-related before the recommendation.\n'
+        '2. ONLY answer questions directly related to allergens, allergies, allergic reactions, food allergens, environmental allergens, cross-contamination, and allergy management.\n'
+        '3. If a question is NOT about allergens or allergies (like asking about diabetes, fitness, etc.), politely decline and redirect: "I apologize, but I can only provide information about allergens and allergic reactions. Please ask me about specific allergens, potential allergic symptoms, or allergy management strategies."\n'
+        '4. Do NOT answer questions about general health conditions, diseases, medications, treatments, or medical advice unrelated to allergens.\n'
+        '5. Use a formal, calm, and respectful tone. Address the user directly using "you".\n'
+        '6. Keep responses concise—preferably 2 to 4 sentences—written in clear, grammatically correct English.\n'
+        '7. Never use markdown, bullet points, or emojis.\n'
+        '8. Examples of ACCEPTABLE topics: food allergens, pollen allergies, pet dander, allergic reactions, anaphylaxis, allergen avoidance, cross-reactivity, allergy testing, common allergen sources, and requests for diagnosis (which you decline appropriately).\n'
+        '9. Examples of UNACCEPTABLE topics: diabetes, heart disease, pregnancy care, general medications, non-allergy infections, mental health, fitness advice, nutrition (unless directly related to allergen avoidance).',
       ),
     );
   }
@@ -123,28 +127,14 @@ class _ChatbotModalState extends State<ChatbotModal>
     List<String> contextParts = [];
 
     if (allergens.isNotEmpty) {
-      contextParts.add('Allergens: ${allergens.join(", ")}');
+      contextParts.add('User allergens: ${allergens.join(", ")}');
     }
 
     if (userData != null) {
       if (userData!['asthmaRespiratory'] == true) {
-        contextParts.add('Has asthma/respiratory condition');
-      }
-      if (userData!['lungDisease'] == true) {
-        contextParts.add('Has lung disease');
-      }
-      if (userData!['heartDisease'] == true) {
-        contextParts.add('Has heart disease');
-      }
-      if (userData!['isPregnant'] == true) {
-        contextParts.add('Currently pregnant');
-      }
-      if (userData!['caresForBabies'] == true) {
-        contextParts.add('Provides care for infants');
-      } else if (userData!['caresForToddlers'] == true) {
-        contextParts.add('Provides care for toddlers');
-      } else if (userData!['caresForChildren'] == true) {
-        contextParts.add('Provides care for children');
+        contextParts.add(
+          'User has asthma/respiratory condition (relevant for allergen-related triggers)',
+        );
       }
     }
 
@@ -152,7 +142,7 @@ class _ChatbotModalState extends State<ChatbotModal>
       return '';
     }
 
-    return '\n\nUser health profile: ${contextParts.join("; ")}';
+    return '\n\nUser context: ${contextParts.join("; ")}';
   }
 
   String cleanAIResponse(String response) {
@@ -270,17 +260,16 @@ class _ChatbotModalState extends State<ChatbotModal>
       String userProfile = buildUserProfileForSuggestions();
 
       String prompt =
-          '''Based on the following user health profile, generate exactly 4 personalized questions related to allergens or possible symptoms. 
-Focus on identifying allergy triggers, reactions, or relief advice.
+          '''Based on the following user allergen profile, generate exactly 4 personalized questions STRICTLY about allergens and allergic reactions. 
 
 $userProfile
 
 Return ONLY the 4 questions, one per line, without numbering, bullets, or any additional text. 
 Each question should be:
-- Focused on allergy or symptom interpretation
+- STRICTLY focused on allergens, allergic reactions, or allergen avoidance
 - Practical and actionable
 - Between 6–10 words long
-- Written in first person (e.g., "What should I avoid with shrimp allergy?")
+- Written in first person (e.g., "What foods contain hidden shrimp allergens?")
 - Concise and direct''';
 
       final response = await model.generateContent([Content.text(prompt)]);
@@ -318,46 +307,17 @@ Each question should be:
     List<String> profileParts = [];
 
     if (allergens.isNotEmpty) {
-      profileParts.add('Allergens: ${allergens.join(", ")}');
+      profileParts.add('Known allergens: ${allergens.join(", ")}');
     }
 
     if (userData != null) {
-      List<String> conditions = [];
       if (userData!['asthmaRespiratory'] == true) {
-        conditions.add('asthma/respiratory condition');
-      }
-      if (userData!['lungDisease'] == true) {
-        conditions.add('lung disease');
-      }
-      if (userData!['heartDisease'] == true) {
-        conditions.add('heart disease');
-      }
-      if (userData!['diabetes'] == true) {
-        conditions.add('diabetes');
-      }
-      if (userData!['hypertension'] == true) {
-        conditions.add('hypertension');
-      }
-
-      if (conditions.isNotEmpty) {
-        profileParts.add('Medical conditions: ${conditions.join(", ")}');
-      }
-
-      if (userData!['isPregnant'] == true) {
-        profileParts.add('Currently pregnant');
-      }
-
-      if (userData!['caresForBabies'] == true) {
-        profileParts.add('Provides care for infants (0-12 months)');
-      } else if (userData!['caresForToddlers'] == true) {
-        profileParts.add('Provides care for toddlers (1-3 years)');
-      } else if (userData!['caresForChildren'] == true) {
-        profileParts.add('Provides care for children (4+ years)');
+        profileParts.add('Has asthma (relevant for allergen triggers)');
       }
     }
 
     if (profileParts.isEmpty) {
-      return 'General health inquiries (no specific conditions reported)';
+      return 'General allergen inquiries (no specific allergens reported)';
     }
 
     return profileParts.join('\n');
@@ -368,38 +328,22 @@ Each question should be:
 
     if (allergens.isNotEmpty) {
       suggestions.add('What foods should I avoid with ${allergens[0]}?');
+      suggestions.add('What causes cross-reactions with ${allergens[0]}?');
     }
 
     if (userData?['asthmaRespiratory'] == true) {
-      suggestions.add('What triggers worsen asthma symptoms?');
+      suggestions.add('What allergens trigger asthma symptoms?');
     }
 
-    if (userData?['heartDisease'] == true) {
-      suggestions.add('What exercises are safe for me?');
-    }
-
-    if (userData?['lungDisease'] == true) {
-      suggestions.add('How can I improve lung health?');
-    }
-
-    if (userData?['isPregnant'] == true) {
-      suggestions.add('What medications are safe during pregnancy?');
-    }
-
-    if (userData?['caresForBabies'] == true) {
-      suggestions.add('When should I take my infant to the doctor?');
-    } else if (userData?['caresForToddlers'] == true) {
-      suggestions.add('What are common toddler allergies?');
-    } else if (userData?['caresForChildren'] == true) {
-      suggestions.add('How can I identify allergies in children?');
-    }
-
+    // Default allergen-focused suggestions
     while (suggestions.length < 4) {
       List<String> defaults = [
-        'What should I do for a fever?',
-        'How can I boost my immune system?',
-        'What are dehydration symptoms?',
-        'When should I see a doctor?',
+        'What are common food allergens?',
+        'How can I identify hidden allergens?',
+        'What are symptoms of allergic reactions?',
+        'How do I prevent cross-contamination?',
+        'What is anaphylaxis?',
+        'Can allergies develop in adults?',
       ];
 
       for (String def in defaults) {
@@ -476,7 +420,7 @@ Each question should be:
           'I apologize, but I couldn\'t generate a response. Please try again.';
 
       aiResponse = cleanAIResponse(aiResponse);
-//
+
       setState(() {
         messages.add(
           ChatMessage(
@@ -649,7 +593,7 @@ Each question should be:
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  'Health Assistant',
+                                  'Allergen Assistant',
                                   style: TextStyle(
                                     color: Color(0xFF2D3748),
                                     fontSize: 18,
@@ -659,7 +603,7 @@ Each question should be:
                                 Text(
                                   isTyping
                                       ? 'Typing...'
-                                      : 'Always here to help',
+                                      : 'Ask about allergens',
                                   style: TextStyle(
                                     color: Color(0xFF64748B),
                                     fontSize: 12,
@@ -702,7 +646,7 @@ Each question should be:
                             Padding(
                               padding: EdgeInsets.only(bottom: 8, left: 8),
                               child: Text(
-                                'Quick suggestions:',
+                                'Quick allergen questions:',
                                 style: TextStyle(
                                   color: Color(0xFF64748B),
                                   fontSize: 12,
@@ -770,7 +714,7 @@ Each question should be:
                                   hintText:
                                       isTyping
                                           ? 'AI is typing...'
-                                          : 'Type your message...',
+                                          : 'Ask about allergens...',
                                   hintStyle: TextStyle(
                                     color: Color(0xFF9CA3AF),
                                     fontSize: 14,
@@ -918,7 +862,6 @@ Each question should be:
   }
 
   Widget buildTypingIndicator() {
-    // Start animation when typing indicator is built
     if (!typingAnimationController.isAnimating) {
       typingAnimationController.repeat(reverse: true);
     }

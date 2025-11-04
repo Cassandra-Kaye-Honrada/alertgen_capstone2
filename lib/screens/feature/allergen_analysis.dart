@@ -358,7 +358,7 @@ Return ONLY JSON:
           final isSameDish = comparisonResult['isSameDish'] == true;
 
           print(
-            '📊 Comparison result for $cachedDishName: confidence=$confidence, isSameDish=$isSameDish',
+            'Comparison result for $cachedDishName: confidence=$confidence, isSameDish=$isSameDish',
           );
 
           if (isSameDish && confidence >= 0.75) {
