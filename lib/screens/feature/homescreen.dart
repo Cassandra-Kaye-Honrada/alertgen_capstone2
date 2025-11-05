@@ -586,8 +586,6 @@ class HomescreenState extends State<Homescreen> {
       benefitsMap = IngredientBenefitsMap();
       var benefitsData = historyItem['ingredientBenefits'];
 
-   
-
       if (benefitsData is Map) {
         Map<String, dynamic> benefits = Map<String, dynamic>.from(benefitsData);
 
@@ -599,13 +597,10 @@ class HomescreenState extends State<Homescreen> {
             '  - $ingredientKey: ${benefitValue.substring(0, benefitValue.length > 50 ? 50 : benefitValue.length)}...',
           );
         });
-
-      } 
+      }
     } else {
       print('Available fields: ${historyItem.keys.join(', ')}');
     }
-
-  
 
     Navigator.push(
       context,
@@ -696,47 +691,66 @@ class HomescreenState extends State<Homescreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Color(0xFFF8F9FA),
-      body: Column(
-        children: [
-          Container(
-            color: Color(0xFFF8F9FA),
-            child: SafeArea(
-              bottom: false,
-              child: Container(
-                padding: EdgeInsets.symmetric(horizontal: 20, vertical: 5),
-                child: buildHeader(),
+      backgroundColor: Colors.white,
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              Color(0xFF2B9EB3),
+              Color(0xFF1E7A8C),
+              Color(0xFFF8F9FA),
+              Color(0xFFFFFFFF),
+            ],
+          ),
+        ),
+        child: Column(
+          children: [
+            Container(
+              //color: Color(0xFFF8F9FA),
+              child: SafeArea(
+                bottom: false,
+                child: Container(
+                  padding: EdgeInsets.only(
+                    left: 20,
+                    right: 20,
+                    top: 5,
+                    bottom: 0,
+                  ),
+                  child: buildHeader(),
+                ),
               ),
             ),
-          ),
-          Expanded(
-            child: RefreshIndicator(
-              onRefresh: refreshUserData,
-              child: SingleChildScrollView(
-                physics: AlwaysScrollableScrollPhysics(),
-                child: Padding(
-                  padding: EdgeInsets.only(left: 20, right: 20, top: 20),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      AirQualityWidget(
-                        apiKey: 'AIzaSyCWva81wgqeq5qIShLvoO9hs20ejk73gCE',
-                      ),
-                      SizedBox(height: 30),
-                      buildEmergencySection(),
-                      SizedBox(height: 30),
-                      buildAllergenProfileSection(),
-                      SizedBox(height: 20),
-                      buildTreatmentSection(),
-                      SizedBox(height: 30),
-                      buildRecentHistorySection(),
-                    ],
+            Expanded(
+              child: RefreshIndicator(
+                onRefresh: refreshUserData,
+                child: SingleChildScrollView(
+                  physics: AlwaysScrollableScrollPhysics(),
+                  child: Padding(
+                    padding: EdgeInsets.only(left: 20, right: 20, top: 0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        AirQualityWidget(
+                          apiKey: 'AIzaSyCWva81wgqeq5qIShLvoO9hs20ejk73gCE',
+                        ),
+                        //SizedBox(height: 30),
+                        //    buildEmergencySection(),
+                        SizedBox(height: 30),
+                        buildAllergenProfileSection(),
+                        SizedBox(height: 20),
+                        buildTreatmentSection(),
+                        SizedBox(height: 30),
+                        buildRecentHistorySection(),
+                      ],
+                    ),
                   ),
                 ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
       floatingActionButton: FloatingChatbotButton(),
       floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
@@ -750,13 +764,62 @@ class HomescreenState extends State<Homescreen> {
       children: [
         Row(
           children: [
-            Image.asset('assets/images/logo.png', height: 40, width: 40),
+            Image.asset('assets/images/alertgenW.png', height: 40, width: 40),
             SizedBox(width: 5),
-            Image.asset('assets/images/alertgen.png', height: 60, width: 100),
+            Image.asset('assets/images/alertgenWW.png', height: 60, width: 100),
           ],
         ),
         Row(
           children: [
+            GestureDetector(
+              onTap: () {
+                emergencyService.startEmergencyCallFromUI(context);
+              },
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 5,
+                ),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFFF3F3),
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.red.withOpacity(0.1),
+                      blurRadius: 4,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(4),
+                      decoration: const BoxDecoration(
+                        color: Color(0xFFE53935),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.call,
+                        color: Colors.white,
+                        size: 14,
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    const Text(
+                      'Call for Help',
+                      style: TextStyle(
+                        color: Color(0xFFE53935),
+                        fontWeight: FontWeight.w600,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
             // GestureDetector(
             //   onTap: () async {
             //     final result = await Navigator.push(
