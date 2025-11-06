@@ -365,7 +365,19 @@ class _UserProfileState extends State<UserProfile> {
               child: SingleChildScrollView(
                 physics: const AlwaysScrollableScrollPhysics(),
                 child: Container(
-                  color: AppColors.primaryColor3,
+                  decoration: const BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        Color(0xFF2B9EB3),
+                        Color(0xFF1E7A8C),
+                        Color(0xFFF8F9FA),
+                        Color(0xFFFFFFFF),
+                      ],
+                    ),
+                  ),
+
                   child: Stack(
                     children: [
                       Column(
@@ -416,7 +428,16 @@ class _UserProfileState extends State<UserProfile> {
                                   Container(
                                     width: double.infinity,
                                     decoration: BoxDecoration(
-                                      color: const Color(0xFF1AA2CC),
+                                      //color: const Color(0xFF1AA2CC),
+                                      gradient: const LinearGradient(
+                                        begin: Alignment.topCenter,
+                                        end: Alignment.bottomCenter,
+                                        colors: [
+                                          Color(0xFF2B9EB3),
+                                          Color(0xFF1E7A8C),
+                                        ],
+                                      ),
+
                                       borderRadius: BorderRadius.circular(20),
                                     ),
                                     padding: const EdgeInsets.symmetric(
@@ -729,18 +750,45 @@ class _UserProfileState extends State<UserProfile> {
                                       profileImageUrl!,
                                       fit: BoxFit.cover,
                                       errorBuilder:
-                                          (context, error, stackTrace) =>
-                                              Container(
-                                                color: AppColors.primaryColor3,
-                                                child: const Icon(
-                                                  Icons.person,
-                                                  size: 60,
-                                                  color: Colors.white,
-                                                ),
+                                          (
+                                            context,
+                                            error,
+                                            stackTrace,
+                                          ) => Container(
+                                            //  color: AppColors.primaryColor3,
+                                            decoration: const BoxDecoration(
+                                              gradient: LinearGradient(
+                                                begin: Alignment.topCenter,
+                                                end: Alignment.bottomCenter,
+                                                colors: [
+                                                  Color(0xFF2B9EB3),
+                                                  Color(0xFF1E7A8C),
+                                                  Color(0xFFF8F9FA),
+                                                  Color(0xFFFFFFFF),
+                                                ],
                                               ),
+                                            ),
+
+                                            child: const Icon(
+                                              Icons.person,
+                                              size: 60,
+                                              color: Colors.white,
+                                            ),
+                                          ),
                                     )
                                     : Container(
-                                      color: AppColors.primaryColor3,
+                                      // color: AppColors.primaryColor3,
+                                      decoration: const BoxDecoration(
+                                        gradient: LinearGradient(
+                                          begin: Alignment.topCenter,
+                                          end: Alignment.bottomCenter,
+                                          colors: [
+                                            Color(0xFF2B9EB3),
+                                            Color(0xFF1E7A8C),
+                                          ],
+                                        ),
+                                      ),
+
                                       child: const Icon(
                                         Icons.person,
                                         size: 60,

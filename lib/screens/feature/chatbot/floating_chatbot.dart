@@ -15,8 +15,22 @@ class FloatingChatbotButton extends StatelessWidget {
           builder: (context) => ChatbotModal(),
         );
       },
-      child: Icon(Icons.chat_bubble_outline),
-      backgroundColor: Colors.blue,
+      backgroundColor: Colors.transparent,
+      elevation: 0,
+      child: Ink(
+        decoration: const BoxDecoration(
+          shape: BoxShape.circle,
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [Color(0xFF2B9EB3), Color(0xFF1E7A8C)],
+          ),
+        ),
+        child: const Padding(
+          padding: EdgeInsets.all(15.0),
+          child: Icon(Icons.chat_bubble_outline, color: Colors.white, size: 28),
+        ),
+      ),
     );
   }
 }
