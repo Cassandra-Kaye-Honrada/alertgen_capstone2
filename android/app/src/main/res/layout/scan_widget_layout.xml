@@ -13,38 +13,45 @@
         android:gravity="center"
         android:padding="16dp"
         android:id="@+id/scan_widget_container"
-        android:elevation="4dp">
+        android:elevation="6dp">
 
+        <!-- Scan Icon with Gradient Background -->
         <LinearLayout
-            android:layout_width="56dp"
-            android:layout_height="56dp"
+            android:layout_width="64dp"
+            android:layout_height="64dp"
             android:background="@drawable/scan_icon_bg"
             android:gravity="center"
-            android:layout_marginBottom="12dp">
+            android:layout_marginBottom="12dp"
+            android:elevation="2dp">
             
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="📷"
-                android:textSize="32sp" />
+                android:textSize="36sp" />
         </LinearLayout>
 
+        <!-- Scan Label -->
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Quick Scan"
-            android:textSize="14sp"
+            android:textSize="16sp"
             android:textColor="#1E293B"
             android:fontFamily="sans-serif-medium"
-            android:gravity="center" />
+            android:gravity="center"
+            android:letterSpacing="0.02" />
 
+        <!-- Subtitle -->
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Check allergens"
-            android:textSize="11sp"
-            android:textColor="#64748B"
+            android:textSize="12sp"
+            android:textColor="#000000"
             android:gravity="center"
-            android:layout_marginTop="4dp" />
+            android:layout_marginTop="4dp"
+            android:fontFamily="sans-serif"
+            android:alpha="0.9" />
     </LinearLayout>
 </FrameLayout>
