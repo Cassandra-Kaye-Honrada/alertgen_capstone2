@@ -1,42 +1,27 @@
-import 'package:allergen/screens/widgets/AirQualityWidget.dart';
+import 'package:allergen/screens/health_environment_analytics/widgets/AirQualityWidget.dart';
+
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:intl/intl.dart';
 
-class AirQualityDetailScreen extends StatefulWidget {
+class AllergenAnalyticsTab extends StatefulWidget {
   final AirQualityData airQualityData;
-  final String location;
-  final List<Population> applicablePopulations;
 
-  const AirQualityDetailScreen({
-    Key? key,
-    required this.airQualityData,
-    required this.location,
-    required this.applicablePopulations,
-  }) : super(key: key);
+  const AllergenAnalyticsTab({Key? key, required this.airQualityData})
+    : super(key: key);
 
   @override
-  State<AirQualityDetailScreen> createState() => _AirQualityDetailScreenState();
+  State<AllergenAnalyticsTab> createState() => _AllergenAnalyticsTabState();
 }
 
-class _AirQualityDetailScreenState extends State<AirQualityDetailScreen>
-    with SingleTickerProviderStateMixin {
-  late TabController _tabController;
+class _AllergenAnalyticsTabState extends State<AllergenAnalyticsTab> {
   List<Map<String, dynamic>> _allergenHistory = [];
   bool _isLoadingHistory = true;
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
     _loadAllergenHistory();
-  }
-
-  @override
-  void dispose() {
-    _tabController.dispose();
-    super.dispose();
   }
 
   Future<void> _loadAllergenHistory() async {
@@ -88,49 +73,6 @@ class _AirQualityDetailScreenState extends State<AirQualityDetailScreen>
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Health & Environment Details'),
-        backgroundColor: Colors.white,
-        foregroundColor: Colors.black,
-        elevation: 0,
-        bottom: TabBar(
-          controller: _tabController,
-          labelColor: const Color(0xFF0B8FAC),
-          unselectedLabelColor: Colors.grey,
-          indicatorColor: const Color(0xFF0B8FAC),
-          tabs: const [
-            Tab(icon: Icon(Icons.air), text: 'Air Quality'),
-            Tab(icon: Icon(Icons.analytics), text: 'Allergen Analytics'),
-          ],
-        ),
-      ),
-      body: TabBarView(
-        controller: _tabController,
-        children: [_buildAirQualityTab(), _buildAllergenAnalyticsTab()],
-      ),
-    );
-  }
-
-  Widget _buildAirQualityTab() {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _buildOverviewSection(),
-          const SizedBox(height: 24),
-          if (_hasHealthRecommendations) _buildHealthRecommendationsSection(),
-          const SizedBox(height: 24),
-          if (_hasPollutantData) _buildPollutantsSection(),
-          const SizedBox(height: 24),
-          _buildAQIScaleSection(),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildAllergenAnalyticsTab() {
     if (_isLoadingHistory) {
       return const Center(
         child: CircularProgressIndicator(
@@ -167,6 +109,10 @@ class _AirQualityDetailScreenState extends State<AirQualityDetailScreen>
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _buildAllergenSummaryCard(),
+          const SizedBox(height: 24),
+          _buildWeeklyHistoryChart(),
+          const SizedBox(height: 24),
+          _build30DaySummary(),
           const SizedBox(height: 24),
           _buildTopAllergensSection(),
           const SizedBox(height: 24),
@@ -678,10 +624,10 @@ class _AirQualityDetailScreenState extends State<AirQualityDetailScreen>
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Icon(
+                  const Icon(
                     Icons.check_circle,
                     size: 16,
-                    color: const Color(0xFF0B8FAC),
+                    color: Color(0xFF0B8FAC),
                   ),
                   const SizedBox(width: 8),
                   Expanded(
@@ -728,17 +674,6 @@ class _AirQualityDetailScreenState extends State<AirQualityDetailScreen>
     }
   }
 
-  // Helper getters
-  bool get _hasHealthRecommendations {
-    return widget.airQualityData.allHealthRecommendations != null &&
-        widget.airQualityData.allHealthRecommendations.isNotEmpty;
-  }
-
-  bool get _hasPollutantData {
-    return widget.airQualityData.components != null &&
-        widget.airQualityData.components.isNotEmpty;
-  }
-
   Color _getRiskColor(String riskLevel) {
     switch (riskLevel.toLowerCase()) {
       case 'severe':
@@ -765,274 +700,42 @@ class _AirQualityDetailScreenState extends State<AirQualityDetailScreen>
     }
   }
 
-  // Air Quality Tab Widgets (keeping original implementations)
-  Widget _buildOverviewSection() {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-          Text(
-            widget.location,
-            style: const TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: Colors.black87,
-            ),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 16),
-          Stack(
-            alignment: Alignment.center,
-            children: [
-              SizedBox(
-                width: 180,
-                height: 180,
-                child: CustomPaint(
-                  painter: AQIGaugePainter(
-                    aqi: widget.airQualityData.aqi.toDouble(),
-                    color: widget.airQualityData.color,
-                  ),
-                ),
-              ),
-              Column(
-                children: [
-                  Text(
-                    '${widget.airQualityData.aqi}',
-                    style: const TextStyle(
-                      fontSize: 42,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black87,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  const Text(
-                    'AQI',
-                    style: TextStyle(fontSize: 16, color: Colors.grey),
-                  ),
-                ],
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-            decoration: BoxDecoration(
-              color: widget.airQualityData.color.withOpacity(0.2),
-              borderRadius: BorderRadius.circular(25),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  width: 12,
-                  height: 12,
-                  decoration: BoxDecoration(
-                    color: widget.airQualityData.color,
-                    shape: BoxShape.circle,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  widget.airQualityData.qualityLevel,
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    color: widget.airQualityData.color,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 16),
-          Text(
-            'Dominant pollutant: ${widget.airQualityData.dominantPollutant}',
-            style: const TextStyle(fontSize: 14, color: Colors.grey),
-          ),
-        ],
-      ),
-    );
-  }
+  Widget _buildWeeklyHistoryChart() {
+    // TESTING: Use a week in October 2024 for testing
+    // Comment out these two lines after testing and uncomment the lines below
+    final now = DateTime(2024, 10, 15); // Mid-October for testing
+    final last7Days = List.generate(7, (index) {
+      return now.subtract(Duration(days: 6 - index));
+    });
 
-  Widget _buildHealthRecommendationsSection() {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Row(
-            children: [
-              Icon(Icons.health_and_safety, size: 20, color: Colors.green),
-              SizedBox(width: 8),
-              Text(
-                'Health Recommendations',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black87,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          if (widget.applicablePopulations.isNotEmpty)
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                const Text(
-                  'For:',
-                  style: TextStyle(fontSize: 14, color: Colors.grey),
-                ),
-                ...widget.applicablePopulations.map((pop) {
-                  return Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 6,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colors.blue[50],
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          _getPopulationIcon(pop),
-                          size: 14,
-                          color: Colors.blue[700],
-                        ),
-                        const SizedBox(width: 4),
-                        Text(
-                          _getPopulationLabel(pop),
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Colors.blue[700],
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ],
-                    ),
-                  );
-                }).toList(),
-              ],
-            ),
-          const SizedBox(height: 16),
-          ..._buildPopulationRecommendations(),
-        ],
-      ),
-    );
-  }
+    // PRODUCTION: Uncomment these lines for real data
+    // final now = DateTime.now();
+    // final last7Days = List.generate(7, (index) {
+    //   return now.subtract(Duration(days: 6 - index));
+    // });
 
-  List<Widget> _buildPopulationRecommendations() {
-    List<Widget> widgets = [];
+    // Count exposures per day by risk level
+    Map<String, List<int>> riskData = {
+      'severe': List.filled(7, 0),
+      'moderate': List.filled(7, 0),
+      'mild': List.filled(7, 0),
+    };
 
-    for (var population in widget.applicablePopulations) {
-      final recommendationKey = _getPopulationRecommendationKey(population);
-      final recommendation = _getHealthRecommendation(recommendationKey);
+    for (var exposure in _allergenHistory) {
+      final timestamp = exposure['timestamp'] as DateTime;
+      final risk = (exposure['riskLevel'] as String).toLowerCase();
 
-      if (recommendation != null && recommendation.isNotEmpty) {
-        if (widgets.isNotEmpty) {
-          widgets.add(const SizedBox(height: 16));
-          widgets.add(Divider(color: Colors.grey[300], height: 1));
-          widgets.add(const SizedBox(height: 16));
+      for (int i = 0; i < 7; i++) {
+        final day = last7Days[i];
+        if (timestamp.year == day.year &&
+            timestamp.month == day.month &&
+            timestamp.day == day.day) {
+          riskData[risk]![i]++;
+          break;
         }
-
-        widgets.add(
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Icon(
-                    _getPopulationIcon(population),
-                    size: 18,
-                    color: Colors.blue[700],
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    _getPopulationLabel(population),
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.blue[700],
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.grey[50],
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Text(
-                  recommendation,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    color: Colors.black87,
-                    height: 1.5,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        );
       }
     }
 
-    if (widgets.isEmpty) {
-      widgets.add(
-        const Column(
-          children: [
-            Icon(Icons.info_outline, size: 40, color: Colors.grey),
-            SizedBox(height: 8),
-            Text(
-              'No specific health recommendations available for current air quality conditions.',
-              style: TextStyle(fontSize: 14, color: Colors.grey, height: 1.5),
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
-      );
-    }
-
-    return widgets;
-  }
-
-  String? _getHealthRecommendation(String key) {
-    try {
-      return widget.airQualityData.allHealthRecommendations[key];
-    } catch (e) {
-      return null;
-    }
-  }
-
-  Widget _buildPollutantsSection() {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(20),
@@ -1046,70 +749,6 @@ class _AirQualityDetailScreenState extends State<AirQualityDetailScreen>
             offset: const Offset(0, 2),
           ),
         ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Row(
-            children: [
-              Icon(Icons.science, size: 20, color: Colors.orange),
-              SizedBox(width: 8),
-              Text(
-                'Pollutant Details',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black87,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          if (_hasPollutantData)
-            Wrap(
-              spacing: 12,
-              runSpacing: 12,
-              children:
-                  widget.airQualityData.components.entries.map((entry) {
-                    return _buildPollutantCard(
-                      _getPollutantName(entry.key),
-                      entry.value,
-                      'μg/m³',
-                      _getPollutantDescription(entry.key),
-                      entry.key,
-                    );
-                  }).toList(),
-            )
-          else
-            const Center(
-              child: Text(
-                'No pollutant data available',
-                style: TextStyle(color: Colors.grey),
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildPollutantCard(
-    String name,
-    double value,
-    String unit,
-    String description,
-    String pollutantCode,
-  ) {
-    final isDominant =
-        widget.airQualityData.dominantPollutant.toLowerCase() ==
-        pollutantCode.toLowerCase();
-
-    return Container(
-      width: 160,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.grey[50],
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey[300]!),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1117,58 +756,99 @@ class _AirQualityDetailScreenState extends State<AirQualityDetailScreen>
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Expanded(
-                child: Text(
-                  name,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.black87,
-                  ),
+              const Text(
+                'WEEKLY HISTORY',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black54,
+                  letterSpacing: 1.2,
                 ),
               ),
-              if (isDominant)
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 6,
-                    vertical: 2,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.orange[100],
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: const Text(
-                    'Dominant',
-                    style: TextStyle(
-                      fontSize: 10,
-                      color: Colors.orange,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
+              Icon(Icons.fullscreen, color: Colors.grey[400], size: 20),
             ],
           ),
-          const SizedBox(height: 8),
-          Text(
-            value.toStringAsFixed(1),
-            style: const TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-              color: Colors.black87,
-            ),
+          const SizedBox(height: 20),
+          // Legend
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              _buildLegendItem(Colors.red, 'Severe'),
+              const SizedBox(width: 16),
+              _buildLegendItem(Colors.orange, 'Moderate'),
+              const SizedBox(width: 16),
+              _buildLegendItem(Colors.yellow[700]!, 'Mild'),
+            ],
           ),
-          Text(unit, style: const TextStyle(fontSize: 12, color: Colors.grey)),
-          const SizedBox(height: 8),
-          Text(
-            description,
-            style: const TextStyle(fontSize: 11, color: Colors.grey),
+          const SizedBox(height: 24),
+          // Chart
+          SizedBox(
+            height: 180,
+            child: CustomPaint(
+              size: Size(double.infinity, 180),
+              painter: WeeklyChartPainter(
+                severeData: riskData['severe']!,
+                moderateData: riskData['moderate']!,
+                mildData: riskData['mild']!,
+                days: last7Days,
+              ),
+            ),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildAQIScaleSection() {
+  Widget _buildLegendItem(Color color, String label) {
+    return Row(
+      children: [
+        Container(
+          width: 12,
+          height: 12,
+          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+        ),
+        const SizedBox(width: 6),
+        Text(
+          label,
+          style: const TextStyle(fontSize: 12, color: Colors.black54),
+        ),
+      ],
+    );
+  }
+
+  Widget _build30DaySummary() {
+    // TESTING: Calculate from October 15, 2024 going back 30 days
+    // Comment out this line after testing and uncomment the line below
+    final thirtyDaysAgo = DateTime(
+      2024,
+      10,
+      15,
+    ).subtract(const Duration(days: 30));
+
+    // PRODUCTION: Uncomment this line for real data
+    // final thirtyDaysAgo = DateTime.now().subtract(const Duration(days: 30));
+
+    final last30DaysExposures =
+        _allergenHistory.where((e) {
+          return (e['timestamp'] as DateTime).isAfter(thirtyDaysAgo);
+        }).toList();
+
+    if (last30DaysExposures.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    // Count by risk level
+    Map<String, int> riskCounts = {'severe': 0, 'moderate': 0, 'mild': 0};
+    for (var exposure in last30DaysExposures) {
+      final risk = (exposure['riskLevel'] as String).toLowerCase();
+      riskCounts[risk] = (riskCounts[risk] ?? 0) + 1;
+    }
+
+    final total = last30DaysExposures.length;
+    final severePercent = ((riskCounts['severe']! / total) * 100).round();
+    final moderatePercent = ((riskCounts['moderate']! / total) * 100).round();
+    final mildPercent = ((riskCounts['mild']! / total) * 100).round();
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(20),
@@ -1186,223 +866,204 @@ class _AirQualityDetailScreenState extends State<AirQualityDetailScreen>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Row(
+          const Text(
+            '30 DAY SUMMARY',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: Colors.black54,
+              letterSpacing: 1.2,
+            ),
+          ),
+          const SizedBox(height: 20),
+          // Percentage labels
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Icon(Icons.legend_toggle, size: 20, color: Colors.purple),
-              SizedBox(width: 8),
               Text(
-                'AQI Scale Reference',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black87,
+                '$mildPercent%',
+                style: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              Text(
+                '$moderatePercent%',
+                style: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              Text(
+                '$severePercent%',
+                style: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 16),
-          _buildAQIScaleItem(
-            0,
-            50,
-            Colors.green,
-            'Good',
-            'Air quality is satisfactory',
-          ),
-          _buildAQIScaleItem(
-            51,
-            100,
-            Colors.yellow,
-            'Moderate',
-            'Acceptable air quality',
-          ),
-          _buildAQIScaleItem(
-            101,
-            150,
-            Colors.orange,
-            'Unhealthy for Sensitive Groups',
-            'General public less likely affected',
-          ),
-          _buildAQIScaleItem(
-            151,
-            200,
-            Colors.red,
-            'Unhealthy',
-            'Everyone may experience effects',
-          ),
-          _buildAQIScaleItem(
-            201,
-            300,
-            Colors.purple,
-            'Very Unhealthy',
-            'Health warnings',
-          ),
-          _buildAQIScaleItem(
-            301,
-            500,
-            Colors.deepPurple,
-            'Hazardous',
-            'Emergency conditions',
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildAQIScaleItem(
-    int min,
-    int max,
-    Color color,
-    String level,
-    String description,
-  ) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            width: 20,
-            height: 20,
-            margin: const EdgeInsets.only(top: 2),
-            decoration: BoxDecoration(
-              color: color,
-              borderRadius: BorderRadius.circular(4),
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Text(
-                      '$min - $max',
-                      style: const TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.black87,
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        level,
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w500,
-                          color: color,
-                        ),
-                      ),
-                    ),
+          const SizedBox(height: 8),
+          // Gradient bar
+          ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: Container(
+              height: 12,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [Colors.yellow[700]!, Colors.orange, Colors.red],
+                  stops: [
+                    mildPercent / 100,
+                    (mildPercent + moderatePercent) / 100,
+                    1.0,
                   ],
                 ),
-                const SizedBox(height: 2),
-                Text(
-                  description,
-                  style: const TextStyle(fontSize: 12, color: Colors.grey),
-                ),
-              ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+          Center(
+            child: TextButton.icon(
+              onPressed: () {
+                // Navigate to detailed trends page
+              },
+              icon: const Icon(Icons.trending_up, size: 18),
+              label: const Text('See your allergy trends'),
+              style: TextButton.styleFrom(
+                foregroundColor: const Color(0xFF0B8FAC),
+              ),
             ),
           ),
         ],
       ),
     );
   }
+}
 
-  // Helper methods
-  IconData _getPopulationIcon(Population population) {
-    switch (population) {
-      case Population.generalPopulation:
-        return Icons.people;
-      case Population.elderly:
-        return Icons.elderly;
-      case Population.lungDiseasePopulation:
-        return Icons.air;
-      case Population.heartDiseasePopulation:
-        return Icons.favorite;
-      case Population.athletes:
-        return Icons.directions_run;
-      case Population.pregnantWomen:
-        return Icons.pregnant_woman;
-      case Population.children:
-        return Icons.child_care;
+// Custom painter for the weekly chart
+class WeeklyChartPainter extends CustomPainter {
+  final List<int> severeData;
+  final List<int> moderateData;
+  final List<int> mildData;
+  final List<DateTime> days;
+
+  WeeklyChartPainter({
+    required this.severeData,
+    required this.moderateData,
+    required this.mildData,
+    required this.days,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint =
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 2.5
+          ..strokeCap = StrokeCap.round;
+
+    final double chartHeight = size.height - 40;
+    final double chartWidth = size.width;
+    final double segmentWidth = chartWidth / 6;
+
+    // Find max value for scaling
+    int maxValue = 0;
+    for (int i = 0; i < 7; i++) {
+      int total = severeData[i] + moderateData[i] + mildData[i];
+      if (total > maxValue) maxValue = total;
+    }
+    if (maxValue == 0) maxValue = 1; // Avoid division by zero
+
+    // Draw grid lines
+    final gridPaint =
+        Paint()
+          ..color = Colors.grey.withOpacity(0.1)
+          ..strokeWidth = 1;
+
+    for (int i = 0; i <= 4; i++) {
+      final y = (chartHeight / 4) * i;
+      canvas.drawLine(Offset(0, y), Offset(chartWidth, y), gridPaint);
+    }
+
+    // Helper function to draw a line
+    void drawLine(List<int> data, Color color) {
+      paint.color = color.withOpacity(0.8);
+      final path = Path();
+
+      for (int i = 0; i < 7; i++) {
+        final x = segmentWidth * i;
+        final normalizedValue = data[i] / maxValue;
+        final y = chartHeight - (normalizedValue * chartHeight);
+
+        if (i == 0) {
+          path.moveTo(x, y);
+        } else {
+          path.lineTo(x, y);
+        }
+      }
+
+      canvas.drawPath(path, paint);
+
+      // Draw area fill
+      final fillPath = Path.from(path);
+      fillPath.lineTo(segmentWidth * 6, chartHeight);
+      fillPath.lineTo(0, chartHeight);
+      fillPath.close();
+
+      final fillPaint =
+          Paint()
+            ..color = color.withOpacity(0.15)
+            ..style = PaintingStyle.fill;
+
+      canvas.drawPath(fillPath, fillPaint);
+    }
+
+    // Draw lines for each risk level
+    drawLine(mildData, Colors.yellow[700]!);
+    drawLine(moderateData, Colors.orange);
+    drawLine(severeData, Colors.red);
+
+    // Draw date labels
+    final textPainter = TextPainter(
+      textDirection: TextDirection.ltr,
+      textAlign: TextAlign.center,
+    );
+
+    for (int i = 0; i < 7; i++) {
+      final x = segmentWidth * i;
+      final date = days[i];
+      final dayStr = '${date.day} ${_getMonthAbbr(date.month)}';
+
+      textPainter.text = TextSpan(
+        text: dayStr,
+        style: const TextStyle(fontSize: 10, color: Colors.black54),
+      );
+      textPainter.layout();
+      textPainter.paint(
+        canvas,
+        Offset(x - textPainter.width / 2, chartHeight + 10),
+      );
     }
   }
 
-  String _getPopulationRecommendationKey(Population population) {
-    switch (population) {
-      case Population.generalPopulation:
-        return 'generalPopulation';
-      case Population.elderly:
-        return 'elderly';
-      case Population.lungDiseasePopulation:
-        return 'lungDiseasePopulation';
-      case Population.heartDiseasePopulation:
-        return 'heartDiseasePopulation';
-      case Population.athletes:
-        return 'athletes';
-      case Population.pregnantWomen:
-        return 'pregnantWomen';
-      case Population.children:
-        return 'children';
-    }
+  String _getMonthAbbr(int month) {
+    const months = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
+    ];
+    return months[month - 1];
   }
 
-  String _getPollutantName(String code) {
-    switch (code.toLowerCase()) {
-      case 'pm25':
-        return 'PM2.5';
-      case 'pm10':
-        return 'PM10';
-      case 'o3':
-        return 'Ozone';
-      case 'no2':
-        return 'Nitrogen Dioxide';
-      case 'so2':
-        return 'Sulfur Dioxide';
-      case 'co':
-        return 'Carbon Monoxide';
-      default:
-        return code.toUpperCase();
-    }
-  }
-
-  String _getPollutantDescription(String code) {
-    switch (code.toLowerCase()) {
-      case 'pm25':
-        return 'Fine inhalable particles';
-      case 'pm10':
-        return 'Inhalable particles';
-      case 'o3':
-        return 'Ground-level ozone';
-      case 'no2':
-        return 'Nitrogen dioxide';
-      case 'so2':
-        return 'Sulfur dioxide';
-      case 'co':
-        return 'Carbon monoxide';
-      default:
-        return 'Air pollutant';
-    }
-  }
-
-  String _getPopulationLabel(Population population) {
-    switch (population) {
-      case Population.generalPopulation:
-        return 'General Public';
-      case Population.elderly:
-        return 'Elderly';
-      case Population.lungDiseasePopulation:
-        return 'Lung Conditions';
-      case Population.heartDiseasePopulation:
-        return 'Heart Conditions';
-      case Population.athletes:
-        return 'Athletes';
-      case Population.pregnantWomen:
-        return 'Pregnant Women';
-      case Population.children:
-        return 'Children';
-    }
-  }
+  @override
+  bool shouldRepaint(WeeklyChartPainter oldDelegate) => true;
 }

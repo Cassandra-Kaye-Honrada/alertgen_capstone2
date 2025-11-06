@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:allergen/screens/community/CommunityForumScreen.dart';
 import 'package:allergen/screens/feature/chatbot/floating_chatbot.dart';
+import 'package:allergen/screens/health_environment_analytics/widgets/AirQualityWidget.dart';
 import 'package:allergen/screens/profile_screen_items/allergen.dart';
 import 'package:allergen/screens/profile_screen_items/scanHistoryScreen.dart';
 import 'package:allergen/screens/profile_screen_items/ProfileScreen.dart';
@@ -10,7 +11,6 @@ import 'package:allergen/screens/feature/scan_screen.dart';
 import 'package:allergen/screens/feature/result_screen.dart';
 import 'package:allergen/screens/feature/allergen_analysis.dart';
 import 'package:allergen/screens/feature/skin_allergy/skin_allergy.dart';
-import 'package:allergen/screens/widgets/AirQualityWidget.dart';
 import 'package:allergen/services/emergency/emergency_service.dart';
 import 'package:allergen/styleguide.dart';
 import 'package:flutter/material.dart';

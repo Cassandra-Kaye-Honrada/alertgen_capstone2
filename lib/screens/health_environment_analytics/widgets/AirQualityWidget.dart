@@ -1,4 +1,4 @@
-import 'package:allergen/screens/widgets/Air%20Quality/AirQualityDetailScreen.dart';
+import 'package:allergen/screens/health_environment_analytics/AirQualityDetailScreen.dart';
 import 'package:flutter/material.dart';
 import 'dart:math' as math;
 import 'package:http/http.dart' as http;
