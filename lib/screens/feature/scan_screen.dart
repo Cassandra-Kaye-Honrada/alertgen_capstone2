@@ -206,6 +206,10 @@ class _CameraScannerScreenState extends State<CameraScannerScreen>
 
       final imageType = await determineImageType(imageFile);
 
+      if (imageType == 'other') {
+        return;
+      }
+
       setState(() {
         isSkinAnalysis = (imageType == 'skin');
         analysisStatus =
@@ -244,8 +248,12 @@ class _CameraScannerScreenState extends State<CameraScannerScreen>
 
   Future<String> determineImageType(File imageFile) async {
     if (apiKey == 'YOUR_API_KEY_HERE') {
-      setState(() => isSkinAnalysis = false);
-      return 'food';
+      setState(() {
+        loading = false;
+        image = null;
+      });
+      showSnackBar('API key not configured', Colors.red);
+      return 'other';
     }
 
     try {
@@ -253,18 +261,36 @@ class _CameraScannerScreenState extends State<CameraScannerScreen>
       final imageBytes = await imageFile.readAsBytes();
 
       final prompt = '''
-You are an expert image classifier. Analyze this image and determine if it shows:
-1. FOOD - any food item, dish, meal, snack, beverage, or food product label
-2. SKIN - human skin showing allergic reactions, rashes, irritation, or skin conditions
+You are an EXPERT image classifier. Analyze this image with STRICT rules:
 
-CRITICAL CLASSIFICATION RULES:
-- If the image shows FOOD in any form → return "food"
-- If the image shows SKIN with visible allergic reactions, rashes, hives, eczema, dermatitis, or any skin condition → return "skin"
-- If unclear or neither → return "food" (default to food analysis)
+**FOOD/PRODUCT** - MUST show one of these:
+1. Actual food: dishes, meals, cooked food, fruits, vegetables, beverages
+2. Food product labels: packaged foods with visible ingredient lists or nutrition facts
+3. Food packaging: boxes, cans, bottles with clear food branding
 
-Return ONLY ONE WORD in JSON format:
+**SKIN** - MUST show:
+1. Human skin with visible allergic reactions (hives, rashes, eczema, dermatitis)
+2. Skin conditions clearly related to food allergies
+
+**OTHER** - Everything else including:
+- Computer screens/monitors showing text
+- Screenshots of documents or websites
+- Random objects, scenery, animals, people
+- Text documents, papers, books (NOT food labels)
+- Any non-food related content
+
+CRITICAL RULES:
+- Text on a computer screen = OTHER (not food)
+- Random text documents = OTHER (not food)
+- Screenshots = OTHER (not food)
+- Food product labels must have VISIBLE ingredients list or nutrition facts
+- Confidence MUST be ≥ 0.70 for "food" or "skin", otherwise return "other"
+
+Return JSON:
 {
-  "type": "food" or "skin"
+  "type": "food" or "skin" or "other",
+  "confidence": 0.XX (minimum 0.70 for food/skin),
+  "reason": "Short, direct description of what is seen in the image (no rule references)"
 }
 ''';
 
@@ -282,18 +308,302 @@ Return ONLY ONE WORD in JSON format:
       }
 
       final jsonData = json.decode(cleanResponse.trim());
-      final imageType = jsonData['type'] ?? 'food';
+      final imageType = jsonData['type'] ?? 'other';
+      final confidence = (jsonData['confidence'] ?? 0.0).toDouble();
+      final reason = jsonData['reason'] ?? '';
+
+      print('Image type detected: $imageType (confidence: $confidence)');
+      print('Reason: $reason');
+
+      if ((imageType == 'food' || imageType == 'skin') && confidence < 0.70) {
+        print('Confidence too low, rejecting as OTHER');
+        setState(() {
+          loading = false;
+          image = null;
+          analysisStatus = '';
+        });
+        showNotFoodOrSkinDialog('Low confidence detection: $reason');
+        return 'other';
+      }
 
       setState(() {
         isSkinAnalysis = (imageType == 'skin');
       });
 
+      if (imageType == 'other') {
+        setState(() {
+          loading = false;
+          image = null;
+          analysisStatus = '';
+        });
+
+        showNotFoodOrSkinDialog(reason);
+        return 'other';
+      }
+
       return imageType;
     } catch (e) {
       print('Error determining image type: $e');
-      setState(() => isSkinAnalysis = false);
-      return 'food';
+      setState(() {
+        loading = false;
+        image = null;
+        analysisStatus = '';
+      });
+      showSnackBar('Failed to analyze image type', Colors.red);
+      return 'other';
     }
+  }
+
+  void showNotFoodOrSkinDialog(String reason) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(24),
+          ),
+          elevation: 8,
+          child: Container(
+            constraints: const BoxConstraints(maxWidth: 400),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(24),
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [Colors.white, Colors.grey[50]!],
+              ),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.grey[100],
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: Colors.grey[300]!,
+                            width: 1,
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: Icon(
+                                Icons.info_outline_rounded,
+                                color: Colors.grey[700],
+                                size: 20,
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Text(
+                                reason.isNotEmpty
+                                    ? reason
+                                    : 'This image doesn\'t appear to contain food or a skin condition.',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: Colors.grey[800],
+                                  height: 1.5,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      const SizedBox(height: 24),
+
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Container(
+                              height: 1,
+                              color: Colors.grey[300],
+                            ),
+                          ),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 12),
+                            child: Text(
+                              'SUPPORTED SCANS',
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.grey[600],
+                                letterSpacing: 1.2,
+                              ),
+                            ),
+                          ),
+                          Expanded(
+                            child: Container(
+                              height: 1,
+                              color: Colors.grey[300],
+                            ),
+                          ),
+                        ],
+                      ),
+
+                      const SizedBox(height: 20),
+
+                      buildScanOption(
+                        Icons.restaurant_menu_rounded,
+                        'Food & Products',
+                        'Dishes, meals, packaged foods, product labels',
+                        const Color(0xFF4CAF50),
+                      ),
+                      const SizedBox(height: 12),
+                      buildScanOption(
+                        Icons.health_and_safety_rounded,
+                        'Skin Conditions',
+                        'Allergic reactions, rashes, hives, eczema',
+                        const Color(0xFF2196F3),
+                      ),
+                    ],
+                  ),
+                ),
+
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
+                  child: Container(
+                    width: double.infinity,
+                    height: 56,
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFF00BCD4), Color(0xFF00838F)],
+                      ),
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFF00BCD4).withOpacity(0.3),
+                          blurRadius: 12,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: Material(
+                      color: Colors.transparent,
+                      child: InkWell(
+                        onTap: () {
+                          Navigator.of(context).pop();
+                          resetCameraState();
+                        },
+                        borderRadius: BorderRadius.circular(16),
+                        child: const Center(
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.camera_alt_rounded,
+                                color: Colors.white,
+                                size: 22,
+                              ),
+                              SizedBox(width: 10),
+                              Text(
+                                'Scan Again',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w700,
+                                  color: Colors.white,
+                                  letterSpacing: 0.5,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget buildScanOption(
+    IconData icon,
+    String title,
+    String description,
+    Color color,
+  ) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: color.withOpacity(0.2), width: 1.5),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.03),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [color.withOpacity(0.15), color.withOpacity(0.05)],
+              ),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(icon, size: 24, color: color),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.black87,
+                    height: 1.2,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  description,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Colors.grey[600],
+                    height: 1.3,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Container(
+            padding: const EdgeInsets.all(4),
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.1),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(Icons.check_circle, size: 20, color: color),
+          ),
+        ],
+      ),
+    );
   }
 
   String get skinAnalysisPrompt => '''
@@ -1991,7 +2301,6 @@ Generate 3-4 possible dish interpretations with confidence scores.
       showSnackBar('Error processing dish: $e', Colors.red);
     }
   }
-
 
   List<IngredientWithBenefits> splitGroupedIngredients(
     List<IngredientWithBenefits> ingredients,

@@ -117,20 +117,46 @@ class MainActivity: FlutterActivity() {
             Log.e(TAG, "❌ Error initializing managers: ${e.message}")
         }
 
-        // Handle initial intent (app launch from shortcut)
+        // Handle initial intent (app launch from shortcut or widget)
         handleIntent(intent)
     }
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         Log.d(TAG, "🔗 onNewIntent called")
+        setIntent(intent)
+        handleIntent(intent)
+    }
+
+    override fun onResume() {
+        super.onResume()
+        Log.d(TAG, "🔗 onResume called")
         handleIntent(intent)
     }
 
     private fun handleIntent(intent: Intent?) {
         intent?.let {
-            Log.d(TAG, "🔗 Handling intent - Action: ${it.action}, Data: ${it.data}")
+            Log.d(TAG, "🔗 Handling intent - Action: ${it.action}, Data: ${it.data}, Extras: ${it.extras?.keySet()}")
             
+            // Handle widget actions
+            when (it.action) {
+                "EMERGENCY_ACTION" -> {
+                    Log.d(TAG, "🚨 Emergency widget tapped")
+                    notifyFlutterRoute("/emergency")
+                    // Clear the action to prevent re-triggering
+                    it.action = null
+                    return
+                }
+                "SCAN_ACTION" -> {
+                    Log.d(TAG, "📷 Scan widget tapped")
+                    notifyFlutterRoute("/scan")
+                    // Clear the action to prevent re-triggering
+                    it.action = null
+                    return
+                }
+            }
+            
+            // Handle route extra
             val route = it.getStringExtra("route")
             if (route != null) {
                 Log.d(TAG, "🔗 Route from extra: $route")
@@ -158,10 +184,17 @@ class MainActivity: FlutterActivity() {
     private fun notifyFlutterRoute(route: String) {
         Log.d(TAG, "🔗 Notifying Flutter about route: $route")
         try {
-            shortcutMethodChannel?.invokeMethod("navigate", route)
-            Log.d(TAG, "✅ Route notification sent to Flutter")
+            // Use post delayed to ensure Flutter is ready
+            android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+                try {
+                    shortcutMethodChannel?.invokeMethod("navigate", route)
+                    Log.d(TAG, "✅ Route notification sent to Flutter")
+                } catch (e: Exception) {
+                    Log.e(TAG, "❌ Failed to notify Flutter (delayed): ${e.message}")
+                }
+            }, 500)
         } catch (e: Exception) {
-            Log.e(TAG, "❌ Failed to notify Flutter: ${e.message}")
+            Log.e(TAG, "❌ Failed to schedule notification: ${e.message}")
         }
     }
 

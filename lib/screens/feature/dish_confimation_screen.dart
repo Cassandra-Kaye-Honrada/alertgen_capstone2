@@ -70,6 +70,13 @@ class _DishSelectionScreenState extends State<DishSelectionScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Filter out options with insufficient ingredients
+    final validOptions =
+        widget.options.where((option) {
+          return option.ingredients.isNotEmpty &&
+              option.ingredients.length >= 2;
+        }).toList();
+
     return Scaffold(
       backgroundColor: Colors.grey[50],
       appBar: AppBar(
@@ -94,43 +101,104 @@ class _DishSelectionScreenState extends State<DishSelectionScreen> {
       ),
       body: Column(
         children: [
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: Colors.blue[50],
-              border: Border(bottom: BorderSide(color: Colors.blue[100]!)),
-            ),
-            child: Row(
-              children: [
-                Icon(Icons.info_outline, color: Colors.blue[700], size: 20),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    'AI generated ${widget.options.length} possible matches. Select the most accurate one.',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.blue[900],
-                      fontWeight: FontWeight.w500,
+          if (validOptions.isEmpty)
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: Colors.red[50],
+                border: Border(bottom: BorderSide(color: Colors.red[100]!)),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.error_outline, color: Colors.red[700], size: 20),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      'Could not extract valid ingredients. Please enter manually.',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.red[900],
+                        fontWeight: FontWeight.w500,
+                      ),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
+            )
+          else
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: Colors.blue[50],
+                border: Border(bottom: BorderSide(color: Colors.blue[100]!)),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.info_outline, color: Colors.blue[700], size: 20),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      'AI generated ${validOptions.length} possible matches. Select the most accurate one.',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.blue[900],
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ),
           Expanded(
-            child: ListView.builder(
-              padding: const EdgeInsets.all(16),
-              itemCount: widget.options.length,
-              itemBuilder: (context, index) {
-                final option = widget.options[index];
-                final isSelected = selectedIndex == index;
-                return buildOptionCard(option, index, isSelected);
-              },
-            ),
+            child:
+                validOptions.isEmpty
+                    ? Center(
+                      child: Padding(
+                        padding: const EdgeInsets.all(32.0),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.no_food_rounded,
+                              size: 64,
+                              color: Colors.grey[400],
+                            ),
+                            const SizedBox(height: 16),
+                            Text(
+                              'No valid food items detected',
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.grey[700],
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              'The scanned image doesn\'t appear to contain food or a product label with ingredients.',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: Colors.grey[600],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    )
+                    : ListView.builder(
+                      padding: const EdgeInsets.all(16),
+                      itemCount: validOptions.length,
+                      itemBuilder: (context, index) {
+                        final option = validOptions[index];
+                        final isSelected = selectedIndex == index;
+                        return buildOptionCard(option, index, isSelected);
+                      },
+                    ),
           ),
           buildManualEntryButton(),
-          buildConfirmButton(),
+          if (validOptions.isNotEmpty) buildConfirmButton(),
         ],
       ),
     );
@@ -206,85 +274,6 @@ class _DishSelectionScreenState extends State<DishSelectionScreen> {
                                     : Colors.black87,
                           ),
                         ),
-                        Row(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 8,
-                                vertical: 4,
-                              ),
-                              // decoration: BoxDecoration(
-                              //   color: getConfidenceColor(
-                              //     option.confidence,
-                              //   ).withOpacity(0.1),
-                              //   borderRadius: BorderRadius.circular(8),
-                              //   border: Border.all(
-                              //     color: getConfidenceColor(
-                              //       option.confidence,
-                              //     ).withOpacity(0.3),
-                              //   ),
-                              // ),
-                              // child: Row(
-                              //   mainAxisSize: MainAxisSize.min,
-                              //   children: [
-                              //     Icon(
-                              //       Icons.stars_rounded,
-                              //       size: 14,
-                              //       color: getConfidenceColor(
-                              //         option.confidence,
-                              //       ),
-                              //     ),
-                              //     const SizedBox(width: 4),
-                              //     Text(
-                              //       '${(option.confidence * 100).toInt()}% match',
-                              //       style: TextStyle(
-                              //         fontSize: 12,
-                              //         fontWeight: FontWeight.w600,
-                              //         color: getConfidenceColor(
-                              //           option.confidence,
-                              //         ),
-                              //       ),
-                              //     ),
-                              //   ],
-                              // ),
-                            ),
-                            if (hasDetailedBenefits) ...[
-                              const SizedBox(width: 8),
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 8,
-                                  vertical: 4,
-                                ),
-                                // decoration: BoxDecoration(
-                                //   color: Colors.green.withOpacity(0.1),
-                                //   borderRadius: BorderRadius.circular(8),
-                                //   border: Border.all(
-                                //     color: Colors.green.withOpacity(0.3),
-                                //   ),
-                                // ),
-                                // child: Row(
-                                //   mainAxisSize: MainAxisSize.min,
-                                //   children: [
-                                //     Icon(
-                                //       Icons.local_hospital_rounded,
-                                //       size: 14,
-                                //       color: Colors.green[700],
-                                //     ),
-                                //     const SizedBox(width: 4),
-                                //     Text(
-                                //       'Health info',
-                                //       style: TextStyle(
-                                //         fontSize: 12,
-                                //         fontWeight: FontWeight.w600,
-                                //         color: Colors.green[700],
-                                //       ),
-                                //     ),
-                                //   ],
-                                // ),
-                              ),
-                            ],
-                          ],
-                        ),
                       ],
                     ),
                   ),
@@ -339,25 +328,6 @@ class _DishSelectionScreenState extends State<DishSelectionScreen> {
                               color: Colors.blue[50],
                               borderRadius: BorderRadius.circular(8),
                             ),
-                            // child: Row(
-                            //   mainAxisSize: MainAxisSize.min,
-                            //   children: [
-                            //     // Icon(
-                            //     //   Icons.info_outline,
-                            //     //   size: 14,
-                            //     //   color: Colors.blue[700],
-                            //     // ),
-                            //     // const SizedBox(width: 4),
-                            //     // Text(
-                            //     //   'View benefits',
-                            //     //   style: TextStyle(
-                            //     //     fontSize: 11,
-                            //     //     fontWeight: FontWeight.w600,
-                            //     //     color: Colors.blue[700],
-                            //     //   ),
-                            //     // ),
-                            //   ],
-                            // ),
                           ),
                         ),
                     ],
@@ -660,8 +630,14 @@ class _DishSelectionScreenState extends State<DishSelectionScreen> {
         child: ElevatedButton(
           onPressed:
               selectedIndex != null
-                  ? () =>
-                      widget.onOptionSelected(widget.options[selectedIndex!])
+                  ? () {
+                    final validOptions =
+                        widget.options.where((option) {
+                          return option.ingredients.isNotEmpty &&
+                              option.ingredients.length >= 2;
+                        }).toList();
+                    widget.onOptionSelected(validOptions[selectedIndex!]);
+                  }
                   : null,
           style: ElevatedButton.styleFrom(
             backgroundColor: const Color(0xFF00BCD4),

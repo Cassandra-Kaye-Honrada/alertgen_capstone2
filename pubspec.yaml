@@ -28,6 +28,7 @@ environment:
 # the latest version available on pub.dev. To see which dependencies have newer
 # versions available, run `flutter pub outdated`.
 dependencies:
+  app_helper_generator: ^1.0.4
   audioplayers: ^6.5.0
   cached_network_image: ^3.4.1
   camera: ^0.11.1
@@ -47,7 +48,6 @@ dependencies:
   flutter_dotenv: ^6.0.0
   flutter_facebook_auth: ^7.1.2
   flutter_launcher_icons: ^0.14.4
-  # flutter_local_notifications: ^19.5.0
   flutter_phone_direct_caller: ^2.2.1
   font_awesome_flutter: ^10.8.0
   geocode: ^1.0.3
