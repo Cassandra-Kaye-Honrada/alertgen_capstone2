@@ -572,24 +572,45 @@ class _AirQualityWidgetState extends State<AirQualityWidget> {
       }
       affectedPopulations = popNames.join(', ');
 
-      // Check if we already saved an alert today
-      final today = DateTime.now();
-      final startOfDay = DateTime(today.year, today.month, today.day);
+      // Check if we should send an alert
+      // Logic: Send alert if either:
+      // 1. No alert exists for this location today
+      // 2. Last alert for this location was more than 6 hours ago
+      final now = DateTime.now();
+      final startOfDay = DateTime(now.year, now.month, now.day);
+      final sixHoursAgo = now.subtract(const Duration(hours: 1));
 
-      final existingAlert =
+      final recentAlerts =
           await FirebaseFirestore.instance
               .collection('users')
               .doc(user.uid)
               .collection('environmental_alerts')
+              .where('location', isEqualTo: _location)
               .where(
                 'timestamp',
                 isGreaterThanOrEqualTo: Timestamp.fromDate(startOfDay),
               )
+              .orderBy('timestamp', descending: true)
               .limit(1)
               .get();
 
-      // Save alert if none exists today
-      if (existingAlert.docs.isEmpty) {
+      bool shouldSendNotification = false;
+
+      if (recentAlerts.docs.isEmpty) {
+        // No alert today for this location
+        shouldSendNotification = true;
+      } else {
+        // Check if last alert was more than 6 hours ago
+        final lastAlert = recentAlerts.docs.first;
+        final lastAlertTime = (lastAlert['timestamp'] as Timestamp).toDate();
+
+        if (lastAlertTime.isBefore(sixHoursAgo)) {
+          shouldSendNotification = true;
+        }
+      }
+
+      // Save alert and send notification if needed
+      if (shouldSendNotification) {
         await FirebaseFirestore.instance
             .collection('users')
             .doc(user.uid)
@@ -618,15 +639,11 @@ class _AirQualityWidgetState extends State<AirQualityWidget> {
         await _fetchEnvironmentalAlerts();
       }
 
-      // Set alert for UI display
+      // Set alert for UI display (always show if conditions are poor)
       setState(() {
         _hasCurrentAlert = true;
         _isAlertDismissed = false; // Reset dismiss state for new alert
-        _alertMessage =
-            '$alertLevel air quality detected!\n'
-            'NAQI: $aqi - ${_airQualityData!.qualityLevel}\n'
-            'Affected groups: $affectedPopulations\n\n'
-            '${_airQualityData!.healthRecommendation ?? "Take precautions."}';
+        _alertMessage = '$alertLevel Air Quality • NAQI $aqi';
       });
     } else {
       setState(() {
@@ -717,35 +734,37 @@ class _AirQualityWidgetState extends State<AirQualityWidget> {
         if (_hasCurrentAlert && _alertMessage != null && !_isAlertDismissed)
           Container(
             margin: const EdgeInsets.fromLTRB(20, 16, 20, 0),
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.95),
+              gradient: LinearGradient(
+                colors: [Colors.orange.shade50, Colors.orange.shade100],
+              ),
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.orangeAccent, width: 2),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.1),
-                  blurRadius: 8,
-                  offset: const Offset(0, 2),
-                ),
-              ],
+              border: Border.all(color: Colors.orange.shade300, width: 1),
             ),
             child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Icon(
-                  Icons.warning_rounded,
-                  color: Colors.orangeAccent,
-                  size: 24,
+                Container(
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(
+                    color: Colors.orange.shade200,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Icons.warning_rounded,
+                    color: Colors.orange.shade800,
+                    size: 18,
+                  ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(
                     _alertMessage!,
-                    style: const TextStyle(
-                      fontSize: 12,
-                      color: Color(0xFF333333),
-                      height: 1.4,
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.orange.shade900,
+                      letterSpacing: 0.2,
                     ),
                   ),
                 ),
@@ -758,14 +777,10 @@ class _AirQualityWidgetState extends State<AirQualityWidget> {
                   },
                   child: Container(
                     padding: const EdgeInsets.all(4),
-                    decoration: BoxDecoration(
-                      color: Colors.grey[200],
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(
+                    child: Icon(
                       Icons.close,
-                      size: 16,
-                      color: Color(0xFF666666),
+                      size: 18,
+                      color: Colors.orange.shade700,
                     ),
                   ),
                 ),
@@ -775,7 +790,7 @@ class _AirQualityWidgetState extends State<AirQualityWidget> {
 
         // Stats header section
         Container(
-          padding: const EdgeInsets.fromLTRB(20, 24, 20, 20),
+          padding: const EdgeInsets.fromLTRB(10, 24, 20, 10),
           child: Row(
             children: [
               // Potential allergens detected
