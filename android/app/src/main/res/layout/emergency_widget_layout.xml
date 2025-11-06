@@ -1,30 +1,50 @@
-<?xml version="1.0" encoding="utf-8"?>
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:padding="8dp"
-    android:background="@drawable/widget_background">
+    android:padding="0dp"
+    android:clipToPadding="false">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent"
+        android:layout_margin="8dp"
+        android:background="@drawable/widget_background"
         android:orientation="vertical"
         android:gravity="center"
-        android:id="@+id/emergency_widget_container">
+        android:padding="16dp"
+        android:id="@+id/emergency_widget_container"
+        android:elevation="4dp">
 
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="🚨"
-            android:textSize="48sp"
-            android:gravity="center" />
+        <LinearLayout
+            android:layout_width="56dp"
+            android:layout_height="56dp"
+            android:background="@drawable/emergency_icon_bg"
+            android:gravity="center"
+            android:layout_marginBottom="12dp">
+            
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="🚨"
+                android:textSize="32sp" />
+        </LinearLayout>
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Emergency"
-            android:textSize="12sp"
-            android:textColor="#FFFFFF"
+            android:textSize="14sp"
+            android:textColor="#1E293B"
+            android:fontFamily="sans-serif-medium"
+            android:gravity="center" />
+
+        <!-- Subtitle -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Tap for help"
+            android:textSize="11sp"
+            android:textColor="#64748B"
             android:gravity="center"
             android:layout_marginTop="4dp" />
     </LinearLayout>
