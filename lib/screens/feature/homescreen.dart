@@ -12,6 +12,7 @@ import 'package:allergen/screens/feature/result_screen.dart';
 import 'package:allergen/screens/feature/allergen_analysis.dart';
 import 'package:allergen/screens/feature/skin_allergy/skin_allergy.dart';
 import 'package:allergen/services/emergency/emergency_service.dart';
+import 'package:allergen/services/push_notification_service.dart';
 import 'package:allergen/styleguide.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -732,6 +733,18 @@ class HomescreenState extends State<Homescreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
+                        // ElevatedButton(
+                        //   onPressed: () async {
+                        //     await PushNotificationService()
+                        //         .showEnvironmentalAlert(
+                        //           title: 'Test Alert',
+                        //           body: 'This is a test environmental alert',
+                        //           alertLevel: 'Unhealthy',
+                        //           aqi: 155,
+                        //         );
+                        //   },
+                        //   child: Text('Test Local Notification'),
+                        // ),
                         AirQualityWidget(
                           apiKey: 'AIzaSyCWva81wgqeq5qIShLvoO9hs20ejk73gCE',
                         ),

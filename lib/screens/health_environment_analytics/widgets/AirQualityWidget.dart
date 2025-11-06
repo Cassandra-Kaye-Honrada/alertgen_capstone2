@@ -1,4 +1,5 @@
 import 'package:allergen/screens/health_environment_analytics/AirQualityDetailScreen.dart';
+import 'package:allergen/services/push_notification_service.dart';
 import 'package:flutter/material.dart';
 import 'dart:math' as math;
 import 'package:http/http.dart' as http;
@@ -41,6 +42,9 @@ class _AirQualityWidgetState extends State<AirQualityWidget> {
   String _location = "Loading...";
   int _weeklyAllergenCount = 0;
   int _environmentalAlerts = 0;
+  bool _hasCurrentAlert = false;
+  String? _alertMessage;
+  bool _isAlertDismissed = false;
 
   @override
   void initState() {
@@ -52,6 +56,37 @@ class _AirQualityWidgetState extends State<AirQualityWidget> {
     await _getLocation();
     await _determinePopulationFromFirebase();
     await _fetchWeeklyAllergenCount();
+    await _fetchEnvironmentalAlerts();
+  }
+
+  Future<void> _fetchEnvironmentalAlerts() async {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) return;
+
+      final now = DateTime.now();
+      final startDate = now.subtract(const Duration(days: 7));
+
+      final snapshot =
+          await FirebaseFirestore.instance
+              .collection('users')
+              .doc(user.uid)
+              .collection('environmental_alerts')
+              .where(
+                'timestamp',
+                isGreaterThanOrEqualTo: Timestamp.fromDate(startDate),
+              )
+              .get();
+
+      setState(() {
+        _environmentalAlerts = snapshot.docs.length;
+      });
+    } catch (e) {
+      print('Error fetching environmental alerts: $e');
+      setState(() {
+        _environmentalAlerts = 0;
+      });
+    }
   }
 
   Future<void> _fetchWeeklyAllergenCount() async {
@@ -396,10 +431,11 @@ class _AirQualityWidgetState extends State<AirQualityWidget> {
           'HEALTH_RECOMMENDATIONS',
           'DOMINANT_POLLUTANT_CONCENTRATION',
           'POLLUTANT_CONCENTRATION',
-          'LOCAL_AQI',
+          'LOCAL_AQI', // Use local AQI (NAQI for India)
           'POLLUTANT_ADDITIONAL_INFO',
         ],
         'languageCode': 'en',
+        'universalAqi': false, // Prefer local AQI over universal
       };
 
       final response = await http
@@ -426,6 +462,9 @@ class _AirQualityWidgetState extends State<AirQualityWidget> {
           );
           _isLoading = false;
         });
+
+        // Check if current air quality warrants an alert
+        await _checkAndSaveAlert();
       } else {
         final errorData = json.decode(response.body);
         final errorMessage = errorData['error']?['message'] ?? 'Unknown error';
@@ -448,6 +487,152 @@ class _AirQualityWidgetState extends State<AirQualityWidget> {
       setState(() {
         _error = 'Error fetching air quality data: ${e.toString()}';
         _isLoading = false;
+      });
+    }
+  }
+
+  Future<void> _checkAndSaveAlert() async {
+    if (_airQualityData == null) return;
+
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    bool shouldAlert = false;
+    String alertLevel = '';
+    String affectedPopulations = '';
+
+    final aqi = _airQualityData!.aqi;
+
+    // NAQI (India) thresholds:
+    // 0-50: Good
+    // 51-100: Satisfactory
+    // 101-200: Moderate
+    // 201-300: Poor
+    // 301-400: Very Poor
+    // 401-500: Severe
+
+    // Check alert thresholds based on populations
+    if (_applicablePopulations.contains(Population.pregnantWomen) ||
+        _applicablePopulations.contains(Population.lungDiseasePopulation) ||
+        _applicablePopulations.contains(Population.heartDiseasePopulation) ||
+        _applicablePopulations.contains(Population.children)) {
+      // Sensitive groups: alert at NAQI > 100 (Moderate and above)
+      if (aqi > 100) {
+        shouldAlert = true;
+        if (aqi > 400) {
+          alertLevel = 'Severe';
+        } else if (aqi > 300) {
+          alertLevel = 'Very Poor';
+        } else if (aqi > 200) {
+          alertLevel = 'Poor';
+        } else {
+          alertLevel = 'Moderate';
+        }
+      }
+    } else {
+      // General population: alert at NAQI > 200 (Poor and above)
+      if (aqi > 200) {
+        shouldAlert = true;
+        if (aqi > 400) {
+          alertLevel = 'Severe';
+        } else if (aqi > 300) {
+          alertLevel = 'Very Poor';
+        } else {
+          alertLevel = 'Poor';
+        }
+      }
+    }
+
+    if (shouldAlert) {
+      // Build affected populations string
+      List<String> popNames = [];
+      for (var pop in _applicablePopulations) {
+        switch (pop) {
+          case Population.pregnantWomen:
+            popNames.add('Pregnant Women');
+            break;
+          case Population.lungDiseasePopulation:
+            popNames.add('Lung Disease');
+            break;
+          case Population.heartDiseasePopulation:
+            popNames.add('Heart Disease');
+            break;
+          case Population.children:
+            popNames.add('Children');
+            break;
+          case Population.elderly:
+            popNames.add('Elderly');
+            break;
+          case Population.athletes:
+            popNames.add('Athletes');
+            break;
+          default:
+            break;
+        }
+      }
+      affectedPopulations = popNames.join(', ');
+
+      // Check if we already saved an alert today
+      final today = DateTime.now();
+      final startOfDay = DateTime(today.year, today.month, today.day);
+
+      final existingAlert =
+          await FirebaseFirestore.instance
+              .collection('users')
+              .doc(user.uid)
+              .collection('environmental_alerts')
+              .where(
+                'timestamp',
+                isGreaterThanOrEqualTo: Timestamp.fromDate(startOfDay),
+              )
+              .limit(1)
+              .get();
+
+      // Save alert if none exists today
+      if (existingAlert.docs.isEmpty) {
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .collection('environmental_alerts')
+            .add({
+              'timestamp': FieldValue.serverTimestamp(),
+              'aqi': aqi,
+              'alertLevel': alertLevel,
+              'qualityLevel': _airQualityData!.qualityLevel,
+              'dominantPollutant': _airQualityData!.dominantPollutant,
+              'location': _location,
+              'affectedPopulations': affectedPopulations,
+              'healthRecommendation': _airQualityData!.healthRecommendation,
+            });
+
+        // Send push notification
+        await PushNotificationService().showEnvironmentalAlert(
+          title: '⚠️ $alertLevel Air Quality Alert',
+          body:
+              'NAQI: $aqi in $_location. ${_airQualityData!.healthRecommendation ?? "Take precautions."}',
+          alertLevel: alertLevel,
+          aqi: aqi,
+        );
+
+        // Refresh alert count
+        await _fetchEnvironmentalAlerts();
+      }
+
+      // Set alert for UI display
+      setState(() {
+        _hasCurrentAlert = true;
+        _isAlertDismissed = false; // Reset dismiss state for new alert
+        _alertMessage =
+            '$alertLevel air quality detected!\n'
+            'NAQI: $aqi - ${_airQualityData!.qualityLevel}\n'
+            'Affected groups: $affectedPopulations\n\n'
+            '${_airQualityData!.healthRecommendation ?? "Take precautions."}';
+      });
+    } else {
+      setState(() {
+        _hasCurrentAlert = false;
+        _alertMessage = null;
+        _isAlertDismissed = false; // Reset dismiss state
       });
     }
   }
@@ -528,6 +713,66 @@ class _AirQualityWidgetState extends State<AirQualityWidget> {
 
     return Column(
       children: [
+        // Alert banner (if applicable)
+        if (_hasCurrentAlert && _alertMessage != null && !_isAlertDismissed)
+          Container(
+            margin: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.95),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.orangeAccent, width: 2),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.1),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Icon(
+                  Icons.warning_rounded,
+                  color: Colors.orangeAccent,
+                  size: 24,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    _alertMessage!,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: Color(0xFF333333),
+                      height: 1.4,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                GestureDetector(
+                  onTap: () {
+                    setState(() {
+                      _isAlertDismissed = true;
+                    });
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.all(4),
+                    decoration: BoxDecoration(
+                      color: Colors.grey[200],
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.close,
+                      size: 16,
+                      color: Color(0xFF666666),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
         // Stats header section
         Container(
           padding: const EdgeInsets.fromLTRB(20, 24, 20, 20),
@@ -621,10 +866,10 @@ class _AirQualityWidgetState extends State<AirQualityWidget> {
             borderRadius: BorderRadius.circular(20),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.1), // shadow color
-                spreadRadius: 2, // how wide the shadow spreads
-                blurRadius: 10, // how soft the shadow looks
-                offset: const Offset(0, 4), // position: (horizontal, vertical)
+                color: Colors.black.withOpacity(0.1),
+                spreadRadius: 2,
+                blurRadius: 10,
+                offset: const Offset(0, 4),
               ),
             ],
           ),
@@ -650,11 +895,18 @@ class _AirQualityWidgetState extends State<AirQualityWidget> {
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
                               Text(
-                                '$aqi AQI',
+                                '$aqi',
                                 style: const TextStyle(
-                                  fontSize: 18,
+                                  fontSize: 20,
                                   fontWeight: FontWeight.bold,
                                   color: Color(0xFF333333),
+                                ),
+                              ),
+                              const Text(
+                                'NAQI',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Color(0xFF666666),
                                 ),
                               ),
                             ],
@@ -770,13 +1022,14 @@ class AQIGaugePainter extends CustomPainter {
       backgroundPaint,
     );
 
-    // Gradient colors based on AQI ranges (good to bad)
+    // NAQI (India) color gradient
     final colors = [
-      const Color(0xFF4CAF50), // Green (Good)
-      const Color(0xFF8BC34A), // Light green
-      const Color(0xFFFFEB3B), // Yellow (Moderate)
-      const Color(0xFFFF9800), // Orange (Unhealthy)
-      const Color(0xFFFF5722), // Red (Hazardous)
+      const Color(0xFF00E400), // Green (0-50: Good)
+      const Color(0xFF92D050), // Light Green (51-100: Satisfactory)
+      const Color(0xFFFFFF00), // Yellow (101-200: Moderate)
+      const Color(0xFFFF7E00), // Orange (201-300: Poor)
+      const Color(0xFFFF0000), // Red (301-400: Very Poor)
+      const Color(0xFF990000), // Dark Red (401-500: Severe)
     ];
 
     final gradient = SweepGradient(
@@ -840,9 +1093,16 @@ class AirQualityData {
 
     Map<String, dynamic>? aqiIndex;
     if (indexes != null && indexes.isNotEmpty) {
+      // Look for India's NAQI (CPCB) first
       aqiIndex = indexes.firstWhere(
-        (index) => index['code'] == 'uaqi' || index['code'] == 'usa_epa',
-        orElse: () => indexes[0],
+        (index) => index['code'] == 'ind_cpcb', // India CPCB/NAQI code
+        orElse: () {
+          // Fallback to any local AQI, then universal
+          return indexes.firstWhere(
+            (index) => index['code'] != 'uaqi',
+            orElse: () => indexes[0],
+          );
+        },
       );
     }
 
