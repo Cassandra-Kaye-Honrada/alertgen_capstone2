@@ -3,7 +3,7 @@ import 'package:allergen/screens/auth/authwrapper.dart';
 import 'package:allergen/screens/emergency/emergency_screen.dart';
 import 'package:allergen/screens/feature/scan_screen.dart';
 import 'package:allergen/services/emergency/emergency_service.dart';
-import 'package:allergen/services/push_notification_service.dart'; // Add this import
+import 'package:allergen/services/push_notification_service.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';

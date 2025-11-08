@@ -2001,7 +2001,7 @@ Generate 3-4 possible product interpretations with confidence scores.
     try {
       setState(() {
         isOCRAnalysis = false;
-        analysisStatus = 'Analyzing dish...';
+        analysisStatus = 'Analyzing food...';
       });
 
       final model = GenerativeModel(model: 'gemini-2.5-pro', apiKey: apiKey);

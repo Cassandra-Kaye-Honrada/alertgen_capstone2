@@ -1,6 +1,5 @@
 import 'dart:convert';
-
-import 'package:allergen/screens/community/CommunityForumScreen.dart';
+import 'package:allergen/screens/feature/educational/educational_allergen.dart';
 import 'package:allergen/screens/feature/chatbot/floating_chatbot.dart';
 import 'package:allergen/screens/health_environment_analytics/widgets/AirQualityWidget.dart';
 import 'package:allergen/screens/profile_screen_items/allergen.dart';
@@ -1738,6 +1737,27 @@ class HomescreenState extends State<Homescreen> {
                     color: Color(0xFF64748B),
                     size: 24,
                   ),
+            ),
+          ),
+
+          GestureDetector(
+            onTap: () {
+              setState(() => currentIndex = 1);
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => AllergyScreen()),
+              );
+            },
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  Icons.school_outlined,
+                  color:
+                      currentIndex == 1 ? Color(0xFF00BCD4) : Color(0xFF64748B),
+                  size: 24,
+                ),
+              ],
             ),
           ),
           GestureDetector(
