@@ -1,5 +1,8 @@
+// lib/screens/health_environment_analytics/AirQualityDetailScreen.dart
+
 import 'package:allergen/screens/health_environment_analytics/air_quality_tab.dart';
 import 'package:allergen/screens/health_environment_analytics/allergen_analytics_tab.dart';
+import 'package:allergen/screens/health_environment_analytics/models/weather_models.dart';
 import 'package:allergen/screens/health_environment_analytics/widgets/AirQualityWidget.dart';
 import 'package:flutter/material.dart';
 
@@ -61,6 +64,10 @@ class _AirQualityDetailScreenState extends State<AirQualityDetailScreen>
             airQualityData: widget.airQualityData,
             location: widget.location,
             applicablePopulations: widget.applicablePopulations,
+            weatherData: WeatherData.mock(), // ✅ USE SHARED MODEL
+            // analytics: EnvironmentalAnalytics.fromAqi(
+            //   widget.airQualityData.aqi,
+            // ), // ✅ USE SHARED MODEL
           ),
           AllergenAnalyticsTab(airQualityData: widget.airQualityData),
         ],

@@ -1,5 +1,4 @@
 import 'package:allergen/screens/health_environment_analytics/widgets/AirQualityWidget.dart';
-
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -17,6 +16,7 @@ class AllergenAnalyticsTab extends StatefulWidget {
 class _AllergenAnalyticsTabState extends State<AllergenAnalyticsTab> {
   List<Map<String, dynamic>> _allergenHistory = [];
   bool _isLoadingHistory = true;
+  String _selectedTimeRange = '7';
 
   @override
   void initState() {
@@ -29,14 +29,13 @@ class _AllergenAnalyticsTabState extends State<AllergenAnalyticsTab> {
       final user = FirebaseAuth.instance.currentUser;
       if (user == null) return;
 
-      // Load food scan history
       final foodSnapshot =
           await FirebaseFirestore.instance
               .collection('users')
               .doc(user.uid)
               .collection('history')
               .orderBy('timestamp', descending: true)
-              .limit(50)
+              .limit(100)
               .get();
 
       List<Map<String, dynamic>> history = [];
@@ -74,31 +73,53 @@ class _AllergenAnalyticsTabState extends State<AllergenAnalyticsTab> {
   @override
   Widget build(BuildContext context) {
     if (_isLoadingHistory) {
-      return const Center(
+      return Center(
         child: CircularProgressIndicator(
-          valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF0B8FAC)),
+          valueColor: AlwaysStoppedAnimation<Color>(Colors.blue[600]!),
         ),
       );
     }
 
     if (_allergenHistory.isEmpty) {
       return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.analytics_outlined, size: 80, color: Colors.grey[300]),
-            const SizedBox(height: 16),
-            Text(
-              'No allergen history available',
-              style: TextStyle(fontSize: 16, color: Colors.grey[600]),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Start scanning food to build your allergen profile',
-              style: TextStyle(fontSize: 14, color: Colors.grey[500]),
-              textAlign: TextAlign.center,
-            ),
-          ],
+        child: Padding(
+          padding: const EdgeInsets.all(32),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(32),
+                decoration: BoxDecoration(
+                  color: Colors.grey[100],
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Icons.analytics_outlined,
+                  size: 64,
+                  color: Colors.grey[400],
+                ),
+              ),
+              const SizedBox(height: 24),
+              Text(
+                'No Allergen Data Yet',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.grey[800],
+                ),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                'Start scanning food items to track your allergen exposure patterns.',
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Colors.grey[600],
+                  height: 1.5,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
         ),
       );
     }
@@ -108,309 +129,152 @@ class _AllergenAnalyticsTabState extends State<AllergenAnalyticsTab> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildAllergenSummaryCard(),
-          const SizedBox(height: 24),
-          _buildWeeklyHistoryChart(),
-          const SizedBox(height: 24),
-          _build30DaySummary(),
-          const SizedBox(height: 24),
-          _buildTopAllergensSection(),
-          const SizedBox(height: 24),
-          _buildRiskDistributionSection(),
-          const SizedBox(height: 24),
-          _buildRecentExposuresSection(),
-          const SizedBox(height: 24),
-          _buildAirQualityAllergenInsights(),
+          _buildQuickStatsSection(),
+          const SizedBox(height: 16),
+          _buildTimeRangeSelector(),
+          const SizedBox(height: 16),
+          _buildExposureTrendChart(),
+          const SizedBox(height: 16),
+          _buildAllergenBreakdown(),
+          const SizedBox(height: 16),
+          _buildRiskAnalysis(),
+          const SizedBox(height: 16),
+          if (_hasSymptomData()) _buildSymptomTracker(),
+          if (_hasSymptomData()) const SizedBox(height: 16),
+          _buildCommonSourcesSection(),
+          const SizedBox(height: 16),
+          _buildRecentExposures(),
+          const SizedBox(height: 16),
+          _buildInsightsAndTips(),
         ],
       ),
     );
   }
 
-  Widget _buildAllergenSummaryCard() {
-    final totalExposures = _allergenHistory.length;
-    final uniqueAllergens =
-        _allergenHistory.map((e) => e['allergenName'] as String).toSet().length;
-    final last7Days =
-        _allergenHistory
-            .where(
-              (e) => (e['timestamp'] as DateTime).isAfter(
-                DateTime.now().subtract(const Duration(days: 7)),
-              ),
-            )
-            .length;
+  Widget _buildQuickStatsSection() {
+    final stats = _calculateStats();
 
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFF0B8FAC), Color(0xFF0FA3C7)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFF0B8FAC).withOpacity(0.3),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Your Allergen Profile',
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
-            ),
-          ),
-          const SizedBox(height: 20),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-              _buildSummaryItem('Total Exposures', '$totalExposures'),
-              _buildSummaryItem('Unique Allergens', '$uniqueAllergens'),
-              _buildSummaryItem('Last 7 Days', '$last7Days'),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSummaryItem(String label, String value) {
-    return Column(
+    return Row(
       children: [
-        Text(
-          value,
-          style: const TextStyle(
-            fontSize: 28,
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
+        Expanded(
+          child: _StatCard(
+            icon: Icons.fastfood,
+            value: '${stats['total']}',
+            label: 'Total',
+            color: Colors.blue[600]!,
           ),
         ),
-        const SizedBox(height: 4),
-        Text(
-          label,
-          style: const TextStyle(fontSize: 12, color: Colors.white70),
-          textAlign: TextAlign.center,
+        const SizedBox(width: 12),
+        Expanded(
+          child: _StatCard(
+            icon: Icons.category,
+            value: '${stats['unique']}',
+            label: 'Unique',
+            color: Colors.orange[600]!,
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: _StatCard(
+            icon: Icons.trending_up,
+            value: stats['average'],
+            label: 'Daily Avg',
+            color: Colors.green[600]!,
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: _StatCard(
+            icon: Icons.warning,
+            value: '${stats['severe']}',
+            label: 'High Risk',
+            color: Colors.red[600]!,
+          ),
         ),
       ],
     );
   }
 
-  Widget _buildTopAllergensSection() {
-    // Count allergen occurrences
-    final Map<String, int> allergenCounts = {};
-    final Map<String, String> allergenRiskLevels = {};
-
-    for (var entry in _allergenHistory) {
-      final name = entry['allergenName'] as String;
-      allergenCounts[name] = (allergenCounts[name] ?? 0) + 1;
-      allergenRiskLevels[name] = entry['riskLevel'] as String;
-    }
-
-    // Sort by count
-    final sortedAllergens =
-        allergenCounts.entries.toList()
-          ..sort((a, b) => b.value.compareTo(a.value));
-
-    final topAllergens = sortedAllergens.take(5).toList();
-
+  Widget _buildTimeRangeSelector() {
     return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Row(
-            children: [
-              Icon(Icons.trending_up, color: Color(0xFF0B8FAC)),
-              SizedBox(width: 8),
-              Text(
-                'Most Frequent Allergens',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black87,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          ...topAllergens.map((entry) {
-            final percentage = (entry.value / _allergenHistory.length * 100);
-            final riskColor = _getRiskColor(allergenRiskLevels[entry.key]!);
-            return Padding(
-              padding: const EdgeInsets.only(bottom: 16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Expanded(
-                        child: Text(
-                          entry.key,
-                          style: const TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.black87,
-                          ),
-                        ),
-                      ),
-                      Text(
-                        '${entry.value} times (${percentage.toStringAsFixed(1)}%)',
-                        style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(4),
-                    child: LinearProgressIndicator(
-                      value: percentage / 100,
-                      backgroundColor: Colors.grey[200],
-                      valueColor: AlwaysStoppedAnimation<Color>(riskColor),
-                      minHeight: 8,
-                    ),
-                  ),
-                ],
-              ),
-            );
-          }).toList(),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildRiskDistributionSection() {
-    final Map<String, int> riskCounts = {'severe': 0, 'moderate': 0, 'mild': 0};
-
-    for (var entry in _allergenHistory) {
-      final risk = (entry['riskLevel'] as String).toLowerCase();
-      riskCounts[risk] = (riskCounts[risk] ?? 0) + 1;
-    }
-
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Row(
-            children: [
-              Icon(Icons.pie_chart, color: Color(0xFF0B8FAC)),
-              SizedBox(width: 8),
-              Text(
-                'Risk Level Distribution',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black87,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 20),
-          _buildRiskLevelCard(
-            'Severe',
-            riskCounts['severe']!,
-            Colors.red,
-            Icons.warning,
-          ),
-          const SizedBox(height: 12),
-          _buildRiskLevelCard(
-            'Moderate',
-            riskCounts['moderate']!,
-            Colors.orange,
-            Icons.info,
-          ),
-          const SizedBox(height: 12),
-          _buildRiskLevelCard(
-            'Mild',
-            riskCounts['mild']!,
-            Colors.yellow[700]!,
-            Icons.check_circle_outline,
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildRiskLevelCard(
-    String level,
-    int count,
-    Color color,
-    IconData icon,
-  ) {
-    final percentage =
-        _allergenHistory.isEmpty
-            ? 0.0
-            : (count / _allergenHistory.length * 100);
-
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withOpacity(0.3)),
+        border: Border.all(color: Colors.grey[200]!, width: 1),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
+      padding: const EdgeInsets.all(4),
       child: Row(
         children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: color.withOpacity(0.2),
-              shape: BoxShape.circle,
-            ),
-            child: Icon(icon, color: color, size: 24),
+          Expanded(child: _buildTimeRangeButton('7', 'Week')),
+          Expanded(child: _buildTimeRangeButton('30', 'Month')),
+          Expanded(child: _buildTimeRangeButton('90', '3 Months')),
+          Expanded(child: _buildTimeRangeButton('365', 'Year')),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTimeRangeButton(String days, String label) {
+    final isSelected = _selectedTimeRange == days;
+    return GestureDetector(
+      onTap: () => setState(() => _selectedTimeRange = days),
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        decoration: BoxDecoration(
+          color: isSelected ? Colors.blue[600] : Colors.transparent,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Text(
+          label,
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+            color: isSelected ? Colors.white : Colors.grey[600],
           ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  level,
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    color: color,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  '$count exposures (${percentage.toStringAsFixed(1)}%)',
-                  style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-                ),
-              ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildExposureTrendChart() {
+    final trendData = _calculateTrendData();
+
+    return _UniformCard(
+      icon: Icons.show_chart,
+      title: 'Exposure Trend',
+      iconColor: Colors.blue[600]!,
+      child: Column(
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              _LegendItem(color: Colors.red[600]!, label: 'Severe'),
+              const SizedBox(width: 16),
+              _LegendItem(color: Colors.orange[600]!, label: 'Moderate'),
+              const SizedBox(width: 16),
+              _LegendItem(color: Colors.amber[600]!, label: 'Mild'),
+            ],
+          ),
+          const SizedBox(height: 24),
+          SizedBox(
+            height: 200,
+            child: CustomPaint(
+              size: const Size(double.infinity, 200),
+              painter: EnhancedTrendChartPainter(
+                severeData: trendData['severe'] as List<int>,
+                moderateData: trendData['moderate'] as List<int>,
+                mildData: trendData['mild'] as List<int>,
+                dates: trendData['dates'] as List<DateTime>,
+                timeRange: int.parse(_selectedTimeRange),
+              ),
             ),
           ),
         ],
@@ -418,63 +282,346 @@ class _AllergenAnalyticsTabState extends State<AllergenAnalyticsTab> {
     );
   }
 
-  Widget _buildRecentExposuresSection() {
-    final recentExposures = _allergenHistory.take(5).toList();
+  Widget _buildAllergenBreakdown() {
+    final allergenData = _calculateAllergenFrequency();
 
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
+    return _UniformCard(
+      icon: Icons.pie_chart,
+      title: 'Allergen Frequency',
+      iconColor: Colors.purple[600]!,
+      child: Column(
+        children:
+            allergenData.entries.take(8).map((entry) {
+              final percentage = entry.value['percentage'] as double;
+              final count = entry.value['count'] as int;
+              final color = entry.value['color'] as Color;
+
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 14),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Expanded(
+                          child: Row(
+                            children: [
+                              Container(
+                                width: 8,
+                                height: 8,
+                                decoration: BoxDecoration(
+                                  color: color,
+                                  shape: BoxShape.circle,
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Text(
+                                  entry.key,
+                                  style: const TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w600,
+                                    color: Colors.black87,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Text(
+                          '$count× (${percentage.toStringAsFixed(0)}%)',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.grey[700],
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(4),
+                      child: LinearProgressIndicator(
+                        value: percentage / 100,
+                        backgroundColor: Colors.grey[200],
+                        valueColor: AlwaysStoppedAnimation<Color>(color),
+                        minHeight: 6,
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }).toList(),
+      ),
+    );
+  }
+
+  Widget _buildRiskAnalysis() {
+    final riskData = _calculateRiskDistribution();
+
+    return _UniformCard(
+      icon: Icons.analytics_outlined,
+      title: 'Risk Distribution',
+      iconColor: Colors.red[600]!,
+      child: Column(
+        children: [
+          _RiskBar(
+            label: 'Severe Risk',
+            count: riskData['severe']!['count'] as int,
+            percentage: riskData['severe']!['percentage'] as double,
+            color: Colors.red[600]!,
+            icon: Icons.error,
+          ),
+          const SizedBox(height: 14),
+          _RiskBar(
+            label: 'Moderate Risk',
+            count: riskData['moderate']!['count'] as int,
+            percentage: riskData['moderate']!['percentage'] as double,
+            color: Colors.orange[600]!,
+            icon: Icons.warning,
+          ),
+          const SizedBox(height: 14),
+          _RiskBar(
+            label: 'Mild Risk',
+            count: riskData['mild']!['count'] as int,
+            percentage: riskData['mild']!['percentage'] as double,
+            color: Colors.amber[600]!,
+            icon: Icons.info,
           ),
         ],
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Row(
-            children: [
-              Icon(Icons.history, color: Color(0xFF0B8FAC)),
-              SizedBox(width: 8),
-              Text(
-                'Recent Allergen Exposures',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black87,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          ...recentExposures.map((exposure) {
-            final timestamp = exposure['timestamp'] as DateTime;
-            final timeAgo = _getTimeAgo(timestamp);
-            final riskColor = _getRiskColor(exposure['riskLevel'] as String);
+    );
+  }
 
+  Widget _buildSymptomTracker() {
+    final symptomData = _calculateSymptomFrequency();
+    if (symptomData.isEmpty) return const SizedBox.shrink();
+
+    return _UniformCard(
+      icon: Icons.medical_services,
+      title: 'Common Symptoms',
+      iconColor: Colors.red[600]!,
+      child: Wrap(
+        spacing: 8,
+        runSpacing: 8,
+        children:
+            symptomData.entries.take(10).map((entry) {
+              return Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 8,
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.red[50],
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: Colors.red[200]!, width: 1),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      entry.key,
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.red[700],
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 6,
+                        vertical: 2,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.red[100],
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        '${entry.value}',
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.red[900],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }).toList(),
+      ),
+    );
+  }
+
+  Widget _buildCommonSourcesSection() {
+    final sourcesData = _calculateCommonSources();
+
+    return _UniformCard(
+      icon: Icons.restaurant,
+      title: 'Common Food Sources',
+      iconColor: Colors.orange[600]!,
+      child: Column(
+        children:
+            sourcesData.entries.take(3).map((entry) {
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      entry.key,
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black87,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 6,
+                      runSpacing: 6,
+                      children:
+                          (entry.value as List<String>).take(5).map((source) {
+                            return Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 6,
+                              ),
+                              decoration: BoxDecoration(
+                                color: Colors.orange[50],
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: Colors.orange[200]!),
+                              ),
+                              child: Text(
+                                source,
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w500,
+                                  color: Colors.orange[900],
+                                ),
+                              ),
+                            );
+                          }).toList(),
+                    ),
+                  ],
+                ),
+              );
+            }).toList(),
+      ),
+    );
+  }
+
+  Widget _buildRecentExposures() {
+    final recentExposures = _allergenHistory.take(5).toList();
+
+    return _UniformCard(
+      icon: Icons.history,
+      title: 'Recent Exposures',
+      iconColor: Colors.indigo[600]!,
+      child: Column(
+        children:
+            recentExposures.map((exposure) {
+              final timestamp = exposure['timestamp'] as DateTime;
+              final timeAgo = _getTimeAgo(timestamp);
+              final riskColor = _getRiskColor(exposure['riskLevel'] as String);
+
+              return Container(
+                margin: const EdgeInsets.only(bottom: 10),
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.grey[50],
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: Colors.grey[200]!),
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 4,
+                      height: 44,
+                      decoration: BoxDecoration(
+                        color: riskColor,
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            exposure['allergenName'] as String,
+                            style: const TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.black87,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            exposure['dishName'] as String,
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey[600],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.grey[200],
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        timeAgo,
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.grey[700],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }).toList(),
+      ),
+    );
+  }
+
+  Widget _buildInsightsAndTips() {
+    final insights = _generateInsights();
+
+    return _UniformCard(
+      icon: Icons.lightbulb_outline,
+      title: 'Insights & Tips',
+      iconColor: Colors.green[600]!,
+      child: Column(
+        children: [
+          ...insights.map((insight) {
             return Container(
               margin: const EdgeInsets.only(bottom: 12),
-              padding: const EdgeInsets.all(12),
+              padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
-                color: Colors.grey[50],
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.grey[200]!),
+                color: (insight['color'] as Color).withOpacity(0.1),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: (insight['color'] as Color).withOpacity(0.3),
+                ),
               ),
               child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Container(
-                    width: 8,
-                    height: 40,
-                    decoration: BoxDecoration(
-                      color: riskColor,
-                      borderRadius: BorderRadius.circular(4),
-                    ),
+                  Icon(
+                    insight['icon'] as IconData,
+                    color: insight['color'] as Color,
+                    size: 22,
                   ),
                   const SizedBox(width: 12),
                   Expanded(
@@ -482,27 +629,20 @@ class _AllergenAnalyticsTabState extends State<AllergenAnalyticsTab> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          exposure['allergenName'] as String,
-                          style: const TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.black87,
+                          insight['title'] as String,
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold,
+                            color: insight['color'] as Color,
                           ),
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          'Found in: ${exposure['dishName']}',
+                          insight['message'] as String,
                           style: TextStyle(
                             fontSize: 12,
-                            color: Colors.grey[600],
-                          ),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          timeAgo,
-                          style: TextStyle(
-                            fontSize: 11,
-                            color: Colors.grey[500],
+                            color: Colors.grey[700],
+                            height: 1.4,
                           ),
                         ),
                       ],
@@ -512,295 +652,512 @@ class _AllergenAnalyticsTabState extends State<AllergenAnalyticsTab> {
               ),
             );
           }).toList(),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildAirQualityAllergenInsights() {
-    final aqi = widget.airQualityData.aqi;
-    String insightTitle;
-    String insightMessage;
-    IconData insightIcon;
-    Color insightColor;
-
-    if (aqi <= 50) {
-      insightTitle = 'Good Conditions for Allergen Management';
-      insightMessage =
-          'Current air quality is excellent. Your allergen symptoms are less likely to be aggravated by environmental factors.';
-      insightIcon = Icons.wb_sunny;
-      insightColor = Colors.green;
-    } else if (aqi <= 100) {
-      insightTitle = 'Moderate Impact on Allergen Sensitivity';
-      insightMessage =
-          'Air quality is acceptable, but sensitive individuals with allergens may experience mild discomfort.';
-      insightIcon = Icons.cloud;
-      insightColor = Colors.yellow[700]!;
-    } else {
-      insightTitle = 'High Alert: Enhanced Allergen Sensitivity';
-      insightMessage =
-          'Poor air quality can worsen allergen reactions. Take extra precautions and avoid trigger foods.';
-      insightIcon = Icons.warning;
-      insightColor = Colors.red;
-    }
-
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(insightIcon, color: insightColor),
-              const SizedBox(width: 8),
-              const Expanded(
-                child: Text(
-                  'Air Quality & Allergen Insights',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black87,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 12),
           Container(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
-              color: insightColor.withOpacity(0.1),
+              color: Colors.blue[50],
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: insightColor.withOpacity(0.3)),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  insightTitle,
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    color: insightColor,
-                  ),
+                Row(
+                  children: [
+                    Icon(
+                      Icons.tips_and_updates,
+                      size: 18,
+                      color: Colors.blue[700],
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Safety Tips',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.blue[800],
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 8),
-                Text(
-                  insightMessage,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    color: Colors.black87,
-                    height: 1.5,
-                  ),
-                ),
+                const SizedBox(height: 12),
+                ...[
+                  'Always carry emergency medication',
+                  'Inform restaurant staff about allergens',
+                  'Read labels carefully every time',
+                  'Keep a food diary to track reactions',
+                ].map((tip) {
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 6),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Icon(
+                          Icons.check_circle,
+                          size: 14,
+                          color: Colors.blue[600],
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            tip,
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.blue[900],
+                              height: 1.3,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                }).toList(),
               ],
             ),
           ),
-          const SizedBox(height: 16),
-          const Text(
-            'Recommendations:',
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-              color: Colors.black87,
-            ),
-          ),
-          const SizedBox(height: 8),
-          ..._getAllergenRecommendations(aqi).map((rec) {
-            return Padding(
-              padding: const EdgeInsets.only(bottom: 8),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Icon(
-                    Icons.check_circle,
-                    size: 16,
-                    color: Color(0xFF0B8FAC),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      rec,
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: Colors.grey[700],
-                        height: 1.4,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            );
-          }).toList(),
         ],
       ),
     );
   }
 
-  List<String> _getAllergenRecommendations(int aqi) {
-    if (aqi <= 50) {
-      return [
-        'Safe to engage in outdoor activities',
-        'Normal allergen management routine',
-        'Good time to introduce new foods cautiously',
-      ];
-    } else if (aqi <= 100) {
-      return [
-        'Monitor your allergen symptoms more closely',
-        'Keep antihistamines accessible',
-        'Avoid prolonged outdoor exposure',
-        'Stay hydrated to help manage symptoms',
-      ];
+  // ============================================================================
+  // HELPER METHODS
+  // ============================================================================
+
+  bool _hasSymptomData() {
+    return _calculateSymptomFrequency().isNotEmpty;
+  }
+
+  Map<String, dynamic> _calculateStats() {
+    final days = int.parse(_selectedTimeRange);
+    final cutoffDate = DateTime.now().subtract(Duration(days: days));
+    final filtered =
+        _allergenHistory
+            .where((e) => (e['timestamp'] as DateTime).isAfter(cutoffDate))
+            .toList();
+
+    final total = filtered.length;
+    final unique =
+        filtered.map((e) => e['allergenName'] as String).toSet().length;
+    final average = days > 0 ? (total / days).toStringAsFixed(1) : '0';
+    final severe =
+        filtered
+            .where((e) => (e['riskLevel'] as String).toLowerCase() == 'severe')
+            .length;
+
+    return {
+      'total': total,
+      'unique': unique,
+      'average': average,
+      'severe': severe,
+    };
+  }
+
+  Map<String, dynamic> _calculateTrendData() {
+    final days = int.parse(_selectedTimeRange);
+    final now = DateTime.now();
+
+    List<DateTime> dateBuckets;
+    int bucketCount;
+
+    if (days <= 7) {
+      bucketCount = 7;
+      dateBuckets = List.generate(
+        7,
+        (i) => now.subtract(Duration(days: 6 - i)),
+      );
+    } else if (days <= 30) {
+      bucketCount = 30;
+      dateBuckets = List.generate(
+        30,
+        (i) => now.subtract(Duration(days: 29 - i)),
+      );
     } else {
-      return [
-        'Stay indoors as much as possible',
-        'Use air purifiers in your home',
-        'Strictly avoid known allergen triggers',
-        'Keep emergency medications readily available',
-        'Consider postponing introduction of new foods',
-      ];
+      bucketCount = (days / 7).ceil();
+      dateBuckets = List.generate(
+        bucketCount,
+        (i) => now.subtract(Duration(days: (bucketCount - 1 - i) * 7)),
+      );
     }
-  }
 
-  Color _getRiskColor(String riskLevel) {
-    switch (riskLevel.toLowerCase()) {
-      case 'severe':
-        return Colors.red;
-      case 'moderate':
-        return Colors.orange;
-      case 'mild':
-        return Colors.yellow[700]!;
-      default:
-        return Colors.grey;
-    }
-  }
-
-  String _getTimeAgo(DateTime dateTime) {
-    final difference = DateTime.now().difference(dateTime);
-    if (difference.inDays > 0) {
-      return '${difference.inDays} day${difference.inDays > 1 ? 's' : ''} ago';
-    } else if (difference.inHours > 0) {
-      return '${difference.inHours} hour${difference.inHours > 1 ? 's' : ''} ago';
-    } else if (difference.inMinutes > 0) {
-      return '${difference.inMinutes} minute${difference.inMinutes > 1 ? 's' : ''} ago';
-    } else {
-      return 'Just now';
-    }
-  }
-
-  Widget _buildWeeklyHistoryChart() {
-    // TESTING: Use a week in October 2024 for testing
-    // Comment out these two lines after testing and uncomment the lines below
-    final now = DateTime(2024, 10, 15); // Mid-October for testing
-    final last7Days = List.generate(7, (index) {
-      return now.subtract(Duration(days: 6 - index));
-    });
-
-    // PRODUCTION: Uncomment these lines for real data
-    // final now = DateTime.now();
-    // final last7Days = List.generate(7, (index) {
-    //   return now.subtract(Duration(days: 6 - index));
-    // });
-
-    // Count exposures per day by risk level
     Map<String, List<int>> riskData = {
-      'severe': List.filled(7, 0),
-      'moderate': List.filled(7, 0),
-      'mild': List.filled(7, 0),
+      'severe': List.filled(bucketCount, 0),
+      'moderate': List.filled(bucketCount, 0),
+      'mild': List.filled(bucketCount, 0),
     };
 
     for (var exposure in _allergenHistory) {
       final timestamp = exposure['timestamp'] as DateTime;
       final risk = (exposure['riskLevel'] as String).toLowerCase();
 
-      for (int i = 0; i < 7; i++) {
-        final day = last7Days[i];
-        if (timestamp.year == day.year &&
-            timestamp.month == day.month &&
-            timestamp.day == day.day) {
+      for (int i = 0; i < bucketCount; i++) {
+        final bucket = dateBuckets[i];
+        bool matches = false;
+
+        if (days <= 30) {
+          matches =
+              timestamp.year == bucket.year &&
+              timestamp.month == bucket.month &&
+              timestamp.day == bucket.day;
+        } else {
+          final nextBucket =
+              i < bucketCount - 1
+                  ? dateBuckets[i + 1]
+                  : now.add(const Duration(days: 7));
+          matches =
+              timestamp.isAfter(bucket.subtract(const Duration(seconds: 1))) &&
+              timestamp.isBefore(nextBucket);
+        }
+
+        if (matches) {
           riskData[risk]![i]++;
           break;
         }
       }
     }
 
+    return {
+      'severe': riskData['severe']!,
+      'moderate': riskData['moderate']!,
+      'mild': riskData['mild']!,
+      'dates': dateBuckets,
+    };
+  }
+
+  Map<String, Map<String, dynamic>> _calculateAllergenFrequency() {
+    final days = int.parse(_selectedTimeRange);
+    final cutoffDate = DateTime.now().subtract(Duration(days: days));
+    final filtered =
+        _allergenHistory
+            .where((e) => (e['timestamp'] as DateTime).isAfter(cutoffDate))
+            .toList();
+
+    final Map<String, int> counts = {};
+    final Map<String, String> risks = {};
+
+    for (var entry in filtered) {
+      final name = entry['allergenName'] as String;
+      counts[name] = (counts[name] ?? 0) + 1;
+      risks[name] = entry['riskLevel'] as String;
+    }
+
+    final sorted =
+        counts.entries.toList()..sort((a, b) => b.value.compareTo(a.value));
+    final total = filtered.length;
+
+    return Map.fromEntries(
+      sorted.map(
+        (e) => MapEntry(e.key, {
+          'count': e.value,
+          'percentage': (e.value / total * 100),
+          'color': _getRiskColor(risks[e.key]!),
+        }),
+      ),
+    );
+  }
+
+  Map<String, Map<String, dynamic>> _calculateRiskDistribution() {
+    final days = int.parse(_selectedTimeRange);
+    final cutoffDate = DateTime.now().subtract(Duration(days: days));
+    final filtered =
+        _allergenHistory
+            .where((e) => (e['timestamp'] as DateTime).isAfter(cutoffDate))
+            .toList();
+
+    final Map<String, int> counts = {'severe': 0, 'moderate': 0, 'mild': 0};
+
+    for (var entry in filtered) {
+      final risk = (entry['riskLevel'] as String).toLowerCase();
+      counts[risk] = (counts[risk] ?? 0) + 1;
+    }
+
+    final total = filtered.length;
+
+    return {
+      'severe': {
+        'count': counts['severe']!,
+        'percentage': total > 0 ? (counts['severe']! / total * 100) : 0.0,
+      },
+      'moderate': {
+        'count': counts['moderate']!,
+        'percentage': total > 0 ? (counts['moderate']! / total * 100) : 0.0,
+      },
+      'mild': {
+        'count': counts['mild']!,
+        'percentage': total > 0 ? (counts['mild']! / total * 100) : 0.0,
+      },
+    };
+  }
+
+  Map<String, int> _calculateSymptomFrequency() {
+    final days = int.parse(_selectedTimeRange);
+    final cutoffDate = DateTime.now().subtract(Duration(days: days));
+    final filtered =
+        _allergenHistory
+            .where((e) => (e['timestamp'] as DateTime).isAfter(cutoffDate))
+            .toList();
+
+    final Map<String, int> symptoms = {};
+
+    for (var entry in filtered) {
+      final symptomList = entry['symptoms'] as List<String>;
+      for (var symptom in symptomList) {
+        symptoms[symptom] = (symptoms[symptom] ?? 0) + 1;
+      }
+    }
+
+    final sorted =
+        symptoms.entries.toList()..sort((a, b) => b.value.compareTo(a.value));
+
+    return Map.fromEntries(sorted);
+  }
+
+  Map<String, List<String>> _calculateCommonSources() {
+    final days = int.parse(_selectedTimeRange);
+    final cutoffDate = DateTime.now().subtract(Duration(days: days));
+    final filtered =
+        _allergenHistory
+            .where((e) => (e['timestamp'] as DateTime).isAfter(cutoffDate))
+            .toList();
+
+    final Map<String, Set<String>> sources = {};
+    final Map<String, int> counts = {};
+
+    for (var entry in filtered) {
+      final allergen = entry['allergenName'] as String;
+      final dish = entry['dishName'] as String;
+
+      sources.putIfAbsent(allergen, () => {});
+      sources[allergen]!.add(dish);
+      counts[allergen] = (counts[allergen] ?? 0) + 1;
+    }
+
+    final sorted =
+        counts.entries.toList()..sort((a, b) => b.value.compareTo(a.value));
+
+    return Map.fromEntries(
+      sorted.map((e) => MapEntry(e.key, sources[e.key]!.toList())),
+    );
+  }
+
+  List<Map<String, dynamic>> _generateInsights() {
+    final days = int.parse(_selectedTimeRange);
+    final cutoffDate = DateTime.now().subtract(Duration(days: days));
+    final filtered =
+        _allergenHistory
+            .where((e) => (e['timestamp'] as DateTime).isAfter(cutoffDate))
+            .toList();
+
+    final insights = <Map<String, dynamic>>[];
+
+    // Most frequent allergen
+    final counts = <String, int>{};
+    for (var entry in filtered) {
+      final name = entry['allergenName'] as String;
+      counts[name] = (counts[name] ?? 0) + 1;
+    }
+
+    if (counts.isNotEmpty) {
+      final top = counts.entries.reduce((a, b) => a.value > b.value ? a : b);
+      insights.add({
+        'icon': Icons.trending_up,
+        'color': Colors.orange[600],
+        'title': 'Most Frequent',
+        'message':
+            '${top.key} appears most often (${top.value}×). Consider alternatives.',
+      });
+    }
+
+    // Severe risk warning
+    final severe =
+        filtered
+            .where((e) => (e['riskLevel'] as String).toLowerCase() == 'severe')
+            .length;
+
+    if (severe > 0) {
+      insights.add({
+        'icon': Icons.warning_amber,
+        'color': Colors.red[600],
+        'title': 'High-Risk Alert',
+        'message': '$severe severe exposures detected. Exercise extra caution.',
+      });
+    }
+
+    // General advice
+    if (filtered.length >= 5) {
+      insights.add({
+        'icon': Icons.lightbulb,
+        'color': Colors.blue[600],
+        'title': 'Stay Vigilant',
+        'message':
+            'Always review ingredients and inform restaurants about allergens.',
+      });
+    }
+
+    return insights;
+  }
+
+  Color _getRiskColor(String riskLevel) {
+    switch (riskLevel.toLowerCase()) {
+      case 'severe':
+        return Colors.red[600]!;
+      case 'moderate':
+        return Colors.orange[600]!;
+      case 'mild':
+        return Colors.amber[600]!;
+      default:
+        return Colors.grey[600]!;
+    }
+  }
+
+  String _getTimeAgo(DateTime dateTime) {
+    final difference = DateTime.now().difference(dateTime);
+    if (difference.inDays > 0) {
+      return '${difference.inDays}d ago';
+    } else if (difference.inHours > 0) {
+      return '${difference.inHours}h ago';
+    } else if (difference.inMinutes > 0) {
+      return '${difference.inMinutes}m ago';
+    } else {
+      return 'Just now';
+    }
+  }
+}
+
+// ============================================================================
+// REUSABLE COMPONENTS
+// ============================================================================
+
+class _StatCard extends StatelessWidget {
+  final IconData icon;
+  final String value;
+  final String label;
+  final Color color;
+
+  const _StatCard({
+    required this.icon,
+    required this.value,
+    required this.label,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
     return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey[200]!, width: 1),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.1),
+            color: Colors.black.withOpacity(0.04),
             blurRadius: 10,
             offset: const Offset(0, 2),
           ),
         ],
       ),
+      padding: const EdgeInsets.all(16),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text(
-                'WEEKLY HISTORY',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black54,
-                  letterSpacing: 1.2,
-                ),
-              ),
-              Icon(Icons.fullscreen, color: Colors.grey[400], size: 20),
-            ],
-          ),
-          const SizedBox(height: 20),
-          // Legend
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              _buildLegendItem(Colors.red, 'Severe'),
-              const SizedBox(width: 16),
-              _buildLegendItem(Colors.orange, 'Moderate'),
-              const SizedBox(width: 16),
-              _buildLegendItem(Colors.yellow[700]!, 'Mild'),
-            ],
-          ),
-          const SizedBox(height: 24),
-          // Chart
-          SizedBox(
-            height: 180,
-            child: CustomPaint(
-              size: Size(double.infinity, 180),
-              painter: WeeklyChartPainter(
-                severeData: riskData['severe']!,
-                moderateData: riskData['moderate']!,
-                mildData: riskData['mild']!,
-                days: last7Days,
-              ),
+          Icon(icon, color: color, size: 24),
+          const SizedBox(height: 8),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              color: color,
             ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 11,
+              color: Colors.grey[600],
+              fontWeight: FontWeight.w500,
+            ),
+            textAlign: TextAlign.center,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
           ),
         ],
       ),
     );
   }
+}
 
-  Widget _buildLegendItem(Color color, String label) {
+class _UniformCard extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final Color iconColor;
+  final Widget child;
+
+  const _UniformCard({
+    required this.icon,
+    required this.title,
+    required this.iconColor,
+    required this.child,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.grey[200]!, width: 1),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      padding: const EdgeInsets.all(18),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: iconColor.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(icon, size: 20, color: iconColor),
+              ),
+              const SizedBox(width: 12),
+              Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black87,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          child,
+        ],
+      ),
+    );
+  }
+}
+
+class _LegendItem extends StatelessWidget {
+  final Color color;
+  final String label;
+
+  const _LegendItem({required this.color, required this.label});
+
+  @override
+  Widget build(BuildContext context) {
     return Row(
+      mainAxisSize: MainAxisSize.min,
       children: [
         Container(
           width: 12,
@@ -810,260 +1167,308 @@ class _AllergenAnalyticsTabState extends State<AllergenAnalyticsTab> {
         const SizedBox(width: 6),
         Text(
           label,
-          style: const TextStyle(fontSize: 12, color: Colors.black54),
+          style: const TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w500,
+            color: Colors.black87,
+          ),
         ),
       ],
     );
   }
+}
 
-  Widget _build30DaySummary() {
-    // TESTING: Calculate from October 15, 2024 going back 30 days
-    // Comment out this line after testing and uncomment the line below
-    final thirtyDaysAgo = DateTime(
-      2024,
-      10,
-      15,
-    ).subtract(const Duration(days: 30));
+class _RiskBar extends StatelessWidget {
+  final String label;
+  final int count;
+  final double percentage;
+  final Color color;
+  final IconData icon;
 
-    // PRODUCTION: Uncomment this line for real data
-    // final thirtyDaysAgo = DateTime.now().subtract(const Duration(days: 30));
+  const _RiskBar({
+    required this.label,
+    required this.count,
+    required this.percentage,
+    required this.color,
+    required this.icon,
+  });
 
-    final last30DaysExposures =
-        _allergenHistory.where((e) {
-          return (e['timestamp'] as DateTime).isAfter(thirtyDaysAgo);
-        }).toList();
-
-    if (last30DaysExposures.isEmpty) {
-      return const SizedBox.shrink();
-    }
-
-    // Count by risk level
-    Map<String, int> riskCounts = {'severe': 0, 'moderate': 0, 'mild': 0};
-    for (var exposure in last30DaysExposures) {
-      final risk = (exposure['riskLevel'] as String).toLowerCase();
-      riskCounts[risk] = (riskCounts[risk] ?? 0) + 1;
-    }
-
-    final total = last30DaysExposures.length;
-    final severePercent = ((riskCounts['severe']! / total) * 100).round();
-    final moderatePercent = ((riskCounts['moderate']! / total) * 100).round();
-    final mildPercent = ((riskCounts['mild']! / total) * 100).round();
-
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            '30 DAY SUMMARY',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              color: Colors.black54,
-              letterSpacing: 1.2,
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Row(
+              children: [
+                Icon(icon, size: 16, color: color),
+                const SizedBox(width: 10),
+                Text(
+                  label,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.black87,
+                  ),
+                ),
+              ],
             ),
-          ),
-          const SizedBox(height: 20),
-          // Percentage labels
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                '$mildPercent%',
-                style: const TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              Text(
-                '$moderatePercent%',
-                style: const TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              Text(
-                '$severePercent%',
-                style: const TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          // Gradient bar
-          ClipRRect(
-            borderRadius: BorderRadius.circular(8),
-            child: Container(
-              height: 12,
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [Colors.yellow[700]!, Colors.orange, Colors.red],
-                  stops: [
-                    mildPercent / 100,
-                    (mildPercent + moderatePercent) / 100,
-                    1.0,
-                  ],
-                ),
+            Text(
+              '$count (${percentage.toStringAsFixed(0)}%)',
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.bold,
+                color: Colors.grey[700],
               ),
             ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(4),
+          child: LinearProgressIndicator(
+            value: percentage / 100,
+            backgroundColor: Colors.grey[200],
+            valueColor: AlwaysStoppedAnimation<Color>(color),
+            minHeight: 6,
           ),
-          const SizedBox(height: 16),
-          Center(
-            child: TextButton.icon(
-              onPressed: () {
-                // Navigate to detailed trends page
-              },
-              icon: const Icon(Icons.trending_up, size: 18),
-              label: const Text('See your allergy trends'),
-              style: TextButton.styleFrom(
-                foregroundColor: const Color(0xFF0B8FAC),
-              ),
-            ),
-          ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }
 
-// Custom painter for the weekly chart
-class WeeklyChartPainter extends CustomPainter {
+// ============================================================================
+// ENHANCED CHART PAINTER
+// ============================================================================
+
+class EnhancedTrendChartPainter extends CustomPainter {
   final List<int> severeData;
   final List<int> moderateData;
   final List<int> mildData;
-  final List<DateTime> days;
+  final List<DateTime> dates;
+  final int timeRange;
 
-  WeeklyChartPainter({
+  EnhancedTrendChartPainter({
     required this.severeData,
     required this.moderateData,
     required this.mildData,
-    required this.days,
+    required this.dates,
+    required this.timeRange,
   });
 
   @override
   void paint(Canvas canvas, Size size) {
-    final paint =
-        Paint()
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = 2.5
-          ..strokeCap = StrokeCap.round;
+    final chartHeight = size.height - 40;
+    final chartWidth = size.width - 20;
+    final dataPoints = severeData.length;
 
-    final double chartHeight = size.height - 40;
-    final double chartWidth = size.width;
-    final double segmentWidth = chartWidth / 6;
+    if (dataPoints < 2) return;
 
-    // Find max value for scaling
+    final segmentWidth = chartWidth / (dataPoints - 1);
+
+    // Find max value
     int maxValue = 0;
-    for (int i = 0; i < 7; i++) {
+    for (int i = 0; i < dataPoints; i++) {
       int total = severeData[i] + moderateData[i] + mildData[i];
       if (total > maxValue) maxValue = total;
     }
-    if (maxValue == 0) maxValue = 1; // Avoid division by zero
+    if (maxValue == 0) maxValue = 1;
 
-    // Draw grid lines
-    final gridPaint =
-        Paint()
-          ..color = Colors.grey.withOpacity(0.1)
-          ..strokeWidth = 1;
+    // Draw background zones
+    _drawBackgroundZones(canvas, Size(chartWidth, chartHeight), maxValue);
 
-    for (int i = 0; i <= 4; i++) {
-      final y = (chartHeight / 4) * i;
-      canvas.drawLine(Offset(0, y), Offset(chartWidth, y), gridPaint);
-    }
+    // Draw grid
+    _drawGrid(canvas, Size(chartWidth, chartHeight));
 
-    // Helper function to draw a line
-    void drawLine(List<int> data, Color color) {
-      paint.color = color.withOpacity(0.8);
-      final path = Path();
-
-      for (int i = 0; i < 7; i++) {
-        final x = segmentWidth * i;
-        final normalizedValue = data[i] / maxValue;
-        final y = chartHeight - (normalizedValue * chartHeight);
-
-        if (i == 0) {
-          path.moveTo(x, y);
-        } else {
-          path.lineTo(x, y);
-        }
-      }
-
-      canvas.drawPath(path, paint);
-
-      // Draw area fill
-      final fillPath = Path.from(path);
-      fillPath.lineTo(segmentWidth * 6, chartHeight);
-      fillPath.lineTo(0, chartHeight);
-      fillPath.close();
-
-      final fillPaint =
-          Paint()
-            ..color = color.withOpacity(0.15)
-            ..style = PaintingStyle.fill;
-
-      canvas.drawPath(fillPath, fillPaint);
-    }
-
-    // Draw lines for each risk level
-    drawLine(mildData, Colors.yellow[700]!);
-    drawLine(moderateData, Colors.orange);
-    drawLine(severeData, Colors.red);
+    // Draw lines and areas
+    _drawLineWithArea(
+      canvas,
+      Size(chartWidth, chartHeight),
+      mildData,
+      Colors.amber[600]!,
+      maxValue,
+      segmentWidth,
+    );
+    _drawLineWithArea(
+      canvas,
+      Size(chartWidth, chartHeight),
+      moderateData,
+      Colors.orange[600]!,
+      maxValue,
+      segmentWidth,
+    );
+    _drawLineWithArea(
+      canvas,
+      Size(chartWidth, chartHeight),
+      severeData,
+      Colors.red[600]!,
+      maxValue,
+      segmentWidth,
+    );
 
     // Draw date labels
+    _drawDateLabels(canvas, Size(chartWidth, chartHeight), segmentWidth);
+
+    // Draw value labels
+    _drawValueLabels(canvas, chartHeight, maxValue);
+  }
+
+  void _drawBackgroundZones(Canvas canvas, Size size, int maxValue) {
+    final zones = [
+      {'threshold': maxValue * 0.7, 'color': Colors.red[50]!},
+      {'threshold': maxValue * 0.4, 'color': Colors.orange[50]!},
+      {'threshold': 0.0, 'color': Colors.green[50]!},
+    ];
+
+    double prevY = 0;
+    for (var zone in zones) {
+      final y =
+          size.height -
+          (size.height * (zone['threshold'] as double) / maxValue);
+      canvas.drawRect(
+        Rect.fromLTRB(0, prevY, size.width, y),
+        Paint()..color = (zone['color'] as Color).withOpacity(0.3),
+      );
+      prevY = y;
+    }
+  }
+
+  void _drawGrid(Canvas canvas, Size size) {
+    final gridPaint =
+        Paint()
+          ..color = Colors.grey[300]!
+          ..strokeWidth = 0.5;
+
+    // Horizontal lines
+    for (int i = 0; i <= 5; i++) {
+      final y = (size.height / 5) * i;
+      canvas.drawLine(Offset(0, y), Offset(size.width, y), gridPaint);
+    }
+  }
+
+  void _drawLineWithArea(
+    Canvas canvas,
+    Size size,
+    List<int> data,
+    Color color,
+    int maxValue,
+    double segmentWidth,
+  ) {
+    final linePaint =
+        Paint()
+          ..color = color
+          ..strokeWidth = 2.5
+          ..style = PaintingStyle.stroke
+          ..strokeCap = StrokeCap.round
+          ..strokeJoin = StrokeJoin.round;
+
+    final path = Path();
+    final fillPath = Path();
+
+    for (int i = 0; i < data.length; i++) {
+      final x = segmentWidth * i;
+      final normalizedValue = data[i] / maxValue;
+      final y = size.height - (normalizedValue * size.height);
+
+      if (i == 0) {
+        path.moveTo(x, y);
+        fillPath.moveTo(x, size.height);
+        fillPath.lineTo(x, y);
+      } else {
+        path.lineTo(x, y);
+        fillPath.lineTo(x, y);
+      }
+
+      // Draw point
+      canvas.drawCircle(Offset(x, y), 3.5, Paint()..color = color);
+      canvas.drawCircle(Offset(x, y), 2, Paint()..color = Colors.white);
+    }
+
+    // Complete fill path
+    fillPath.lineTo(segmentWidth * (data.length - 1), size.height);
+    fillPath.close();
+
+    // Draw fill
+    canvas.drawPath(
+      fillPath,
+      Paint()
+        ..color = color.withOpacity(0.15)
+        ..style = PaintingStyle.fill,
+    );
+
+    // Draw line
+    canvas.drawPath(path, linePaint);
+  }
+
+  void _drawDateLabels(Canvas canvas, Size size, double segmentWidth) {
     final textPainter = TextPainter(
       textDirection: TextDirection.ltr,
       textAlign: TextAlign.center,
     );
 
-    for (int i = 0; i < 7; i++) {
+    int labelInterval = 1;
+    if (timeRange > 30) labelInterval = 7;
+    if (timeRange > 90) labelInterval = 14;
+
+    for (int i = 0; i < dates.length; i += labelInterval) {
       final x = segmentWidth * i;
-      final date = days[i];
-      final dayStr = '${date.day} ${_getMonthAbbr(date.month)}';
+      final date = dates[i];
+      String dateStr;
+
+      if (timeRange <= 7) {
+        dateStr = _getDayName(date.weekday);
+      } else if (timeRange <= 30) {
+        dateStr = '${date.day}';
+      } else {
+        dateStr = '${date.day}/${date.month}';
+      }
 
       textPainter.text = TextSpan(
-        text: dayStr,
-        style: const TextStyle(fontSize: 10, color: Colors.black54),
+        text: dateStr,
+        style: TextStyle(
+          fontSize: 10,
+          color: Colors.grey[600],
+          fontWeight: FontWeight.w500,
+        ),
       );
       textPainter.layout();
       textPainter.paint(
         canvas,
-        Offset(x - textPainter.width / 2, chartHeight + 10),
+        Offset(x - textPainter.width / 2, size.height + 10),
       );
     }
   }
 
-  String _getMonthAbbr(int month) {
-    const months = [
-      'Jan',
-      'Feb',
-      'Mar',
-      'Apr',
-      'May',
-      'Jun',
-      'Jul',
-      'Aug',
-      'Sep',
-      'Oct',
-      'Nov',
-      'Dec',
-    ];
-    return months[month - 1];
+  void _drawValueLabels(Canvas canvas, double chartHeight, int maxValue) {
+    final textPainter = TextPainter(
+      textDirection: TextDirection.ltr,
+      textAlign: TextAlign.right,
+    );
+
+    for (int i = 0; i <= 2; i++) {
+      final value = (maxValue / 2 * i).toInt();
+      final y = chartHeight - (chartHeight / 2 * i);
+
+      textPainter.text = TextSpan(
+        text: '$value',
+        style: TextStyle(
+          fontSize: 10,
+          color: Colors.grey[600],
+          fontWeight: FontWeight.w500,
+        ),
+      );
+      textPainter.layout();
+      textPainter.paint(canvas, Offset(-textPainter.width - 8, y - 6));
+    }
+  }
+
+  String _getDayName(int weekday) {
+    const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    return days[weekday - 1];
   }
 
   @override
-  bool shouldRepaint(WeeklyChartPainter oldDelegate) => true;
+  bool shouldRepaint(EnhancedTrendChartPainter oldDelegate) => true;
 }

@@ -777,7 +777,6 @@ class _UserProfileState extends State<UserProfile> {
                                           ),
                                     )
                                     : Container(
-                                      // color: AppColors.primaryColor3,
                                       decoration: const BoxDecoration(
                                         gradient: LinearGradient(
                                           begin: Alignment.topCenter,
