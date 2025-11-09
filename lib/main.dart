@@ -1,5 +1,6 @@
 import 'package:allergen/firebase_options.dart';
 import 'package:allergen/screens/auth/authwrapper.dart';
+import 'package:allergen/screens/auth/login.dart';
 import 'package:allergen/screens/emergency/emergency_screen.dart';
 import 'package:allergen/screens/feature/scan_screen.dart';
 import 'package:allergen/services/emergency/emergency_service.dart';
@@ -16,10 +17,11 @@ void main() async {
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   await dotenv.load(fileName: ".env");
 
-  // Initialize PushNotificationService
-  await PushNotificationService().initialize();
-
-  // await EmergencyService().initialize();
+  try {
+    await PushNotificationService().initialize();
+  } catch (e) {
+    print('Push notification initialization failed: $e');
+  }
 
   runApp(const AlertGen());
 }

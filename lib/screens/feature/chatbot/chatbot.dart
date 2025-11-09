@@ -27,6 +27,7 @@ class _ChatbotModalState extends State<ChatbotModal>
   late Animation<double> typingAnimation;
   bool showScrollToBottom = false;
   double scrollPosition = 0;
+  String? userFirstName;
 
   @override
   void initState() {
@@ -43,9 +44,11 @@ class _ChatbotModalState extends State<ChatbotModal>
 
     scrollController.addListener(scrollListener);
 
-    initializeAI();
-    loadUserProfile();
-    loadChatHistory();
+    // Load user profile first to get first name, then initialize AI and chat
+    loadUserProfile().then((_) {
+      initializeAI();
+      loadChatHistory();
+    });
   }
 
   void scrollListener() {
@@ -82,22 +85,35 @@ class _ChatbotModalState extends State<ChatbotModal>
 
   void initializeAI() {
     final apiKey = dotenv.env['API_KEY'] ?? '';
-    model = GenerativeModel(
-      model: 'gemini-2.0-flash-exp',
-      apiKey: apiKey,
-      systemInstruction: Content.system(
+
+    // Personalized system instruction with user's first name
+    String personalizedInstruction =
         'You are a specialized allergen information assistant. Your ONLY purpose is to provide information about allergens, allergic reactions, cross-reactivity, allergen avoidance, and allergy-related symptoms. '
         'You must STRICTLY follow these rules:\n'
         '1. DIAGNOSIS REQUESTS ARE ALLERGEN-RELATED: If the user asks "can you diagnose me", "diagnose my symptoms", "what do I have", or similar diagnosis questions, these ARE allergen-related questions. You MUST respond with: "I cannot provide medical diagnoses, but I strongly recommend consulting a healthcare professional or allergist for proper diagnosis and treatment. They can perform appropriate tests to identify the cause of your symptoms." If symptoms are described, you may briefly mention they could be allergen-related before the recommendation.\n'
         '2. ONLY answer questions directly related to allergens, allergies, allergic reactions, food allergens, environmental allergens, cross-contamination, and allergy management.\n'
         '3. If a question is NOT about allergens or allergies (like asking about diabetes, fitness, etc.), politely decline and redirect: "I apologize, but I can only provide information about allergens and allergic reactions. Please ask me about specific allergens, potential allergic symptoms, or allergy management strategies."\n'
         '4. Do NOT answer questions about general health conditions, diseases, medications, treatments, or medical advice unrelated to allergens.\n'
-        '5. Use a formal, calm, and respectful tone. Address the user directly using "you".\n'
-        '6. Keep responses concise—preferably 2 to 4 sentences—written in clear, grammatically correct English.\n'
+        '5. Use a formal, calm, and respectful tone.';
+
+    // Add personalized greeting with user's first name if available
+    if (userFirstName != null && userFirstName!.isNotEmpty) {
+      personalizedInstruction +=
+          ' Address the user by their name "${userFirstName!}" when appropriate to create a personalized experience.';
+    } else {
+      personalizedInstruction += ' Address the user directly using "you".';
+    }
+
+    personalizedInstruction +=
+        '\n6. Keep responses concise—preferably 2 to 4 sentences—written in clear, grammatically correct English.\n'
         '7. Never use markdown, bullet points, or emojis.\n'
         '8. Examples of ACCEPTABLE topics: food allergens, pollen allergies, pet dander, allergic reactions, anaphylaxis, allergen avoidance, cross-reactivity, allergy testing, common allergen sources, and requests for diagnosis (which you decline appropriately).\n'
-        '9. Examples of UNACCEPTABLE topics: diabetes, heart disease, pregnancy care, general medications, non-allergy infections, mental health, fitness advice, nutrition (unless directly related to allergen avoidance).',
-      ),
+        '9. Examples of UNACCEPTABLE topics: diabetes, heart disease, pregnancy care, general medications, non-allergy infections, mental health, fitness advice, nutrition (unless directly related to allergen avoidance).';
+
+    model = GenerativeModel(
+      model: 'gemini-2.0-flash-exp',
+      apiKey: apiKey,
+      systemInstruction: Content.system(personalizedInstruction),
     );
   }
 
@@ -113,9 +129,11 @@ class _ChatbotModalState extends State<ChatbotModal>
               .get();
 
       if (userDoc.exists) {
+        final data = userDoc.data()!;
         setState(() {
-          userData = userDoc.data();
-          userImageUrl = userDoc.data()?['imageUrl'];
+          userData = data;
+          userImageUrl = data['imageUrl'];
+          userFirstName = data['firstName'] as String?;
         });
       }
     } catch (e) {
@@ -173,6 +191,7 @@ class _ChatbotModalState extends State<ChatbotModal>
       final user = FirebaseAuth.instance.currentUser;
       if (user == null) return;
 
+      // Load user allergens
       final allergenSnapshot =
           await FirebaseFirestore.instance
               .collection('users')
@@ -181,12 +200,15 @@ class _ChatbotModalState extends State<ChatbotModal>
               .where('type', isEqualTo: 'allergen')
               .get();
 
-      allergens =
-          allergenSnapshot.docs
-              .map((doc) => doc.data()['name'] as String? ?? '')
-              .where((name) => name.isNotEmpty)
-              .toList();
+      setState(() {
+        allergens =
+            allergenSnapshot.docs
+                .map((doc) => doc.data()['name'] as String? ?? '')
+                .where((name) => name.isNotEmpty)
+                .toList();
+      });
 
+      // Load chat history
       final chatDoc =
           await FirebaseFirestore.instance
               .collection('users')
@@ -212,14 +234,17 @@ class _ChatbotModalState extends State<ChatbotModal>
           });
 
           restoreChatSession();
+
+          // Scroll to bottom after messages are loaded
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            scrollToBottom();
+          });
         } else {
           await generateInitialMessages();
         }
       } else {
         await generateInitialMessages();
       }
-
-      scrollToBottom();
     } catch (e) {
       print('Error loading chat history: $e');
       await generateInitialMessages();
@@ -245,14 +270,32 @@ class _ChatbotModalState extends State<ChatbotModal>
 
     chatSession = model.startChat();
 
-    await generateAISuggestions();
+    // Add personalized welcome message
+    String welcomeMessage = "Hello";
+    if (userFirstName != null && userFirstName!.isNotEmpty) {
+      welcomeMessage += " $userFirstName";
+    }
+    welcomeMessage +=
+        "! I'm your Allergen Assistant. I can help you with information about allergens, allergic reactions, cross-reactivity, and allergy management. What would you like to know?";
 
     setState(() {
+      messages.add(
+        ChatMessage(
+          text: welcomeMessage,
+          isUser: false,
+          timestamp: DateTime.now(),
+        ),
+      );
       isLoading = false;
     });
 
+    await generateAISuggestions();
     await saveChatHistory();
-    scrollToBottom();
+
+    // Scroll to bottom after initial messages are set
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      scrollToBottom();
+    });
   }
 
   Future<void> generateAISuggestions() async {
@@ -398,7 +441,10 @@ Each question should be:
 
     messageController.clear();
 
-    scrollToBottom();
+    // Scroll to bottom after adding user message
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      scrollToBottom();
+    });
 
     if (!typingAnimationController.isAnimating) {
       typingAnimationController.repeat(reverse: true);
@@ -434,7 +480,11 @@ Each question should be:
 
       typingAnimationController.stop();
 
-      scrollToBottom();
+      // Scroll to bottom after AI response
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        scrollToBottom();
+      });
+
       await saveChatHistory();
     } catch (e) {
       print('Error sending message to AI: $e');
@@ -452,7 +502,11 @@ Each question should be:
 
       typingAnimationController.stop();
 
-      scrollToBottom();
+      // Scroll to bottom after error message
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        scrollToBottom();
+      });
+
       await saveChatHistory();
     }
   }
