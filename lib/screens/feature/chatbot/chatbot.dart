@@ -44,7 +44,6 @@ class _ChatbotModalState extends State<ChatbotModal>
 
     scrollController.addListener(scrollListener);
 
-    // Load user profile first to get first name, then initialize AI and chat
     loadUserProfile().then((_) {
       initializeAI();
       loadChatHistory();
@@ -86,7 +85,6 @@ class _ChatbotModalState extends State<ChatbotModal>
   void initializeAI() {
     final apiKey = dotenv.env['API_KEY'] ?? '';
 
-    // Personalized system instruction with user's first name
     String personalizedInstruction =
         'You are a specialized allergen information assistant. Your ONLY purpose is to provide information about allergens, allergic reactions, cross-reactivity, allergen avoidance, and allergy-related symptoms. '
         'You must STRICTLY follow these rules:\n'
@@ -96,7 +94,6 @@ class _ChatbotModalState extends State<ChatbotModal>
         '4. Do NOT answer questions about general health conditions, diseases, medications, treatments, or medical advice unrelated to allergens.\n'
         '5. Use a formal, calm, and respectful tone.';
 
-    // Add personalized greeting with user's first name if available
     if (userFirstName != null && userFirstName!.isNotEmpty) {
       personalizedInstruction +=
           ' Address the user by their name "${userFirstName!}" when appropriate to create a personalized experience.';
@@ -191,7 +188,6 @@ class _ChatbotModalState extends State<ChatbotModal>
       final user = FirebaseAuth.instance.currentUser;
       if (user == null) return;
 
-      // Load user allergens
       final allergenSnapshot =
           await FirebaseFirestore.instance
               .collection('users')
@@ -208,7 +204,6 @@ class _ChatbotModalState extends State<ChatbotModal>
                 .toList();
       });
 
-      // Load chat history
       final chatDoc =
           await FirebaseFirestore.instance
               .collection('users')
@@ -235,7 +230,6 @@ class _ChatbotModalState extends State<ChatbotModal>
 
           restoreChatSession();
 
-          // Scroll to bottom after messages are loaded
           WidgetsBinding.instance.addPostFrameCallback((_) {
             scrollToBottom();
           });
@@ -270,7 +264,6 @@ class _ChatbotModalState extends State<ChatbotModal>
 
     chatSession = model.startChat();
 
-    // Add personalized welcome message
     String welcomeMessage = "Hello";
     if (userFirstName != null && userFirstName!.isNotEmpty) {
       welcomeMessage += " $userFirstName";
@@ -292,7 +285,6 @@ class _ChatbotModalState extends State<ChatbotModal>
     await generateAISuggestions();
     await saveChatHistory();
 
-    // Scroll to bottom after initial messages are set
     WidgetsBinding.instance.addPostFrameCallback((_) {
       scrollToBottom();
     });
@@ -378,7 +370,6 @@ Each question should be:
       suggestions.add('What allergens trigger asthma symptoms?');
     }
 
-    // Default allergen-focused suggestions
     while (suggestions.length < 4) {
       List<String> defaults = [
         'What are common food allergens?',
@@ -441,7 +432,6 @@ Each question should be:
 
     messageController.clear();
 
-    // Scroll to bottom after adding user message
     WidgetsBinding.instance.addPostFrameCallback((_) {
       scrollToBottom();
     });
@@ -480,7 +470,6 @@ Each question should be:
 
       typingAnimationController.stop();
 
-      // Scroll to bottom after AI response
       WidgetsBinding.instance.addPostFrameCallback((_) {
         scrollToBottom();
       });
@@ -502,7 +491,6 @@ Each question should be:
 
       typingAnimationController.stop();
 
-      // Scroll to bottom after error message
       WidgetsBinding.instance.addPostFrameCallback((_) {
         scrollToBottom();
       });
@@ -670,7 +658,6 @@ Each question should be:
                       ),
                     ),
 
-                    // Messages
                     Expanded(
                       child:
                           isLoading
