@@ -918,7 +918,7 @@ class _AirQualityWidgetState extends State<AirQualityWidget> {
                                 ),
                               ),
                               const Text(
-                                'NAQI',
+                                'AQI',
                                 style: TextStyle(
                                   fontSize: 12,
                                   color: Color(0xFF666666),
@@ -993,6 +993,8 @@ class _AirQualityWidgetState extends State<AirQualityWidget> {
                     if (_airQualityData!.healthRecommendation != null)
                       Text(
                         _airQualityData!.healthRecommendation!,
+                        maxLines: 3,
+                        overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
                           fontSize: 13,
                           color: Color(0xFF666666),
