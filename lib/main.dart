@@ -1,6 +1,5 @@
 import 'package:allergen/firebase_options.dart';
 import 'package:allergen/screens/auth/authwrapper.dart';
-import 'package:allergen/screens/auth/login.dart';
 import 'package:allergen/screens/emergency/emergency_screen.dart';
 import 'package:allergen/screens/feature/scan_screen.dart';
 import 'package:allergen/services/emergency/emergency_service.dart';

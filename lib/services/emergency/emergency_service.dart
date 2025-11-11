@@ -1,4 +1,3 @@
-
 import 'package:phone_state/phone_state.dart';
 import 'dart:io' show Platform;
 
@@ -76,7 +75,7 @@ class EmergencyService {
     print(
       '[Seq #$sequenceId] Making call to ${contact.name} (${contact.phoneNumber})',
     );
- 
+
     _isCurrentlyInCall = true;
     _isWaitingForCallTimeout = true;
     _currentCallNumber = contact.phoneNumber;
@@ -152,8 +151,6 @@ class EmergencyService {
       _phoneStateSubscription = PhoneState.stream.listen((PhoneState state) {
         handlePhoneStateChange(state, phoneNumber, sequenceId);
       });
-
-   
     } catch (e) {
       print('Error starting call state monitoring: $e');
     }
@@ -177,9 +174,7 @@ class EmergencyService {
     switch (state.status) {
       case PhoneStateStatus.CALL_STARTED:
         if (isCurrentCallForContact(state.number, phoneNumber)) {
-          print(
-            '[Seq #$sequenceId] Call STARTED detected for ${phoneNumber}',
-          );
+          print('[Seq #$sequenceId] Call STARTED detected for ${phoneNumber}');
         }
         break;
 
@@ -250,7 +245,6 @@ class EmergencyService {
     _phoneStateSubscription = null;
   }
 
-  
   Future<void> initialize() async {
     if (_isInitialized) {
       await forceReload();
@@ -355,8 +349,7 @@ class EmergencyService {
         await _locationService.getCurrentLocationAndAddress();
       }
 
-      String message =
-          customMessage ?? createEmergencyMessage(includeLocation);
+      String message = customMessage ?? createEmergencyMessage(includeLocation);
 
       Map<String, bool> results = await _communicationService
           .sendEmergencyMessages(_emergencyContacts, message, smsGranted);
@@ -403,7 +396,7 @@ class EmergencyService {
       _isWaitingForCallTimeout = false;
       _currentContactIndex = 0;
       _currentSequenceId++;
-      _isSequenceActive = true; 
+      _isSequenceActive = true;
 
       _stateManager.resetState();
 
@@ -444,7 +437,7 @@ class EmergencyService {
         print(
           'Location messages sent: $successCount/${results.length} successful',
         );
-      } 
+      }
 
       await startCallingSequence(settingsToUse);
     } catch (e) {
@@ -601,9 +594,7 @@ class EmergencyService {
   }
 
   Future<void> startCountdown(int countdownSeconds, int sequenceId) async {
-    print(
-      '[Seq #$sequenceId] Starting ${countdownSeconds}-second countdown',
-    );
+    print('[Seq #$sequenceId] Starting ${countdownSeconds}-second countdown');
 
     for (int i = countdownSeconds; i > 0; i--) {
       if (!_shouldContinueEmergencySequence ||
@@ -722,7 +713,7 @@ class EmergencyService {
     _shouldContinueEmergencySequence = false;
     _isCurrentlyInCall = false;
     _isWaitingForCallTimeout = false;
-    _isSequenceActive = false; 
+    _isSequenceActive = false;
 
     if (_callCompletionCompleter != null &&
         !_callCompletionCompleter!.isCompleted) {
@@ -1091,7 +1082,7 @@ class EmergencyService {
     showDialog(
       context: context,
       builder:
-          (context) => AlertDialog(
+          (dialogContext) => AlertDialog(
             title: Text('No Emergency Contacts'),
             content: Column(
               mainAxisSize: MainAxisSize.min,
@@ -1106,12 +1097,12 @@ class EmergencyService {
             ),
             actions: [
               TextButton(
-                onPressed: () => Navigator.of(context).pop(),
+                onPressed: () => Navigator.of(dialogContext).pop(),
                 child: Text('Cancel'),
               ),
               TextButton(
                 onPressed: () {
-                  Navigator.of(context).pop();
+                  Navigator.of(dialogContext).pop();
                   showSettings(context);
                 },
                 child: Text('Add Contacts'),

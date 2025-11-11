@@ -878,7 +878,7 @@ class _EmergencySettingsScreenState extends State<EmergencySettingsScreen> {
               child: ListView(
                 padding: const EdgeInsets.all(16),
                 children: [
-                  _buildContactsSection(),
+                  buildContactsSection(),
                   const SizedBox(height: 16),
                   buildSettingsSection(),
                 ],
@@ -929,7 +929,7 @@ class _EmergencySettingsScreenState extends State<EmergencySettingsScreen> {
     );
   }
 
-  Widget _buildContactsSection() {
+  Widget buildContactsSection() {
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -1025,14 +1025,14 @@ class _EmergencySettingsScreenState extends State<EmergencySettingsScreen> {
               ],
             ),
             const SizedBox(height: 20),
-            if (contacts.isEmpty) _buildEmptyState() else _buildContactsList(),
+            if (contacts.isEmpty) buildEmptyState() else buildContactsList(),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildEmptyState() {
+  Widget buildEmptyState() {
     return Container(
       padding: const EdgeInsets.all(32),
       child: Column(
@@ -1069,7 +1069,7 @@ class _EmergencySettingsScreenState extends State<EmergencySettingsScreen> {
     );
   }
 
-  Widget _buildContactsList() {
+  Widget buildContactsList() {
     return ReorderableListView.builder(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
@@ -1077,12 +1077,12 @@ class _EmergencySettingsScreenState extends State<EmergencySettingsScreen> {
       onReorder: reorderContacts,
       itemBuilder: (context, index) {
         final contact = contacts[index];
-        return _buildContactCard(contact);
+        return buildContactCard(contact);
       },
     );
   }
 
-  Widget _buildContactCard(EmergencyContact contact) {
+  Widget buildContactCard(EmergencyContact contact) {
     return Container(
       key: ValueKey(contact.id),
       margin: const EdgeInsets.only(bottom: 12),
@@ -1132,7 +1132,7 @@ class _EmergencySettingsScreenState extends State<EmergencySettingsScreen> {
                 padding: const EdgeInsets.symmetric(
                   horizontal: 6,
                   vertical: 2,
-                ), // Reduced padding
+                ),
                 decoration: BoxDecoration(
                   color: Colors.green.shade50,
                   borderRadius: BorderRadius.circular(10),
@@ -1143,7 +1143,7 @@ class _EmergencySettingsScreenState extends State<EmergencySettingsScreen> {
                   children: [
                     Icon(
                       Icons.location_on,
-                      size: 10, // Reduced from 12
+                      size: 10, 
                       color: Colors.green.shade600,
                     ),
                     const SizedBox(width: 3),

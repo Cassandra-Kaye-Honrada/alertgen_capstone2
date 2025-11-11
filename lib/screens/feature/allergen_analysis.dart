@@ -732,37 +732,168 @@ Return ONLY JSON:
   }
 
   Future<String?> findMatchingUserAllergen(
-    String allergenName,
-    List<String> userAllergens,
-  ) async {
-    String cleanAllergenName = allergenName.toLowerCase().trim();
+  String allergenName,
+  List<String> userAllergens,
+) async {
+  String cleanAllergenName = allergenName.toLowerCase().trim();
 
-    for (String userAllergen in userAllergens) {
-      String cleanUserAllergen = userAllergen.toLowerCase().trim();
+  Map<String, List<String>> allergenCategories = {
+    'nuts': [
+      'cashew', 'cashews',
+      'almond', 'almonds',
+      'walnut', 'walnuts',
+      'pistachio', 'pistachios',
+      'hazelnut', 'hazelnuts',
+      'pecan', 'pecans',
+      'macadamia', 'macadamias',
+      'brazil nut', 'brazil nuts',
+      'pine nut', 'pine nuts',
+      'chestnut', 'chestnuts',
+    ],
+    'tree nuts': [
+      'cashew', 'cashews',
+      'almond', 'almonds',
+      'walnut', 'walnuts',
+      'pistachio', 'pistachios',
+      'hazelnut', 'hazelnuts',
+      'pecan', 'pecans',
+      'macadamia', 'macadamias',
+      'brazil nut', 'brazil nuts',
+      'pine nut', 'pine nuts',
+      'chestnut', 'chestnuts',
+    ],
+    'shellfish': [
+      'shrimp', 'shrimps', 'prawn', 'prawns',
+      'crab', 'crabs',
+      'lobster', 'lobsters',
+      'crayfish',
+      'mussel', 'mussels',
+      'clam', 'clams',
+      'oyster', 'oysters',
+      'scallop', 'scallops',
+      'squid', 'squids',
+      'octopus',
+    ],
+    'crustacean': [
+      'shrimp', 'shrimps', 'prawn', 'prawns',
+      'crab', 'crabs',
+      'lobster', 'lobsters',
+      'crayfish',
+    ],
+    'fish': [
+      'tuna',
+      'salmon',
+      'tilapia',
+      'bangus', 'milkfish',
+      'cod',
+      'mackerel',
+      'sardines', 'sardine',
+      'anchovies', 'anchovy',
+      'galunggong',
+      'fish sauce', 'patis',
+      'fish paste', 'bagoong isda',
+    ],
+    'milk': [
+      'milk', 'dairy',
+      'cheese',
+      'butter',
+      'cream',
+      'yogurt', 'yoghurt',
+      'whey',
+      'casein',
+      'lactose',
+      'gatas',
+    ],
+    'dairy': [
+      'milk',
+      'cheese',
+      'butter',
+      'cream',
+      'yogurt', 'yoghurt',
+      'whey',
+      'casein',
+      'lactose',
+      'gatas',
+    ],
+    'soy': [
+      'soy', 'soya',
+      'soybean', 'soybeans',
+      'soy sauce', 'toyo',
+      'tofu', 'tokwa',
+      'edamame',
+      'soy protein',
+      'soy milk',
+    ],
+    'egg': ['egg', 'eggs', 'itlog', 'albumin'],
+    'eggs': ['egg', 'eggs', 'itlog', 'albumin'],
+    'wheat': ['wheat', 'gluten', 'flour', 'harina'],
+    'gluten': ['wheat', 'gluten', 'flour', 'harina'],
+    'sesame': ['sesame', 'sesame seed', 'sesame seeds', 'tahini'],
+  };
 
-      if (cleanAllergenName == cleanUserAllergen) {
-        return userAllergen;
-      }
+  for (String userAllergen in userAllergens) {
+    String cleanUserAllergen = userAllergen.toLowerCase().trim();
 
-      bool areEquivalent = await TranslationService.instance.areTermsEquivalent(
-        cleanAllergenName,
-        cleanUserAllergen,
-      );
-      if (areEquivalent) {
-        return userAllergen;
-      }
+    if (cleanAllergenName == cleanUserAllergen) {
+      return userAllergen;
+    }
 
-      if (isSingularPlural(cleanAllergenName, cleanUserAllergen)) {
-        return userAllergen;
-      }
+    if (isSingularPlural(cleanAllergenName, cleanUserAllergen)) {
+      return userAllergen;
+    }
+  }
 
-      if (areAllergenSynonyms(cleanAllergenName, cleanUserAllergen)) {
-        return userAllergen;
+  for (String userAllergen in userAllergens) {
+    String cleanUserAllergen = userAllergen.toLowerCase().trim();
+
+    if (allergenCategories.containsKey(cleanUserAllergen)) {
+      List<String> categoryItems = allergenCategories[cleanUserAllergen]!;
+      
+      for (String categoryItem in categoryItems) {
+        if (cleanAllergenName == categoryItem ||
+            cleanAllergenName.contains(categoryItem) ||
+            categoryItem.contains(cleanAllergenName)) {
+          print('Category match: "$cleanAllergenName" matches user allergen "$cleanUserAllergen"');
+          return userAllergen;
+        }
       }
     }
 
-    return null;
+    if (allergenCategories.containsKey(cleanAllergenName)) {
+      List<String> categoryItems = allergenCategories[cleanAllergenName]!;
+      
+      if (categoryItems.any((item) => 
+          item == cleanUserAllergen || 
+          item.contains(cleanUserAllergen) ||
+          cleanUserAllergen.contains(item))) {
+        print('category match: user allergen "$cleanUserAllergen" is in detected category "$cleanAllergenName"');
+        return userAllergen;
+      }
+    }
   }
+
+  for (String userAllergen in userAllergens) {
+    String cleanUserAllergen = userAllergen.toLowerCase().trim();
+    
+    bool areEquivalent = await TranslationService.instance.areTermsEquivalent(
+      cleanAllergenName,
+      cleanUserAllergen,
+    );
+    if (areEquivalent) {
+      return userAllergen;
+    }
+  }
+
+  for (String userAllergen in userAllergens) {
+    String cleanUserAllergen = userAllergen.toLowerCase().trim();
+    
+    if (areAllergenSynonyms(cleanAllergenName, cleanUserAllergen)) {
+      return userAllergen;
+    }
+  }
+
+  return null;
+}
 
   Future<void> updateAllergenHighlighting(List<AllergenInfo> allergens) async {
     final allergenData = await getUserAllergenData();

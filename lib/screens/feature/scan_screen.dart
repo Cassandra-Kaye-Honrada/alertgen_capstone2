@@ -1383,6 +1383,7 @@ CRITICAL REQUIREMENTS:
   String getAllergenAnalysisPrompt(List<String> userAllergens) {
     String userAllergensText =
         userAllergens.isNotEmpty ? userAllergens.join(', ') : '';
+
     return '''
 You are an expert allergen detection specialist with advanced linguistic intelligence. Analyze the provided ingredients list to identify SPECIFIC allergens from BOTH the 9 FDA major allergens AND the user's custom allergens.
 
@@ -1390,7 +1391,7 @@ CRITICAL DETECTION RULES:
 - Detect SPECIFIC allergens, NOT categories (e.g., "Shrimp" not "Shellfish", "Cashew" not "Tree Nuts")
 - AVOID DUPLICATE ALLERGENS - Each unique allergen should only appear ONCE in the results
 - If multiple specific allergens exist in the same FDA category, list them SEPARATELY (e.g., both "Shrimp" and "Crab" if both are present)
-
+- **CRITICAL**: When detecting tree nuts, list EACH TYPE separately (Cashew, Almond, Walnut, Hazelnut, Pecan, Pistachio, Macadamia, etc.)
 
 FDA MAJOR ALLERGENS - DETECT SPECIFICALLY:
 
@@ -1423,7 +1424,8 @@ FDA MAJOR ALLERGENS - DETECT SPECIFICALLY:
     - Name as: "Octopus"
     - Name as: "Snails"
 
-6. TREE NUT ALLERGENS (detect each nut separately - NOT peanuts, NOT coconut):
+6. TREE NUT ALLERGENS (detect EACH nut separately - NOT peanuts, NOT coconut):
+    - **CRITICAL**: Each tree nut must be listed separately with its own entry
     - Name as: "Cashew" (kasuy, cashew nuts)
     - Name as: "Almonds"
     - Name as: "Walnuts"
@@ -1434,6 +1436,7 @@ FDA MAJOR ALLERGENS - DETECT SPECIFICALLY:
     - Name as: "Pine Nuts"
     - Name as: "Brazil Nuts"
     - Name as: "Chestnuts"
+    - **Example**: If ingredients contain "cashews, almonds, walnuts" → create 3 separate allergen entries: one for Cashew, one for Almonds, one for Walnuts
 
 7. PEANUTS ALLERGEN (LEGUME - NOT A TREE NUT):
    - Name as: "Peanuts"
@@ -1465,14 +1468,21 @@ ENHANCED ALLERGEN DETECTION RULES WITH INTELLIGENT MATCHING:
     - If ingredient is "tuna" → allergen name is "Tuna" (NOT "Fish")
     - If ingredient is "soy sauce" → allergen name is "Soy" (NOT just listing ingredient)
     - If ingredient is "bagoong alamang" → allergen name is "Shrimp" (NOT "Shellfish")
-    - **SPECIAL SOY RULE**: If the ingredient is **"tofu"** and **"tofu"** is in the user's custom allergens, name the allergen as **"Tofu"**. Otherwise, name it **"Soy"**.
+    - **If ingredients contain multiple tree nuts (e.g., "cashews, almonds, walnuts") → create SEPARATE allergen entries for EACH: "Cashew", "Almonds", "Walnuts"**
 
 2. **MULTIPLE SPECIFIC ALLERGENS**: If dish contains multiple specific allergens from same FDA category, list each separately:
     - Example: If dish has both "shrimp paste" and "oyster sauce" → list TWO allergens: "Shrimp" and "Oysters"
-    - Example: If dish has both "cashews" and "almonds" → list TWO allergens: "Cashew" and "Almonds"
+    - **Example: If dish has "cashews", "almonds", and "walnuts" → list THREE allergens: "Cashew", "Almonds", "Walnuts"**
     - Example: If dish has "tuna" and "anchovies" → list TWO allergens: "Tuna" and "Anchovies"
 
-3. **SMART LINGUISTIC MATCHING**: Use AI intelligence to match allergens with variations:
+3. **USER ALLERGEN MATCHING - CATEGORY EXPANSION**:
+    - **CRITICAL**: If user allergen is "shellfish" → detect ALL specific shellfish separately (Shrimp, Crab, Oysters, Clams, Mussels, etc.) and mark EACH as isUserAllergen: true
+    - **CRITICAL**: If user allergen is "nut", "nuts", or "tree nuts" → detect ALL specific tree nuts separately (Cashew, Almonds, Walnuts, Hazelnuts, Pecans, Pistachios, Macadamia, etc.) and mark EACH as isUserAllergen: true
+    - **CRITICAL**: If user allergen is "fish" → detect ALL specific fish separately (Tuna, Salmon, Bangus, Anchovies, etc.) and mark EACH as isUserAllergen: true
+    - If user allergen is specific (e.g., "shrimp", "cashew") → only detect that specific allergen and mark it as isUserAllergen: true
+    - **Example**: User has "nuts" allergen, ingredients contain "cashews, almonds, walnuts" → create 3 separate entries ALL marked isUserAllergen: true
+
+4. **SMART LINGUISTIC MATCHING**: Use AI intelligence to match allergens with variations:
     - SINGULAR/PLURAL: "egg" matches "eggs", "shrimp" matches "shrimps", "cashew" matches "cashews"
     - SYNONYM MATCHING: "soy" matches "soybean"/"soya", "milk" matches "dairy", "gatas" matches "milk"
     - DERIVATIVE MATCHING: "wheat" matches "flour"/"gluten", "soy" matches "tofu"/"soy sauce"
@@ -1493,12 +1503,13 @@ ENHANCED ALLERGEN DETECTION RULES WITH INTELLIGENT MATCHING:
       * "halaan" = "Clams"
       * "pusit" = "Squid"
 
-4. **DEDUPLICATE ALLERGENS**: If same allergen found in multiple ingredients, list it ONCE with ALL sources:
+5. **DEDUPLICATE ALLERGENS**: If same allergen found in multiple ingredients, list it ONCE with ALL sources:
     - Example: "soy sauce" and "tofu" both contain soy → ONE "Soy" allergen with sources: "soy sauce, tofu"
     - Example: "shrimp" and "shrimp paste" → ONE "Shrimp" allergen with sources: "shrimp, shrimp paste"
     - Example: "milk" and "cheese" → ONE "Milk" allergen with sources: "milk, cheese"
+    - **BUT**: "cashews" and "almonds" are DIFFERENT allergens → TWO separate entries
 
-5. **CONTEXT-AWARE DETECTION**:
+6. **CONTEXT-AWARE DETECTION**:
     - Fish sauce (patis) → detect as "Fish Sauce"
     - Bagoong isda → detect as "Fish Paste"  
     - Bagoong alamang → detect as "Shrimp"
@@ -1506,15 +1517,6 @@ ENHANCED ALLERGEN DETECTION RULES WITH INTELLIGENT MATCHING:
     - Lumpia wrapper → detect as "Wheat"
     - Soy sauce (toyo) → detect as "Soy"
     - Shrimp paste (alamang) → detect as "Shrimp"
-
-6. **USER ALLERGEN MATCHING**: For custom allergens, be MORE inclusive and specific:
-    - Use linguistic intelligence to find related ingredients
-    - Match root words and common variations
-    - Consider both English and Filipino terms
-    - **IMPORTANT**: If user allergen is "shellfish" → detect ALL specific shellfish separately (Shrimp, Crab, Oysters, Clams, etc.) and mark each as isUserAllergen: true
-    - **IMPORTANT**: If user allergen is "nut" or "nuts" → detect ALL specific nuts separately (Cashew, Almonds, Walnuts, Peanuts, etc.) and mark each as isUserAllergen: true
-    - **IMPORTANT**: If user allergen is "fish" → detect ALL specific fish separately (Tuna, Salmon, Bangus, etc.) and mark each as isUserAllergen: true
-    - If user allergen is specific (e.g., "shrimp") → only detect that specific allergen
 
 7. **WHOLE-WORD MATCHING**: Avoid false positives:
     - "Eggplant" does NOT contain eggs
@@ -1537,7 +1539,7 @@ Return JSON with this exact structure:
 {
     "allergens": [
         {
-            "name": "Specific allergen name (e.g., 'Shrimp', 'Cashew', 'Tuna', 'Milk', 'Eggs' - NOT 'Shellfish' or 'Tree Nuts')",
+            "name": "Specific allergen name (e.g., 'Shrimp', 'Cashew', 'Almonds', 'Walnuts', 'Tuna', 'Milk', 'Eggs' - NOT 'Shellfish' or 'Tree Nuts')",
             "riskLevel": "severe|moderate|mild|safe",
             "symptoms": ["specific symptom1", "specific symptom2", "specific symptom3"],
             "sources": ["ingredient1", "ingredient2", "ingredient3"],
@@ -1553,7 +1555,9 @@ CRITICAL REQUIREMENTS:
 2. Check for BOTH FDA major allergens AND user's custom allergens
 3. ELIMINATE DUPLICATES - each unique specific allergen appears only once
 4. COMBINE SOURCES - if same allergen in multiple ingredients, list all sources together
-5. Provide appropriate risk levels and symptoms
+5. **LIST EACH TREE NUT SEPARATELY** - never group as "Tree Nuts" or "Mixed Nuts"
+6. **When user has category allergen (nuts, shellfish, fish), mark ALL specific items in that category as isUserAllergen: true**
+7. Provide appropriate risk levels and symptoms
 ''';
   }
 
@@ -3034,11 +3038,11 @@ GUIDELINES:
                   case 'moderate':
                     severity = 0.5;
                     break;
-                  case 'mild': //
+                  case 'mild':
                     severity = 0.0;
                     break;
                   default:
-                    severity = 0.5;
+                    severity = 0.0;
                 }
                 severityMap[allergenName] = severity;
               }

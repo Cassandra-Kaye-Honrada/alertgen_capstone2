@@ -376,18 +376,6 @@ class _IngredientAllergenModalState extends State<IngredientAllergenModal> {
     return false;
   }
 
-  Color getSeverityColor(double severity) {
-    if (severity < 0.33) return Colors.green;
-    if (severity < 0.67) return Colors.orange;
-    return Colors.red;
-  }
-
-  String getSeverityText(double severity) {
-    if (severity < 0.33) return 'Mild';
-    if (severity < 0.67) return 'Moderate';
-    return 'Severe';
-  }
-
   Future<List<Widget>> buildAllergenWidgets() async {
     List<Widget> widgets = [];
 
@@ -403,12 +391,6 @@ class _IngredientAllergenModalState extends State<IngredientAllergenModal> {
         displayName = matchedAllergenKey;
       }
 
-      double severity =
-          matchedAllergenKey != null
-              ? displaySeverityData[matchedAllergenKey] ?? 0.5
-              : 0.5;
-      Color severityColor = getSeverityColor(severity);
-
       widgets.add(
         Column(
           children: [
@@ -416,38 +398,31 @@ class _IngredientAllergenModalState extends State<IngredientAllergenModal> {
               width: 60,
               height: 60,
               decoration: BoxDecoration(
-                color: severityColor.withOpacity(0.2),
+                color: Colors.white,
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: severityColor, width: 2),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.08),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
               ),
-              child: Center(
-                child: getAllergenIcon(allergen.name, severityColor),
-              ),
+              child: Center(child: getAllergenIcon(allergen.name)),
             ),
             const SizedBox(height: 8),
             SizedBox(
               width: 70,
-              child: Column(
-                children: [
-                  Text(
-                    displayName,
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.grey.shade700,
-                      fontWeight: FontWeight.w600,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    getSeverityText(severity),
-                    style: TextStyle(
-                      fontSize: 10,
-                      color: severityColor,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ],
+              child: Text(
+                displayName,
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Colors.grey.shade700,
+                  fontWeight: FontWeight.w600,
+                ),
+                textAlign: TextAlign.center,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
               ),
             ),
           ],
@@ -458,7 +433,7 @@ class _IngredientAllergenModalState extends State<IngredientAllergenModal> {
     return widgets;
   }
 
-  Widget getAllergenIcon(String allergenName, Color severityColor) {
+  Widget getAllergenIcon(String allergenName) {
     IconData iconData;
     final String name = allergenName.toLowerCase().trim();
 
@@ -515,7 +490,7 @@ class _IngredientAllergenModalState extends State<IngredientAllergenModal> {
         break;
     }
 
-    return FaIcon(iconData, color: severityColor, size: 30);
+    return FaIcon(iconData, color: AppColors.primary, size: 30);
   }
 
   @override
@@ -634,7 +609,6 @@ class _IngredientAllergenModalState extends State<IngredientAllergenModal> {
                               color: Colors.green.shade900,
                             ),
                           ),
-                          const Spacer(),
                         ],
                       ),
                       const SizedBox(height: 12),

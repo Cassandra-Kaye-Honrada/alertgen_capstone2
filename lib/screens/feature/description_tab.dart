@@ -298,25 +298,25 @@ class _DescriptionTabState extends State<DescriptionTab>
                 'Ingredients Analysis',
                 style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
-              if (!isReanalyzing && !widget.isFromHistory)
-                IconButton(
-                  onPressed: widget.toggleEdit,
-                  icon: Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color:
-                          widget.isEditing
-                              ? Colors.red[50]
-                              : AppColors.primary.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Icon(
-                      widget.isEditing ? Icons.close : Icons.edit,
-                      color: widget.isEditing ? Colors.red : AppColors.primary,
-                      size: 20,
-                    ),
-                  ),
-                ),
+              // if (!isReanalyzing && !widget.isFromHistory)
+              //   IconButton(
+              //     onPressed: widget.toggleEdit,
+              //     icon: Container(
+              //       padding: const EdgeInsets.all(8),
+              //       decoration: BoxDecoration(
+              //         color:
+              //             widget.isEditing
+              //                 ? Colors.red[50]
+              //                 : AppColors.primary.withOpacity(0.1),
+              //         borderRadius: BorderRadius.circular(8),
+              //       ),
+              //       child: Icon(
+              //         widget.isEditing ? Icons.close : Icons.edit,
+              //         color: widget.isEditing ? Colors.red : AppColors.primary,
+              //         size: 20,
+              //       ),
+              //     ),
+              //   ),
             ],
           ),
           const SizedBox(height: 12),

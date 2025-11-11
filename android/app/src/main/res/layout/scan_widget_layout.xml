@@ -15,7 +15,6 @@
         android:id="@+id/scan_widget_container"
         android:elevation="6dp">
 
-        <!-- Scan Icon with Gradient Background -->
         <LinearLayout
             android:layout_width="64dp"
             android:layout_height="64dp"
@@ -31,7 +30,6 @@
                 android:textSize="36sp" />
         </LinearLayout>
 
-        <!-- Scan Label -->
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
@@ -42,7 +40,6 @@
             android:gravity="center"
             android:letterSpacing="0.02" />
 
-        <!-- Subtitle -->
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"

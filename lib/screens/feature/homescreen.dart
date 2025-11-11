@@ -433,90 +433,92 @@ class HomescreenState extends State<Homescreen> {
       ),
     );
   }
-  // Replace the extractHistoricalSeverityData method in homescreen.dart
-  // Starting around line 460
+Map<String, double> extractHistoricalSeverityData(
+  Map<String, dynamic> historyItem,
+) {
+  Map<String, double> severityMap = {};
 
-  Map<String, double> extractHistoricalSeverityData(
-    Map<String, dynamic> historyItem,
-  ) {
-    Map<String, double> severityMap = {};
+  List<dynamic> userAllergensAtScanTime =
+      historyItem['userAllergensAtScanTime'] ?? [];
 
-    List<dynamic> userAllergensAtScanTime =
-        historyItem['userAllergensAtScanTime'] ?? [];
+  print('User allergens at scan time: $userAllergensAtScanTime');
 
-    print(userAllergensAtScanTime);
-
-    if (userAllergensAtScanTime.isNotEmpty) {
-      print('Loading from userAllergensAtScanTime');
-      for (var allergenData in userAllergensAtScanTime) {
-        if (allergenData is Map<String, dynamic>) {
-          String name =
-              allergenData['name']?.toString().toLowerCase().trim() ?? '';
-          double severity = (allergenData['severity'] ?? 0.5).toDouble();
-          if (name.isNotEmpty) {
-            severityMap[name] = severity;
-            print(' $name: $severity');
-          }
-        } else if (allergenData is String) {
-          String allergenName = allergenData.toLowerCase().trim();
-
-          List<dynamic> allergens = historyItem['allergens'] ?? [];
-          for (var allergen in allergens) {
-            if (allergen is Map<String, dynamic>) {
-              String name =
-                  allergen['name']?.toString().toLowerCase().trim() ?? '';
-              if (name == allergenName && allergen['isUserAllergen'] == true) {
-                double severity = (allergen['severity'] ?? 0.5).toDouble();
-                severityMap[allergenName] = severity;
-                print('$allergenName: $severity (from allergen data)');
-              }
-            }
-          }
+  if (userAllergensAtScanTime.isNotEmpty) {
+    print('Loading from userAllergensAtScanTime');
+    for (var allergenData in userAllergensAtScanTime) {
+      if (allergenData is Map<String, dynamic>) {
+        String name =
+            allergenData['name']?.toString().toLowerCase().trim() ?? '';
+        double severity = (allergenData['severity'] ?? 0.5).toDouble();
+        if (name.isNotEmpty) {
+          severityMap[name] = severity;
+          print('  $name: $severity');
         }
-      }
-    } else {
-      print('Loading from allergens array (fallback)');
-      List<dynamic> allergens = historyItem['allergens'] ?? [];
-      for (var allergen in allergens) {
-        if (allergen is Map<String, dynamic> &&
-            allergen['isUserAllergen'] == true) {
-          String allergenName =
-              allergen['name']?.toString().toLowerCase().trim() ?? '';
+      } else if (allergenData is String) {
+        String allergenName = allergenData.toLowerCase().trim();
 
-          double severity;
-          if (allergen.containsKey('severity')) {
-            severity = (allergen['severity'] ?? 0.5).toDouble();
-            print(' $allergenName: $severity (from severity field)');
-          } else {
-            String riskLevel =
-                allergen['riskLevel']?.toString().toLowerCase() ?? 'moderate';
-
-            switch (riskLevel) {
-              case 'severe':
-                severity = 0.8;
-                break;
-              case 'moderate':
-                severity = 0.5;
-                break;
-              case 'mild':
-                severity = 0.2;
-                break;
-              default:
-                severity = 0.0;
+        List<dynamic> allergens = historyItem['allergens'] ?? [];
+        for (var allergen in allergens) {
+          if (allergen is Map<String, dynamic>) {
+            String name =
+                allergen['name']?.toString().toLowerCase().trim() ?? '';
+            if (name == allergenName && allergen['isUserAllergen'] == true) {
+              double severity = (allergen['severity'] ?? 0.5).toDouble();
+              severityMap[allergenName] = severity;
+              print('$allergenName: $severity (from allergen data)');
             }
-            print('$allergenName: $severity (from riskLevel: $riskLevel)');
-          }
-
-          if (allergenName.isNotEmpty) {
-            severityMap[allergenName] = severity;
           }
         }
       }
     }
+  } else {
+    print('Loading from allergens array (fallback)');
+    List<dynamic> allergens = historyItem['allergens'] ?? [];
+    for (var allergen in allergens) {
+      if (allergen is Map<String, dynamic> &&
+          allergen['isUserAllergen'] == true) {
+        String allergenName =
+            allergen['name']?.toString().toLowerCase().trim() ?? '';
 
-    print('Final severity map: $severityMap');
-    return severityMap;
+        double severity;
+        if (allergen.containsKey('severity')) {
+          severity = (allergen['severity'] ?? 0.5).toDouble();
+          print('  $allergenName: $severity (from severity field)');
+        } else {
+          String riskLevel =
+              allergen['riskLevel']?.toString().toLowerCase() ?? 'moderate';
+
+          switch (riskLevel) {
+            case 'severe':
+              severity = 0.8;
+              break;
+            case 'moderate':
+              severity = 0.5;
+              break;
+            case 'mild':
+              severity = 0.2; 
+              break;
+            case 'safe':
+              severity = 0.0;
+              break;
+            default:
+             
+              severity = 0.2;
+              print('Unknown risk level "$riskLevel" for $allergenName, defaulting to 0.2 (mild)');
+          }
+          print('$allergenName: $severity (from riskLevel: $riskLevel)');
+        }
+
+        if (allergenName.isNotEmpty) {
+          severityMap[allergenName] = severity;
+        }
+      }
+    }
   }
+
+  print('Final severity map: $severityMap');
+  return severityMap;
+}
 
   Future<void> navigateToFoodResult(Map<String, dynamic> historyItem) async {
     final dishName = historyItem['dishName'] ?? 'Unknown Dish';

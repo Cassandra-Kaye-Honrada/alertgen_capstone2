@@ -1067,6 +1067,6 @@ class _ScanHistoryScreenState extends State<ScanHistoryScreen> {
           ),
         ],
       ),
-    );
+    );  
   }
 }
