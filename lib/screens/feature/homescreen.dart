@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:allergen/screens/feature/educational/Informational_Screen.dart';
 import 'package:allergen/screens/feature/educational/educational_allergen.dart';
 import 'package:allergen/screens/feature/chatbot/floating_chatbot.dart';
 import 'package:allergen/screens/health_environment_analytics/widgets/AirQualityWidget.dart';
@@ -1747,7 +1748,11 @@ Map<String, double> extractHistoricalSeverityData(
               setState(() => currentIndex = 1);
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (context) => AllergyScreen()),
+                MaterialPageRoute(
+                  builder:
+                      (context) =>
+                          AllergyScreen()
+                ),
               );
             },
             child: Column(
