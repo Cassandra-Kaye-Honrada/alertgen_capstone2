@@ -1751,7 +1751,8 @@ Map<String, double> extractHistoricalSeverityData(
                 MaterialPageRoute(
                   builder:
                       (context) =>
-                          AllergyScreen()
+                          //AllergyScreen()
+                          FoodAllergyScreen()
                 ),
               );
             },
