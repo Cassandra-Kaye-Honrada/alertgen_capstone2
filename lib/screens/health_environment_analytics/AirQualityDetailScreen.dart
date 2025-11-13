@@ -509,14 +509,7 @@ class _AirQualityDetailScreenState extends State<AirQualityDetailScreen>
           GestureDetector(
             onTap:
                 () => Navigator.of(context).popUntil((route) => route.isFirst),
-            child: Image.asset(
-              'assets/navigation/menu_inactive.png',
-              width: 24,
-              height: 24,
-              errorBuilder:
-                  (context, error, stackTrace) =>
-                      Icon(Icons.home, color: Color(0xFF64748B), size: 24),
-            ),
+            child: Icon(Icons.home, color: AppColors.Gray, size: 24),
           ),
           GestureDetector(
             onTap: () {},
@@ -534,9 +527,9 @@ class _AirQualityDetailScreenState extends State<AirQualityDetailScreen>
               );
             },
             child: Image.asset(
-              'assets/navigation/scan_inactive.png',
-              width: 24,
-              height: 24,
+              'assets/navigation/scan_gray.png',
+              width: 18,
+              height: 18,
               errorBuilder:
                   (context, error, stackTrace) => Icon(
                     Icons.camera_alt,
@@ -554,7 +547,7 @@ class _AirQualityDetailScreenState extends State<AirQualityDetailScreen>
             },
             child: const Icon(
               Icons.school_outlined,
-              color: AppColors.primaryColor3,
+              color: AppColors.Gray,
               size: 24,
             ),
           ),
@@ -569,14 +562,7 @@ class _AirQualityDetailScreenState extends State<AirQualityDetailScreen>
                 ),
               );
             },
-            child: Image.asset(
-              'assets/navigation/Profile_inactive.png',
-              width: 24,
-              height: 24,
-              errorBuilder:
-                  (context, error, stackTrace) =>
-                      Icon(Icons.person, color: Color(0xFF00BCD4), size: 24),
-            ),
+            child: Icon(Icons.person, color: AppColors.Gray, size: 24),
           ),
         ],
       ),

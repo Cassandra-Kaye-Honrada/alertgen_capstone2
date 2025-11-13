@@ -1716,14 +1716,7 @@ class HomescreenState extends State<Homescreen> {
         children: [
           GestureDetector(
             onTap: () => setState(() => currentIndex = 0),
-            child: Image.asset(
-              'assets/navigation/menu_active.png',
-              width: 24,
-              height: 24,
-              errorBuilder:
-                  (context, error, stackTrace) =>
-                      Icon(Icons.home, color: Color(0xFF64748B), size: 24),
-            ),
+            child: Icon(Icons.home, color: AppColors.primary, size: 35),
           ),
 
           // ✅ UPDATED: Navigate to Air Quality Home Screen
@@ -1744,12 +1737,7 @@ class HomescreenState extends State<Homescreen> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(
-                  Icons.analytics_outlined,
-                  color:
-                      currentIndex == 1 ? Color(0xFF1AA2CC) : Color(0xFF00BCD4),
-                  size: 24,
-                ),
+                Icon(Icons.analytics_outlined, color: AppColors.Gray, size: 24),
               ],
             ),
           ),
@@ -1763,16 +1751,17 @@ class HomescreenState extends State<Homescreen> {
                   ),
                 ),
             child: Image.asset(
-              'assets/navigation/scan_inactive.png',
-              width: 24,
-              height: 24,
+              'assets/navigation/scan_gray.png',
+              width: 18,
+              height: 18,
               errorBuilder:
                   (context, error, stackTrace) => Icon(
                     Icons.camera_alt,
-                    color: Color(0xFF1AA2CC),
+                    color: Color(0xFF64748B),
                     size: 24,
                   ),
             ),
+            //Icon(Icons.camera_alt, color: AppColors.Gray, size: 24),
           ),
 
           GestureDetector(
@@ -1786,12 +1775,7 @@ class HomescreenState extends State<Homescreen> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(
-                  Icons.school_outlined,
-                  color:
-                      currentIndex == 1 ? Color(0xFF1AA2CC) : Color(0xFF00BCD4),
-                  size: 24,
-                ),
+                Icon(Icons.school_outlined, color: AppColors.Gray, size: 24),
               ],
             ),
           ),
@@ -1808,14 +1792,7 @@ class HomescreenState extends State<Homescreen> {
                 ),
               );
             },
-            child: Image.asset(
-              'assets/navigation/Profile_inactive.png',
-              width: 24,
-              height: 24,
-              errorBuilder:
-                  (context, error, stackTrace) =>
-                      Icon(Icons.person, color: Color(0xFF00BCD4), size: 24),
-            ),
+            child: Icon(Icons.person, color: AppColors.Gray, size: 24),
           ),
         ],
       ),

@@ -916,14 +916,7 @@ class _UserProfileState extends State<UserProfile> {
               );
             },
 
-            child: Image.asset(
-              'assets/navigation/menu_inactive.png',
-              width: 24,
-              height: 24,
-              errorBuilder:
-                  (context, error, stackTrace) =>
-                      Icon(Icons.home, color: Color(0xFF64748B), size: 24),
-            ),
+            child: Icon(Icons.home, color: AppColors.Gray, size: 24),
           ),
 
           // ✅ UPDATED: Navigate to Air Quality Home Screen
@@ -944,14 +937,7 @@ class _UserProfileState extends State<UserProfile> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(
-                  Icons.analytics_outlined,
-                  color:
-                      currentIndex == 1
-                          ? AppColors.primary
-                          : AppColors.primaryColor3,
-                  size: 24,
-                ),
+                Icon(Icons.analytics_outlined, color: AppColors.Gray, size: 24),
               ],
             ),
           ),
@@ -965,9 +951,9 @@ class _UserProfileState extends State<UserProfile> {
                   ),
                 ),
             child: Image.asset(
-              'assets/navigation/scan_inactive.png',
-              width: 24,
-              height: 24,
+              'assets/navigation/scan_gray.png',
+              width: 18,
+              height: 18,
               errorBuilder:
                   (context, error, stackTrace) => Icon(
                     Icons.camera_alt,
@@ -988,14 +974,7 @@ class _UserProfileState extends State<UserProfile> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(
-                  Icons.school_outlined,
-                  color:
-                      currentIndex == 1
-                          ? AppColors.primary
-                          : AppColors.primaryColor3,
-                  size: 24,
-                ),
+                Icon(Icons.school_outlined, color: AppColors.Gray, size: 24),
               ],
             ),
           ),
@@ -1012,18 +991,7 @@ class _UserProfileState extends State<UserProfile> {
                 ),
               );
             },
-            child: Image.asset(
-              'assets/navigation/profile_active.png',
-              width: 24,
-              height: 24,
-              errorBuilder: (context, error, stackTrace) {
-                return const Icon(
-                  Icons.person,
-                  color: Color(0xFF00BCD4),
-                  size: 24,
-                );
-              },
-            ),
+            child: const Icon(Icons.person, color: AppColors.primary, size: 35),
           ),
         ],
       ),
