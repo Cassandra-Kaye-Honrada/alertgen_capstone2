@@ -26,11 +26,11 @@ class AirQualityTab extends StatelessWidget {
         children: [
           _buildAQIOverview(),
           const SizedBox(height: 16),
-          _buildEnvironmentalScore(),
+          buildEnvironmentalScore(),
           const SizedBox(height: 16),
-          if (weatherData != null) _buildWeatherCard(),
+          if (weatherData != null) buildWeatherCard(),
           if (weatherData != null) const SizedBox(height: 16),
-          _buildPollutantChart(),
+          buildPollutantChart(),
           const SizedBox(height: 16),
           _buildAQITrendChart(),
           const SizedBox(height: 16),
@@ -42,9 +42,7 @@ class AirQualityTab extends StatelessWidget {
     );
   }
 
-  // ============================================================================
-  // MAIN SECTIONS
-  // ============================================================================
+ 
 
   Widget _buildAQIOverview() {
     final naqiColor = _AQIColors.getColor(airQualityData.aqi);
@@ -85,7 +83,7 @@ class AirQualityTab extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 16),
-          _buildAQIStatusMessage(naqiColor),
+          buildAQIStatusMessage(naqiColor),
         ],
       ),
     );
@@ -165,9 +163,9 @@ class AirQualityTab extends StatelessWidget {
     );
   }
 
-  Widget _buildAQIStatusMessage(Color naqiColor) {
-    final message = _getDetailedAQIMessage(airQualityData.aqi);
-    final icon = _getAQIStatusIcon(airQualityData.aqi);
+  Widget buildAQIStatusMessage(Color naqiColor) {
+    final message = getDetailedAQIMessage(airQualityData.aqi);
+    final icon = getAQIStatusIcon(airQualityData.aqi);
 
     return Container(
       padding: const EdgeInsets.all(14),
@@ -195,7 +193,7 @@ class AirQualityTab extends StatelessWidget {
     );
   }
 
-  Widget _buildEnvironmentalScore() {
+  Widget buildEnvironmentalScore() {
     final analysis = _EnvironmentalAnalyzer(
       airQualityData: airQualityData,
       weatherData: weatherData,
@@ -208,21 +206,21 @@ class AirQualityTab extends StatelessWidget {
       iconColor: _ScoreHelper.getColor(analysis.overallScore),
       child: Column(
         children: [
-          _buildOverallScore(analysis.overallScore),
+          buildOverallScore(analysis.overallScore),
           const SizedBox(height: 20),
-          _buildCategoryScore('Air Quality', analysis.airScore),
-          _buildCategoryScore('Weather', analysis.weatherScore),
-          _buildCategoryScore('Health Risk', analysis.healthScore),
+          buildCategoryScore('Air Quality', analysis.airScore),
+          buildCategoryScore('Weather', analysis.weatherScore),
+          buildCategoryScore('Health Risk', analysis.healthScore),
           if (analysis.alerts.isNotEmpty) ...[
             const SizedBox(height: 16),
-            _buildAlertsSection(analysis.alerts),
+            buildAlertsSection(analysis.alerts),
           ],
         ],
       ),
     );
   }
 
-  Widget _buildOverallScore(double score) {
+  Widget buildOverallScore(double score) {
     final color = _ScoreHelper.getColor(score);
     return Container(
       padding: const EdgeInsets.all(16),
@@ -280,7 +278,7 @@ class AirQualityTab extends StatelessWidget {
     );
   }
 
-  Widget _buildCategoryScore(String label, double score) {
+  Widget buildCategoryScore(String label, double score) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 14),
       child: Column(
@@ -324,7 +322,7 @@ class AirQualityTab extends StatelessWidget {
     );
   }
 
-  Widget _buildAlertsSection(List<String> alerts) {
+  Widget buildAlertsSection(List<String> alerts) {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
@@ -389,18 +387,18 @@ class AirQualityTab extends StatelessWidget {
     );
   }
 
-  Widget _buildWeatherCard() {
+  Widget buildWeatherCard() {
     return _UniformCard(
-      icon: _getWeatherIcon(weatherData!.icon),
+      icon: getWeatherIcon(weatherData!.icon),
       title: 'Weather',
       iconColor: Colors.blue[600]!,
       child: Column(
         children: [
           Row(
             children: [
-              Expanded(child: _buildWeatherMainDisplay()),
+              Expanded(child: buildWeatherMainDisplay()),
               Container(width: 1, height: 100, color: Colors.grey[300]),
-              Expanded(child: _buildWeatherMetrics()),
+              Expanded(child: buildWeatherMetrics()),
             ],
           ),
           const SizedBox(height: 16),
@@ -416,7 +414,7 @@ class AirQualityTab extends StatelessWidget {
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(
-                    _getWeatherImpact(),
+                    getWeatherImpact(),
                     style: TextStyle(
                       fontSize: 12,
                       color: Colors.blue[900],
@@ -432,11 +430,11 @@ class AirQualityTab extends StatelessWidget {
     );
   }
 
-  Widget _buildWeatherMainDisplay() {
+  Widget buildWeatherMainDisplay() {
     return Column(
       children: [
         BoxedIcon(
-          _getWeatherIcon(weatherData!.icon),
+          getWeatherIcon(weatherData!.icon),
           size: 48,
           color: Colors.blue[600],
         ),
@@ -457,7 +455,7 @@ class AirQualityTab extends StatelessWidget {
     );
   }
 
-  Widget _buildWeatherMetrics() {
+  Widget buildWeatherMetrics() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -482,7 +480,7 @@ class AirQualityTab extends StatelessWidget {
     );
   }
 
-  Widget _buildPollutantChart() {
+  Widget buildPollutantChart() {
     final sortedPollutants =
         airQualityData.components.entries.toList()
           ..sort((a, b) => b.value.compareTo(a.value));
@@ -501,13 +499,13 @@ class AirQualityTab extends StatelessWidget {
               : Column(
                 children:
                     sortedPollutants
-                        .map((entry) => _buildPollutantBar(entry, maxValue))
+                        .map((entry) => buildPollutantBar(entry, maxValue))
                         .toList(),
               ),
     );
   }
 
-  Widget _buildPollutantBar(MapEntry<String, double> entry, double maxValue) {
+  Widget buildPollutantBar(MapEntry<String, double> entry, double maxValue) {
     final percentage = (entry.value / maxValue).clamp(0.0, 1.0);
     final isDominant =
         airQualityData.dominantPollutant.toLowerCase() ==
@@ -969,7 +967,7 @@ class AirQualityTab extends StatelessWidget {
     return 'Emergency conditions';
   }
 
-  IconData _getAQIStatusIcon(int aqi) {
+  IconData getAQIStatusIcon(int aqi) {
     if (aqi <= 50) return Icons.check_circle;
     if (aqi <= 100) return Icons.check_circle_outline;
     if (aqi <= 200) return Icons.warning_amber;
@@ -977,7 +975,7 @@ class AirQualityTab extends StatelessWidget {
     return Icons.dangerous;
   }
 
-  String _getDetailedAQIMessage(int aqi) {
+  String getDetailedAQIMessage(int aqi) {
     if (aqi <= 50) return 'Excellent! Great day for outdoor activities';
     if (aqi <= 100) return 'Good air quality. Enjoy outdoor activities';
     if (aqi <= 200) return 'Moderate. Sensitive groups should limit exposure';
@@ -994,7 +992,7 @@ class AirQualityTab extends StatelessWidget {
     return 'Avoid outdoor exposure';
   }
 
-  String _getWeatherImpact() {
+  String getWeatherImpact() {
     if (weatherData == null) return 'Weather data not available';
 
     final wind = weatherData!.windSpeed;
@@ -1026,7 +1024,7 @@ class AirQualityTab extends StatelessWidget {
     };
   }
 
-  IconData _getWeatherIcon(String iconCode) {
+  IconData getWeatherIcon(String iconCode) {
     const iconMap = {
       '01d': WeatherIcons.day_sunny,
       '01n': WeatherIcons.night_clear,

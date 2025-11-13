@@ -109,6 +109,10 @@ class _CameraScannerScreenState extends State<CameraScannerScreen>
       }
     } catch (e) {
       print('Error initializing camera: $e');
+      showSnackBar(
+        'Unable to access camera. Please check permissions.',
+        Colors.red.shade700,
+      );
     }
   }
 
@@ -160,6 +164,10 @@ class _CameraScannerScreenState extends State<CameraScannerScreen>
       setState(() {});
     } catch (e) {
       print('Error toggling flash: $e');
+      showSnackBar(
+        'Flash setting unavailable on this device.',
+        Colors.orange.shade700,
+      );
     }
   }
 
@@ -174,7 +182,10 @@ class _CameraScannerScreenState extends State<CameraScannerScreen>
       await analyzeImage(imageFile);
     } catch (e) {
       setState(() => loading = false);
-      showSnackBar('Error capturing image: $e', Colors.red);
+      showSnackBar(
+        'Unable to capture photo. Please try again.',
+        Colors.red.shade700,
+      );
     }
   }
 
@@ -193,7 +204,10 @@ class _CameraScannerScreenState extends State<CameraScannerScreen>
       }
     } catch (e) {
       setState(() => loading = false);
-      showSnackBar('Error picking image: $e', Colors.red);
+      showSnackBar(
+        'Unable to access ${source == ImageSource.gallery ? "gallery" : "camera"}. Please check permissions.',
+        Colors.red.shade700,
+      );
     }
   }
 
@@ -213,9 +227,7 @@ class _CameraScannerScreenState extends State<CameraScannerScreen>
       setState(() {
         isSkinAnalysis = (imageType == 'skin');
         analysisStatus =
-            isSkinAnalysis
-                ? 'Analyzing skin condition/allergy...'
-                : 'Analyzing food...';
+            isSkinAnalysis ? 'Analyzing skin allergy...' : 'Analyzing food...';
       });
 
       if (imageType == 'skin') {
@@ -242,7 +254,10 @@ class _CameraScannerScreenState extends State<CameraScannerScreen>
         analysisStatus = '';
         isSkinAnalysis = false;
       });
-      showSnackBar('Error analyzing image: $e', Colors.red);
+      showSnackBar(
+        'Unable to analyze image. Please ensure the photo is clear and try again.',
+        Colors.red.shade700,
+      );
     }
   }
 
@@ -411,7 +426,7 @@ Return JSON:
                               child: Text(
                                 reason.isNotEmpty
                                     ? reason
-                                    : 'This image doesn\'t appear to contain food or a skin condition.',
+                                    : 'This image doesn\'t appear to contain food or a skin allergy.',
                                 style: TextStyle(
                                   fontSize: 14,
                                   color: Colors.grey[800],
@@ -465,7 +480,7 @@ Return JSON:
                       const SizedBox(height: 12),
                       buildScanOption(
                         Icons.health_and_safety_rounded,
-                        'Skin Conditions',
+                        'Skin Allergy',
                         'Allergic reactions, rashes, hives, eczema',
                         const Color(0xFF2196F3),
                       ),
@@ -773,7 +788,7 @@ CRITICAL REQUIREMENTS:
           imageHash,
         );
       } else {
-        showSnackBar('Unable to analyze skin condition', Colors.red);
+        showSnackBar('Unable to analyze skin allergy', Colors.red);
         setState(() {
           image = null;
           loading = false;
@@ -784,7 +799,7 @@ CRITICAL REQUIREMENTS:
         loading = false;
         analysisStatus = '';
       });
-      showSnackBar('Error analyzing skin condition: $e', Colors.red);
+      showSnackBar('Error analyzing skin allergy: $e', Colors.red);
     }
   }
 
@@ -982,9 +997,26 @@ CRITICAL REQUIREMENTS:
   void showSnackBar(String message, Color color) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(message),
+        content: Text(
+          message,
+          style: const TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w500,
+            color: Colors.white,
+          ),
+        ),
         backgroundColor: color,
-        behavior: SnackBarBehavior.fixed,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        margin: const EdgeInsets.all(16),
+        duration: const Duration(seconds: 3),
+        action: SnackBarAction(
+          label: 'Dismiss',
+          textColor: Colors.white,
+          onPressed: () {
+            ScaffoldMessenger.of(context).hideCurrentSnackBar();
+          },
+        ),
       ),
     );
   }
@@ -1862,7 +1894,6 @@ CRITICAL RULES:
 NOW ANALYZE THE IMAGE.
 ''';
 
-
   Future<void> analyzeOCRText(String ocrText, File imageFile) async {
     if (apiKey == 'YOUR_API_KEY_HERE') {
       setState(() => loading = false);
@@ -1893,7 +1924,7 @@ Return only the product name.
       String possibleProductName = (quickResponse.text ?? '').trim();
 
       setState(() {
-        analysisStatus = 'Checking cache...';
+        analysisStatus = 'Analyzing product label...';
       });
 
       var cachedData = await allergenAnalysis.checkFoodCache(

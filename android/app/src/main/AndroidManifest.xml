@@ -105,7 +105,18 @@
                 android:resource="@xml/scan_widget_info" />
         </receiver>
 
-        <!-- ✅ CRITICAL: Flutter Local Notifications Receivers -->
+          <receiver
+        android:name=".AirQualityWidgetProvider"
+        android:exported="true">
+        <intent-filter>
+            <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+        </intent-filter>
+        <meta-data
+            android:name="android.appwidget.provider"
+            android:resource="@xml/air_quality_widget_info" />
+    </receiver>
+
+        <!--  CRITICAL: Flutter Local Notifications Receivers -->
         <receiver 
             android:exported="false" 
             android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationReceiver" />

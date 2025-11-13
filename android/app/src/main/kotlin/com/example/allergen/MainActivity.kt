@@ -134,53 +134,60 @@ class MainActivity: FlutterActivity() {
         handleIntent(intent)
     }
 
-    private fun handleIntent(intent: Intent?) {
-        intent?.let {
-            Log.d(TAG, "🔗 Handling intent - Action: ${it.action}, Data: ${it.data}, Extras: ${it.extras?.keySet()}")
-            
-            // Handle widget actions
-            when (it.action) {
-                "EMERGENCY_ACTION" -> {
-                    Log.d(TAG, "🚨 Emergency widget tapped")
-                    notifyFlutterRoute("/emergency")
-                    // Clear the action to prevent re-triggering
-                    it.action = null
-                    return
-                }
-                "SCAN_ACTION" -> {
-                    Log.d(TAG, "📷 Scan widget tapped")
-                    notifyFlutterRoute("/scan")
-                    // Clear the action to prevent re-triggering
-                    it.action = null
-                    return
-                }
-            }
-            
-            // Handle route extra
-            val route = it.getStringExtra("route")
-            if (route != null) {
-                Log.d(TAG, "🔗 Route from extra: $route")
-                notifyFlutterRoute(route)
+   private fun handleIntent(intent: Intent?) {
+    intent?.let {
+        Log.d(TAG, "🔗 Handling intent - Action: ${it.action}, Data: ${it.data}, Extras: ${it.extras?.keySet()}")
+        
+        // Handle widget actions
+        when (it.action) {
+            "EMERGENCY_ACTION" -> {
+                Log.d(TAG, "🚨 Emergency widget tapped")
+                notifyFlutterRoute("/emergency")
+                it.action = null
                 return
             }
-
-            // Handle deep link data
-            it.data?.let { uri ->
-                Log.d(TAG, "🔗 URI received: $uri")
-                when (uri.toString()) {
-                    "allergen://scan" -> {
-                        Log.d(TAG, "🔗 Navigating to scan")
-                        notifyFlutterRoute("/scan")
-                    }
-                    "allergen://emergency" -> {
-                        Log.d(TAG, "🔗 Navigating to emergency")
-                        notifyFlutterRoute("/emergency")
-                    }
+            "SCAN_ACTION" -> {
+                Log.d(TAG, "📷 Scan widget tapped")
+                notifyFlutterRoute("/scan")
+                it.action = null
+                return
+            }
+            "AIR_QUALITY_ACTION" -> {
+                Log.d(TAG, "🌤️ Air Quality widget tapped")
+                notifyFlutterRoute("/air_quality")
+                it.action = null
+                return
+            }
+        }
+        
+        // Handle route extra
+        val route = it.getStringExtra("route")
+        if (route != null) {
+            Log.d(TAG, "🔗 Route from extra: $route")
+            notifyFlutterRoute(route)
+            return
+        }
+        
+        // Handle deep link data
+        it.data?.let { uri ->
+            Log.d(TAG, "🔗 URI received: $uri")
+            when (uri.toString()) {
+                "allergen://scan" -> {
+                    Log.d(TAG, "🔗 Navigating to scan")
+                    notifyFlutterRoute("/scan")
+                }
+                "allergen://emergency" -> {
+                    Log.d(TAG, "🔗 Navigating to emergency")
+                    notifyFlutterRoute("/emergency")
+                }
+                "allergen://air_quality" -> {
+                    Log.d(TAG, "🔗 Navigating to air quality")
+                    notifyFlutterRoute("/air_quality")
                 }
             }
         }
     }
-
+}
     private fun notifyFlutterRoute(route: String) {
         Log.d(TAG, "🔗 Notifying Flutter about route: $route")
         try {

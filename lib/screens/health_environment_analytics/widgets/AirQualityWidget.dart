@@ -788,12 +788,10 @@ class _AirQualityWidgetState extends State<AirQualityWidget> {
             ),
           ),
 
-        // Stats header section
         Container(
           padding: const EdgeInsets.fromLTRB(10, 24, 20, 10),
           child: Row(
             children: [
-              // Potential allergens detected
               Expanded(
                 child: Column(
                   children: [
@@ -819,9 +817,7 @@ class _AirQualityWidgetState extends State<AirQualityWidget> {
                   ],
                 ),
               ),
-              // Divider
               Container(width: 1, height: 60, color: Colors.white30),
-              // Environmental alerts
               Expanded(
                 child: Column(
                   children: [

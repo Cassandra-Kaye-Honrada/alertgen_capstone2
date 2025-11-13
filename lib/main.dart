@@ -2,6 +2,7 @@ import 'package:allergen/firebase_options.dart';
 import 'package:allergen/screens/auth/authwrapper.dart';
 import 'package:allergen/screens/emergency/emergency_screen.dart';
 import 'package:allergen/screens/feature/scan_screen.dart';
+import 'package:allergen/screens/health_environment_analytics/aqi_loader.dart';
 import 'package:allergen/services/emergency/emergency_service.dart';
 import 'package:allergen/services/push_notification_service.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -84,8 +85,28 @@ class _ShortcutHandlerState extends State<ShortcutHandler> {
           triggerEmergency();
         } else if (route == '/scan') {
           navigatorKey.currentState?.pushNamed(route);
+        } else if (route == '/air_quality') {
+          triggerAirQuality();
         }
       });
+    }
+  }
+
+  Future<void> triggerAirQuality() async {
+    print('Triggering air quality from widget');
+    final context = navigatorKey.currentContext;
+
+    if (context == null) {
+      print('No context available');
+      return;
+    }
+
+    if (context.mounted) {
+      print('Context mounted, navigating to AirQualityLoader');
+      await Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => AirQualityLoader()),
+      );
     }
   }
 
