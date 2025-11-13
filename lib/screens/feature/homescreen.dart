@@ -754,7 +754,7 @@ class HomescreenState extends State<Homescreen> {
                           apiKey: 'AIzaSyCWva81wgqeq5qIShLvoO9hs20ejk73gCE',
                         ),
                         //SizedBox(height: 30),
-                        //    buildEmergencySection(),
+                        // buildEmergencySection(),
                         SizedBox(height: 30),
                         buildAllergenProfileSection(),
                         SizedBox(height: 20),

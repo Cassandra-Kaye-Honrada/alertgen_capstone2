@@ -42,8 +42,6 @@ class AirQualityTab extends StatelessWidget {
     );
   }
 
- 
-
   Widget _buildAQIOverview() {
     final naqiColor = _AQIColors.getColor(airQualityData.aqi);
 
