@@ -1,4 +1,7 @@
 import 'package:allergen/screens/emergency/emergency_settings_screen.dart';
+import 'package:allergen/screens/feature/educational/Informational_Screen.dart';
+import 'package:allergen/screens/feature/homescreen.dart';
+import 'package:allergen/screens/health_environment_analytics/AirQualityDetailScreen.dart';
 import 'package:allergen/screens/models/emergency_settings.dart';
 import 'package:allergen/screens/models/emergency_contact.dart';
 import 'package:allergen/screens/auth/login.dart';
@@ -802,83 +805,227 @@ class _UserProfileState extends State<UserProfile> {
                 ),
               ),
             ),
-            Container(
-              margin: const EdgeInsets.all(20),
-              height: 80,
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(40),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.1),
-                    blurRadius: 10,
-                    spreadRadius: 2,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  GestureDetector(
-                    onTap: () {
-                      setState(() {
-                        currentIndex = 0;
-                      });
-                      Navigator.pop(context);
-                    },
-                    child: Image.asset(
-                      'assets/navigation/menu_inactive.png',
-                      width: 24,
-                      height: 24,
-                      errorBuilder: (context, error, stackTrace) {
-                        return const Icon(
-                          Icons.home,
-                          color: Color(0xFF64748B),
-                          size: 24,
-                        );
-                      },
-                    ),
-                  ),
-                  GestureDetector(
-                    onTap: scanAction,
-                    child: Image.asset(
-                      'assets/navigation/scan_inactive.png',
-                      width: 24,
-                      height: 24,
-                      errorBuilder: (context, error, stackTrace) {
-                        return const Icon(
-                          Icons.camera_alt,
-                          color: Color(0xFF64748B),
-                          size: 24,
-                        );
-                      },
-                    ),
-                  ),
-                  GestureDetector(
-                    onTap: () {
-                      setState(() {
-                        currentIndex = 2;
-                      });
-                    },
-                    child: Image.asset(
-                      'assets/navigation/profile_active.png',
-                      width: 24,
-                      height: 24,
-                      errorBuilder: (context, error, stackTrace) {
-                        return const Icon(
-                          Icons.person,
-                          color: Color(0xFF00BCD4),
-                          size: 24,
-                        );
-                      },
-                    ),
-                  ),
-                ],
-              ),
-            ),
+            // Container(
+            //   margin: const EdgeInsets.all(20),
+            //   height: 80,
+            //   decoration: BoxDecoration(
+            //     color: Colors.white,
+            //     borderRadius: BorderRadius.circular(40),
+            //     boxShadow: [
+            //       BoxShadow(
+            //         color: Colors.black.withOpacity(0.1),
+            //         blurRadius: 10,
+            //         spreadRadius: 2,
+            //         offset: const Offset(0, 2),
+            //       ),
+            //     ],
+            //   ),
+            //   child: Row(
+            //     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            //     children: [
+            //       GestureDetector(
+            //         onTap: () {
+            //           setState(() {
+            //             currentIndex = 0;
+            //           });
+            //           Navigator.pop(context);
+            //         },
+            //         child: Image.asset(
+            //           'assets/navigation/menu_inactive.png',
+            //           width: 24,
+            //           height: 24,
+            //           errorBuilder: (context, error, stackTrace) {
+            //             return const Icon(
+            //               Icons.home,
+            //               color: Color(0xFF64748B),
+            //               size: 24,
+            //             );
+            //           },
+            //         ),
+            //       ),
+            //       GestureDetector(
+            //         onTap: scanAction,
+            //         child: Image.asset(
+            //           'assets/navigation/scan_inactive.png',
+            //           width: 24,
+            //           height: 24,
+            //           errorBuilder: (context, error, stackTrace) {
+            //             return const Icon(
+            //               Icons.camera_alt,
+            //               color: Color(0xFF64748B),
+            //               size: 24,
+            //             );
+            //           },
+            //         ),
+            //       ),
+            //       GestureDetector(
+            //         onTap: () {
+            //           setState(() {
+            //             currentIndex = 2;
+            //           });
+            //         },
+            //         child: Image.asset(
+            //           'assets/navigation/profile_active.png',
+            //           width: 24,
+            //           height: 24,
+            //           errorBuilder: (context, error, stackTrace) {
+            //             return const Icon(
+            //               Icons.person,
+            //               color: Color(0xFF00BCD4),
+            //               size: 24,
+            //             );
+            //           },
+            //         ),
+            //       ),
+            //     ],
+            //   ),
+            // ),
           ],
         ),
+      ),
+      bottomNavigationBar: buildBottomNavigation(),
+    );
+  }
+
+  Widget buildBottomNavigation() {
+    return Container(
+      margin: EdgeInsets.all(20),
+      height: 80,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(40),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 10,
+            spreadRadius: 2,
+            offset: Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        children: [
+          GestureDetector(
+            onTap: () {
+              setState(() => currentIndex = 0);
+
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => Homescreen()),
+              );
+            },
+
+            child: Image.asset(
+              'assets/navigation/menu_inactive.png',
+              width: 24,
+              height: 24,
+              errorBuilder:
+                  (context, error, stackTrace) =>
+                      Icon(Icons.home, color: Color(0xFF64748B), size: 24),
+            ),
+          ),
+
+          // ✅ UPDATED: Navigate to Air Quality Home Screen
+          GestureDetector(
+            onTap: () {
+              setState(() => currentIndex = 1);
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder:
+                      (context) => AirQualityDetailScreen(
+                        apiKey: 'AIzaSyCWva81wgqeq5qIShLvoO9hs20ejk73gCE',
+                        // No data passed - will fetch on its own
+                      ),
+                ),
+              );
+            },
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  Icons.analytics_outlined,
+                  color:
+                      currentIndex == 1
+                          ? AppColors.primary
+                          : AppColors.primaryColor3,
+                  size: 24,
+                ),
+              ],
+            ),
+          ),
+
+          GestureDetector(
+            onTap:
+                () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => CameraScannerScreen(),
+                  ),
+                ),
+            child: Image.asset(
+              'assets/navigation/scan_inactive.png',
+              width: 24,
+              height: 24,
+              errorBuilder:
+                  (context, error, stackTrace) => Icon(
+                    Icons.camera_alt,
+                    color: Color(0xFF64748B),
+                    size: 24,
+                  ),
+            ),
+          ),
+
+          GestureDetector(
+            onTap: () {
+              setState(() => currentIndex = 1);
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => FoodAllergyScreen()),
+              );
+            },
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  Icons.school_outlined,
+                  color:
+                      currentIndex == 1
+                          ? AppColors.primary
+                          : AppColors.primaryColor3,
+                  size: 24,
+                ),
+              ],
+            ),
+          ),
+
+          GestureDetector(
+            onTap: () {
+              setState(() => currentIndex = 2);
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder:
+                      (context) =>
+                          UserProfile(emergencyService: EmergencyService()),
+                ),
+              );
+            },
+            child: Image.asset(
+              'assets/navigation/profile_active.png',
+              width: 24,
+              height: 24,
+              errorBuilder: (context, error, stackTrace) {
+                return const Icon(
+                  Icons.person,
+                  color: Color(0xFF00BCD4),
+                  size: 24,
+                );
+              },
+            ),
+          ),
+        ],
       ),
     );
   }

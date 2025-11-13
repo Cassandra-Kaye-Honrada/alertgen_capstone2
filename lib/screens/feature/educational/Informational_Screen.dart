@@ -1,4 +1,8 @@
+import 'package:allergen/screens/feature/scan_screen.dart';
 import 'package:allergen/screens/first_Aid_screens/FirstAidScreen.dart';
+import 'package:allergen/screens/health_environment_analytics/AirQualityDetailScreen.dart';
+import 'package:allergen/screens/profile_screen_items/ProfileScreen.dart';
+import 'package:allergen/services/emergency/emergency_service.dart';
 import 'package:allergen/styleguide.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
@@ -871,6 +875,119 @@ Voluntary warnings include:
     );
   }
 
+  Widget _buildBottomNavigation() {
+    return Container(
+      margin: const EdgeInsets.all(20),
+      height: 80,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(40),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 10,
+            spreadRadius: 2,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        children: [
+          // Home
+          GestureDetector(
+            onTap:
+                () => Navigator.of(context).popUntil((route) => route.isFirst),
+            child: Image.asset(
+              'assets/navigation/menu_inactive.png',
+              width: 24,
+              height: 24,
+              errorBuilder:
+                  (context, error, stackTrace) =>
+                      Icon(Icons.home, color: Color(0xFF64748B), size: 24),
+            ),
+          ),
+
+          GestureDetector(
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder:
+                      (context) => AirQualityDetailScreen(
+                        apiKey: 'AIzaSyCWva81wgqeq5qIShLvoO9hs20ejk73gCE',
+                      ),
+                ),
+              );
+            },
+            child: const Icon(
+              Icons.analytics_outlined,
+              color: AppColors.primaryColor3,
+              size: 24,
+            ),
+          ),
+
+          // Scanner
+          GestureDetector(
+            onTap: () {
+              // Navigate to scanner - you'll need to import your scanner screen
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => CameraScannerScreen()),
+              );
+            },
+            child: Image.asset(
+              'assets/navigation/scan_inactive.png',
+              width: 24,
+              height: 24,
+              errorBuilder:
+                  (context, error, stackTrace) => Icon(
+                    Icons.camera_alt,
+                    color: Color(0xFF64748B),
+                    size: 24,
+                  ),
+            ),
+          ),
+
+          // Education/Food Allergy
+          GestureDetector(
+            onTap: () {
+              // Navigate to food allergy screen
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => FoodAllergyScreen()),
+              );
+            },
+            child: const Icon(Icons.school, color: AppColors.primary, size: 35),
+          ),
+
+          // Profile
+          GestureDetector(
+            onTap: () {
+              // Navigate to profile
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder:
+                      (context) =>
+                          UserProfile(emergencyService: EmergencyService()),
+                ),
+              );
+            },
+            child: Image.asset(
+              'assets/navigation/Profile_inactive.png',
+              width: 24,
+              height: 24,
+              errorBuilder:
+                  (context, error, stackTrace) =>
+                      Icon(Icons.person, color: Color(0xFF00BCD4), size: 24),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -908,35 +1025,40 @@ Voluntary warnings include:
                 color: Colors.white,
                 child: SingleChildScrollView(
                   physics: const AlwaysScrollableScrollPhysics(),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                  child: Stack(
                     children: [
-                      _buildSearchBar(),
-                      _buildFilterChips(),
-                      _buildAnimatedStatsCard(),
-                      const SizedBox(height: 8),
-                      _buildSectionHeader(
-                        context,
-                        'Major Food Allergens',
-                        Icons.restaurant,
-                      ),
-                      _buildAllergensGrid(),
-                      const SizedBox(height: 16),
-                      buildTreatmentSection(),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _buildSearchBar(),
+                          _buildFilterChips(),
+                          _buildAnimatedStatsCard(),
+                          const SizedBox(height: 8),
+                          _buildSectionHeader(
+                            context,
+                            'Major Food Allergens',
+                            Icons.restaurant,
+                          ),
+                          _buildAllergensGrid(),
+                          const SizedBox(height: 16),
+                          buildTreatmentSection(),
 
-                      _buildSectionHeader(
-                        context,
-                        'Educational Resources',
-                        Icons.menu_book,
+                          _buildSectionHeader(
+                            context,
+                            'Educational Resources',
+                            Icons.menu_book,
+                          ),
+                          ...resources.map(
+                            (resource) => _buildResourceItem(resource, context),
+                          ),
+                          const SizedBox(height: 32),
+                        ],
                       ),
-                      ...resources.map(
-                        (resource) => _buildResourceItem(resource, context),
-                      ),
-                      const SizedBox(height: 32),
                     ],
                   ),
                 ),
               ),
+      bottomNavigationBar: _buildBottomNavigation(),
     );
   }
 
