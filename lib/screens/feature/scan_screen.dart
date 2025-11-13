@@ -459,7 +459,7 @@ Return JSON:
                       buildScanOption(
                         Icons.restaurant_menu_rounded,
                         'Food & Products',
-                        'Dishes, meals, packaged foods, product labels',
+                        'Dishes, meals, packaged foods(ingredients)',
                         const Color(0xFF4CAF50),
                       ),
                       const SizedBox(height: 12),
@@ -706,17 +706,16 @@ CRITICAL REQUIREMENTS:
     try {
       setState(() {
         isSkinAnalysis = true;
-        analysisStatus = 'Analyzing skin condition/allergy...';
+        analysisStatus = 'Analyzing skin allergy...';
       });
 
       final imageHash = skinCache.generateImageHash(imageFile);
-
       final exactMatch = await skinCache.checkExactImageMatch(imageHash);
 
       if (exactMatch != null) {
         setState(() {
           loading = false;
-          analysisStatus = '';
+          // analysisStatus = '';
         });
 
         navigateToSkinResults(exactMatch, imageFile, fromCache: true);
@@ -724,7 +723,7 @@ CRITICAL REQUIREMENTS:
       }
 
       setState(() {
-        analysisStatus = 'Comparing with previous conditions...';
+        analysisStatus = 'Analyzing skin allergy...';
       });
 
       final similarMatch = await skinCache.checkSimilarSkinCondition(
@@ -733,25 +732,17 @@ CRITICAL REQUIREMENTS:
       );
 
       if (similarMatch != null) {
-        final matchConfidence = similarMatch['matchConfidence'] ?? 0.0;
-        final matchReasoning = similarMatch['matchReasoning'] ?? '';
-
         setState(() {
           loading = false;
-          analysisStatus = '';
+          analysisStatus = 'Analyzing skin allergy...';
         });
-
-        showSnackBar(
-          'Found similar condition (${(matchConfidence * 100).toInt()}% match): ${matchReasoning}',
-          Colors.blue,
-        );
 
         navigateToSkinResults(similarMatch, imageFile, fromCache: true);
         return;
       }
 
       setState(() {
-        analysisStatus = 'Analyzing skin condition/allergy...';
+        analysisStatus = 'Analyzing skin allergy...';
       });
 
       final model = GenerativeModel(model: 'gemini-2.5-pro', apiKey: apiKey);
@@ -869,7 +860,11 @@ CRITICAL REQUIREMENTS:
     if (selectedOption != null) {
       final skinData = selectedOption.toJson();
 
-      await skinCache.saveSkinAnalysisCache(skinData, imageFile, imageHash);
+      skinCache
+          .saveSkinAnalysisCache(skinData, imageFile, imageHash)
+          .catchError((e) {
+            print('Error saving skin analysis: $e');
+          });
 
       navigateToSkinResults(skinData, imageFile, fromCache: false);
     } else {
@@ -1866,6 +1861,8 @@ CRITICAL RULES:
 
 NOW ANALYZE THE IMAGE.
 ''';
+
+
   Future<void> analyzeOCRText(String ocrText, File imageFile) async {
     if (apiKey == 'YOUR_API_KEY_HERE') {
       setState(() => loading = false);
@@ -2716,7 +2713,7 @@ Make the description:
       final cachedData = await allergenAnalysis.checkFoodCache(dishNameText);
 
       if (cachedData != null) {
-        print('✅ Manual entry: Cache hit for "$dishNameText"');
+        print(' Manual entry: Cache hit for "$dishNameText"');
 
         final cachedIngredients = List<String>.from(
           cachedData['ingredients'] ?? [],

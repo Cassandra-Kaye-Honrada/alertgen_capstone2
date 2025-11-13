@@ -574,6 +574,7 @@ Return ONLY JSON:
       if (user == null) {
         return {'names': <String>[], 'severity': <String, double>{}};
       }
+      
       final snapshot =
           await FirebaseFirestore.instance
               .collection('users')

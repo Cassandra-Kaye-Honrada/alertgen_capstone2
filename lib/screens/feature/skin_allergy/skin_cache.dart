@@ -8,8 +8,8 @@ import 'package:firebase_storage/firebase_storage.dart';
 import 'package:google_generative_ai/google_generative_ai.dart';
 
 class SkinAnalysisCache {
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  final FirebaseStorage _storage = FirebaseStorage.instance;
+  final FirebaseFirestore firestore = FirebaseFirestore.instance;
+  final FirebaseStorage storage = FirebaseStorage.instance;
   
   String generateImageHash(File imageFile) {
     try {
@@ -27,7 +27,7 @@ class SkinAnalysisCache {
       final user = FirebaseAuth.instance.currentUser;
       if (user == null) return null;
       
-      final querySnapshot = await _firestore
+      final querySnapshot = await firestore
           .collection('users')
           .doc(user.uid)
           .collection('skin_cache')
@@ -38,7 +38,7 @@ class SkinAnalysisCache {
       if (querySnapshot.docs.isNotEmpty) {
         final data = querySnapshot.docs.first.data();
         
-        _firestore
+        firestore
             .collection('users')
             .doc(user.uid)
             .collection('skin_cache')
@@ -67,7 +67,7 @@ class SkinAnalysisCache {
       final user = FirebaseAuth.instance.currentUser;
       if (user == null) return null;
       
-      final querySnapshot = await _firestore
+      final querySnapshot = await firestore
           .collection('users')
           .doc(user.uid)
           .collection('skin_cache')
@@ -87,7 +87,7 @@ class SkinAnalysisCache {
         if (cachedImageUrl == null) continue;
         
         try {
-          final ref = _storage.refFromURL(cachedImageUrl);
+          final ref = storage.refFromURL(cachedImageUrl);
           final cachedImageBytes = await ref.getData();
           
           if (cachedImageBytes == null) continue;
@@ -129,7 +129,7 @@ THRESHOLDS:
           if (comparisonResult['isSameCondition'] == true && 
               comparisonResult['confidence'] >= 0.65) {
             
-            _firestore
+            firestore
                 .collection('users')
                 .doc(user.uid)
                 .collection('skin_cache')
@@ -193,7 +193,7 @@ THRESHOLDS:
       String? thumbnailUrl;
       try {
         final thumbnailFileName = 'thumb_${DateTime.now().millisecondsSinceEpoch}.jpg';
-        final thumbnailRef = _storage
+        final thumbnailRef = storage
             .ref()
             .child('skin_thumbnails')
             .child(user.uid)
@@ -205,7 +205,7 @@ THRESHOLDS:
         print('Error uploading thumbnail: $e');
       }
       
-      await _firestore
+      await firestore
           .collection('users')
           .doc(user.uid)
           .collection('skin_cache')
