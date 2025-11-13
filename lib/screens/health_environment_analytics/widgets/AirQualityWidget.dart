@@ -656,13 +656,16 @@ class _AirQualityWidgetState extends State<AirQualityWidget> {
 
   void _navigateToDetailScreen() {
     if (_airQualityData != null) {
-      Navigator.of(context).push(
+      Navigator.push(
+        context,
         MaterialPageRoute(
           builder:
               (context) => AirQualityDetailScreen(
                 airQualityData: _airQualityData!,
                 location: _location,
                 applicablePopulations: _applicablePopulations,
+                showBackButton:
+                    true, // ADD THIS LINE - tells it to show back button
               ),
         ),
       );

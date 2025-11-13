@@ -994,7 +994,7 @@ Voluntary warnings include:
       backgroundColor: AppColors.defaultbackground,
       appBar: AppBar(
         title: Text(
-          'Food Allergy Education',
+          'Learn About Allergy',
           style: AppTextStyles.headline.copyWith(
             color: Colors.white,
             fontSize: 18,

@@ -103,7 +103,6 @@ class _AboutScreenState extends State<AboutScreen>
                       const SizedBox(height: 32),
                       buildLimitationsSection(),
                       const SizedBox(height: 32),
-
                       buildContactSection(),
                       const SizedBox(height: 24),
                       buildFooter(),
@@ -155,7 +154,6 @@ class _AboutScreenState extends State<AboutScreen>
               ),
             ),
           ),
-
           const SizedBox(height: 20),
           const Text(
             'AlertGen',
@@ -168,7 +166,7 @@ class _AboutScreenState extends State<AboutScreen>
           ),
           const SizedBox(height: 8),
           const Text(
-            'Advanced Allergen Detection Application',
+            'Complete Allergy Management & Safety Platform',
             style: TextStyle(
               color: AppColors.textGray,
               fontSize: 16,
@@ -214,10 +212,11 @@ class _AboutScreenState extends State<AboutScreen>
             border: Border.all(color: AppColors.lightGray.withOpacity(0.3)),
           ),
           child: const Text(
-            'ALERTGEN is an AI-driven mobile application designed to protect individuals with food allergies. '
-            'Our mission is to provide smart allergen detection using OCR and AI, personalized allergy profiles, '
-            'safe food alternatives, and emergency support to ensure confidence and safety in every meal.',
-
+            'ALERTGEN is a comprehensive AI-driven mobile application designed to protect individuals with allergies. '
+            'Our mission is to provide smart allergen detection for both food and skin allergies using OCR and AI, '
+            'real-time environmental monitoring with air quality tracking, personalized allergy profiles, '
+            'detailed allergen analytics, educational resources, safe food alternatives, and emergency support '
+            'to ensure confidence and safety in every aspect of daily life.',
             style: TextStyle(
               color: AppColors.textGray,
               fontSize: 15,
@@ -234,26 +233,52 @@ class _AboutScreenState extends State<AboutScreen>
   Widget buildFeaturesSection() {
     final features = [
       {
-        'icon': Icons.search,
-        'title': 'Smart Allergen Detection',
+        'icon': Icons.camera_alt,
+        'title': 'Food & Skin Allergen Scanning',
         'desc':
-            'Uses OCR to scan food labels and AI to analyze unlabelled foods, detecting potential allergens in real time',
+            'Scan food labels and check for skin allergies using camera or image uploads with instant allergen detection',
+      },
+      {
+        'icon': Icons.air,
+        'title': 'Air Quality Monitoring',
+        'desc':
+            'Track real-time air quality and AQI levels in your location with push notifications for high pollution alerts',
+      },
+      {
+        'icon': Icons.analytics,
+        'title': 'Allergen Analytics',
+        'desc':
+            'Comprehensive insights and trends from your scan history to understand allergen exposure patterns',
+      },
+      {
+        'icon': Icons.school,
+        'title': 'Allergen Education',
+        'desc':
+            'Learn about allergies with comprehensive information and educational resources about allergens',
       },
       {
         'icon': Icons.person_outline,
-        'title': 'Allergy Profiles',
-        'desc': 'Personalized profiles to track and compare allergens',
+        'title': 'Personalized Profiles',
+        'desc':
+            'Custom allergy profiles to track and manage your specific allergen sensitivities',
       },
       {
         'icon': Icons.restaurant_menu,
         'title': 'Safe Alternatives',
-        'desc': 'Suggests allergen-free food substitutes using Firebase',
+        'desc':
+            'Intelligent suggestions for allergen-free food substitutes tailored to your profile',
+      },
+      {
+        'icon': Icons.history,
+        'title': 'Scan History',
+        'desc':
+            'Keep track of all your previous scans and build a database of safe foods',
       },
       {
         'icon': Icons.health_and_safety,
         'title': 'Emergency Support',
         'desc':
-            'First aid guide and quick emergency contact in case of reactions',
+            'First aid guide and quick emergency contacts for allergic reactions',
       },
     ];
 
@@ -261,16 +286,15 @@ class _AboutScreenState extends State<AboutScreen>
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         buildSectionTitle('Core Features'),
-        const SizedBox(height: 20),
         SizedBox(
-          height: 400, 
+          height: 900,
           child: GridView.builder(
             physics: const NeverScrollableScrollPhysics(),
             gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
               crossAxisCount: 2,
               crossAxisSpacing: 16,
               mainAxisSpacing: 16,
-              childAspectRatio: 0.85, 
+              childAspectRatio: 0.85,
             ),
             itemCount: features.length,
             itemBuilder: (context, index) {
@@ -304,20 +328,15 @@ class _AboutScreenState extends State<AboutScreen>
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment:
-            MainAxisAlignment.center,
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Container(
-            padding: const EdgeInsets.all(10), 
+            padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
               color: AppColors.primary.withOpacity(0.05),
               borderRadius: BorderRadius.circular(10),
             ),
-            child: Icon(
-              icon,
-              color: AppColors.primary,
-              size: 22,
-            ),
+            child: Icon(icon, color: AppColors.primary, size: 22),
           ),
           const SizedBox(height: 12),
           Text(
@@ -336,7 +355,7 @@ class _AboutScreenState extends State<AboutScreen>
               description,
               style: TextStyle(
                 color: AppColors.textGray.withOpacity(0.8),
-                fontSize: 11, 
+                fontSize: 11,
                 height: 1.3,
                 letterSpacing: 0.2,
               ),
@@ -354,8 +373,11 @@ class _AboutScreenState extends State<AboutScreen>
       'Optical Character Recognition (OCR)',
       'Machine Learning Algorithms',
       'AI Image Analysis',
+      'Real-time Air Quality API Integration',
+      'Push Notification Service',
       'Cloud-Based Processing',
       'Real-time Database Integration',
+      'Advanced Analytics Engine',
       'Secure Data Encryption',
     ];
 
@@ -413,21 +435,31 @@ class _AboutScreenState extends State<AboutScreen>
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        buildSectionTitle('Detection Capabilities'),
+        buildSectionTitle('Detection & Monitoring Capabilities'),
         const SizedBox(height: 16),
         buildCapabilityItem(
-          'Common Allergens',
-          'Comprehensive detection of major food allergens including nuts, dairy, gluten, shellfish, and more',
+          'Food & Skin Allergen Detection',
+          'Comprehensive scanning of food labels and skin allergy identification including nuts, dairy, gluten, shellfish, and various skin irritants',
+        ),
+        const SizedBox(height: 12),
+        buildCapabilityItem(
+          'Environmental Monitoring',
+          'Real-time air quality tracking with AQI measurements and background monitoring with automatic alerts for high pollution levels',
+        ),
+        const SizedBox(height: 12),
+        buildCapabilityItem(
+          'Analytics & Insights',
+          'Detailed allergen exposure analysis with historical trends, patterns, and personalized recommendations based on your scan history',
+        ),
+        const SizedBox(height: 12),
+        buildCapabilityItem(
+          'Educational Resources',
+          'Comprehensive allergen information database with learning materials about allergy symptoms, prevention, and management strategies',
         ),
         const SizedBox(height: 12),
         buildCapabilityItem(
           'Personalized Detection',
-          'Customizable allergen profiles with sensitivity tracking and exposure monitoring',
-        ),
-        const SizedBox(height: 12),
-        buildCapabilityItem(
-          'Advanced Analysis',
-          'Hidden allergen identification ',
+          'Customizable allergen profiles with sensitivity tracking, exposure monitoring, and tailored alert preferences',
         ),
       ],
     );
@@ -523,10 +555,16 @@ class _AboutScreenState extends State<AboutScreen>
                 'OCR performance varies with font styles and label clarity',
               ),
               buildLimitationItem(
-                'Requires stable internet connection for AI processing',
+                'Requires stable internet connection for AI processing and air quality updates',
               ),
               buildLimitationItem(
                 'Regional and uncommon foods may present detection challenges',
+              ),
+              buildLimitationItem(
+                'Air quality data accuracy depends on local monitoring stations and API availability',
+              ),
+              buildLimitationItem(
+                'Background notifications require proper permissions and may vary by device',
               ),
             ],
           ),
@@ -657,7 +695,7 @@ class _AboutScreenState extends State<AboutScreen>
           ),
           const SizedBox(height: 12),
           const Text(
-            'Committed to Food Safety',
+            'Committed to Comprehensive Allergy Safety',
             style: TextStyle(
               color: AppColors.textBlack,
               fontSize: 16,
@@ -666,7 +704,7 @@ class _AboutScreenState extends State<AboutScreen>
           ),
           const SizedBox(height: 8),
           const Text(
-            'Dedicated to creating a safer dining experience for individuals with food allergies',
+            'Dedicated to creating a safer environment for individuals with allergies through intelligent detection, monitoring, and education',
             style: TextStyle(
               color: AppColors.textGray,
               fontSize: 13,

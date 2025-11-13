@@ -40,25 +40,46 @@ class _WelcomeScreenState extends State<WelcomeScreen>
     OnboardingScreenData(
       id: 1,
       title: "Welcome to AlertGen",
-      description: "Your personal food safety companion",
+      description: "Your complete allergy management and safety companion",
       iconType: OnboardingIconType.logo,
     ),
     OnboardingScreenData(
       id: 2,
-      title: "Scan Any Food",
+      title: "Scan Food & Skin Allergies",
       description:
-          "Use your camera or upload to scan food labels, meals, or ingredients and instantly check for allergens.",
+          "Use your camera to scan food labels and check for skin allergies. Get instant results for ingredients you should avoid.",
       iconType: OnboardingIconType.camera,
     ),
     OnboardingScreenData(
       id: 3,
+      title: "Air Quality Monitoring",
+      description:
+          "Track real-time air quality in your location. Get push notifications when AQI levels are high, even when the app is closed.",
+      iconType: OnboardingIconType.environment,
+    ),
+    OnboardingScreenData(
+      id: 4,
       title: "Personalized Alerts",
       description:
           "Set your allergies and get personalized alerts when a food contains ingredients you should avoid.",
       iconType: OnboardingIconType.alert,
     ),
     OnboardingScreenData(
-      id: 4,
+      id: 5,
+      title: "Allergen Analytics",
+      description:
+          "Analyze your scan history with detailed insights and trends about your allergen exposure over time.",
+      iconType: OnboardingIconType.analytics,
+    ),
+    OnboardingScreenData(
+      id: 6,
+      title: "Learn About Allergies",
+      description:
+          "Access comprehensive allergen information and education to better understand and manage your allergies.",
+      iconType: OnboardingIconType.education,
+    ),
+    OnboardingScreenData(
+      id: 7,
       title: "Safe Food History",
       description:
           "Keep track of your previous scans and build a history of safe foods you can eat.",
@@ -315,7 +336,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                 width: 48,
                 height: 48,
                 decoration: BoxDecoration(
-                  color: const Color(0xFF02B3AB),
+                  color: const Color(0xFFFF6B9D),
                   borderRadius: BorderRadius.circular(24),
                   boxShadow: [
                     BoxShadow(
@@ -325,7 +346,65 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                     ),
                   ],
                 ),
-                child: const Icon(Icons.upload, size: 24, color: Colors.white),
+                child: const Icon(Icons.face, size: 24, color: Colors.white),
+              ),
+            ),
+          ],
+        );
+
+      case OnboardingIconType.environment:
+        return Stack(
+          children: [
+            Container(
+              width: 128,
+              height: 128,
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [Color(0xFF4CAF50), Color(0xFF8BC34A)],
+                ),
+                borderRadius: BorderRadius.circular(24),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.2),
+                    blurRadius: 20,
+                    offset: const Offset(0, 10),
+                  ),
+                ],
+              ),
+              child: const Icon(Icons.air, size: 64, color: Colors.white),
+            ),
+            Positioned(
+              top: -8,
+              right: -8,
+              child: AnimatedBuilder(
+                animation: pulseAnimation,
+                builder: (context, child) {
+                  return Transform.scale(
+                    scale: pulseAnimation.value,
+                    child: Container(
+                      width: 48,
+                      height: 48,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF2196F3),
+                        borderRadius: BorderRadius.circular(24),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.1),
+                            blurRadius: 10,
+                            offset: const Offset(0, 5),
+                          ),
+                        ],
+                      ),
+                      child: const Icon(
+                        Icons.notifications_active,
+                        size: 24,
+                        color: Colors.white,
+                      ),
+                    ),
+                  );
+                },
               ),
             ),
           ],
@@ -384,6 +463,106 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                     ),
                   );
                 },
+              ),
+            ),
+          ],
+        );
+
+      case OnboardingIconType.analytics:
+        return Stack(
+          children: [
+            Container(
+              width: 128,
+              height: 128,
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [Color(0xFF9C27B0), Color(0xFFE91E63)],
+                ),
+                borderRadius: BorderRadius.circular(24),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.2),
+                    blurRadius: 20,
+                    offset: const Offset(0, 10),
+                  ),
+                ],
+              ),
+              child: const Icon(Icons.analytics, size: 64, color: Colors.white),
+            ),
+            Positioned(
+              bottom: -8,
+              right: -8,
+              child: Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  color: const Color(0xFF00BCD4),
+                  borderRadius: BorderRadius.circular(24),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.1),
+                      blurRadius: 10,
+                      offset: const Offset(0, 5),
+                    ),
+                  ],
+                ),
+                child: const Icon(
+                  Icons.insights,
+                  size: 24,
+                  color: Colors.white,
+                ),
+              ),
+            ),
+          ],
+        );
+
+      case OnboardingIconType.education:
+        return Stack(
+          children: [
+            Container(
+              width: 128,
+              height: 128,
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [Color(0xFFFF9800), Color(0xFFFFC107)],
+                ),
+                borderRadius: BorderRadius.circular(24),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.2),
+                    blurRadius: 20,
+                    offset: const Offset(0, 10),
+                  ),
+                ],
+              ),
+              child: const Icon(Icons.school, size: 64, color: Colors.white),
+            ),
+            Positioned(
+              top: -8,
+              right: -8,
+              child: Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  color: const Color(0xFF4CAF50),
+                  borderRadius: BorderRadius.circular(24),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.1),
+                      blurRadius: 10,
+                      offset: const Offset(0, 5),
+                    ),
+                  ],
+                ),
+                child: const Icon(
+                  Icons.menu_book,
+                  size: 24,
+                  color: Colors.white,
+                ),
               ),
             ),
           ],
@@ -452,4 +631,12 @@ class OnboardingScreenData {
   });
 }
 
-enum OnboardingIconType { logo, camera, alert, history }
+enum OnboardingIconType {
+  logo,
+  camera,
+  environment,
+  alert,
+  analytics,
+  education,
+  history,
+}

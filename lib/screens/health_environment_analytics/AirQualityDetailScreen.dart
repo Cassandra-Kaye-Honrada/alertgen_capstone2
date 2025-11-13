@@ -22,6 +22,7 @@ class AirQualityDetailScreen extends StatefulWidget {
   final String? location;
   final List<Population>? applicablePopulations;
   final String? apiKey;
+  final bool showBackButton;
 
   const AirQualityDetailScreen({
     Key? key,
@@ -29,6 +30,7 @@ class AirQualityDetailScreen extends StatefulWidget {
     this.location,
     this.applicablePopulations,
     this.apiKey,
+    this.showBackButton = false,
   }) : super(key: key);
 
   @override
@@ -55,15 +57,12 @@ class _AirQualityDetailScreenState extends State<AirQualityDetailScreen>
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
 
-    // Check if data was provided
     if (widget.airQualityData != null) {
-      // Use provided data
       _airQualityData = widget.airQualityData;
       _location = widget.location ?? "Current Location";
       _applicablePopulations =
           widget.applicablePopulations ?? [Population.generalPopulation];
     } else {
-      // Fetch data silently in background
       _initialize();
     }
   }
@@ -358,16 +357,43 @@ class _AirQualityDetailScreenState extends State<AirQualityDetailScreen>
 
   Widget _buildLoadingOverlay() {
     return Container(
-      color: Colors.white,
-      child: const Center(
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [Color(0xFFE8F4F8), Color(0xFFFFFFFF)],
+        ),
+      ),
+      child: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            CircularProgressIndicator(color: Color(0xFF0B8FAC)),
-            SizedBox(height: 16),
-            Text(
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(20),
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFF0B8FAC).withOpacity(0.1),
+                    blurRadius: 20,
+                    spreadRadius: 5,
+                  ),
+                ],
+              ),
+              child: const CircularProgressIndicator(
+                color: Color(0xFF0B8FAC),
+                strokeWidth: 3,
+              ),
+            ),
+            const SizedBox(height: 24),
+            const Text(
               'Loading air quality data...',
-              style: TextStyle(color: Color(0xFF666666), fontSize: 14),
+              style: TextStyle(
+                color: Color(0xFF0B8FAC),
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+              ),
             ),
           ],
         ),
@@ -377,33 +403,85 @@ class _AirQualityDetailScreenState extends State<AirQualityDetailScreen>
 
   Widget _buildErrorState() {
     return Container(
-      color: Colors.white,
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [Color(0xFFE8F4F8), Color(0xFFFFFFFF)],
+        ),
+      ),
       padding: const EdgeInsets.all(24),
       child: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(Icons.error_outline, size: 64, color: Colors.red),
-            const SizedBox(height: 16),
-            Text(
-              _error!,
-              textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: 14, color: Color(0xFF666666)),
-            ),
-            const SizedBox(height: 24),
-            ElevatedButton(
-              onPressed: _initialize,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF0B8FAC),
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 32,
-                  vertical: 12,
+        child: Container(
+          padding: const EdgeInsets.all(32),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(24),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.08),
+                blurRadius: 20,
+                spreadRadius: 2,
+              ),
+            ],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFFEBEE),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.cloud_off,
+                  size: 48,
+                  color: Color(0xFFE53935),
                 ),
               ),
-              child: const Text('Retry'),
-            ),
-          ],
+              const SizedBox(height: 24),
+              Text(
+                _error!,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: 16,
+                  color: Color(0xFF333333),
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              const SizedBox(height: 32),
+              ElevatedButton(
+                onPressed: _initialize,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF0B8FAC),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 48,
+                    vertical: 16,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(30),
+                  ),
+                  elevation: 0,
+                ),
+                child: const Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.refresh, size: 20),
+                    SizedBox(width: 8),
+                    Text(
+                      'Try Again',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -428,7 +506,6 @@ class _AirQualityDetailScreenState extends State<AirQualityDetailScreen>
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         children: [
-          // Home
           GestureDetector(
             onTap:
                 () => Navigator.of(context).popUntil((route) => route.isFirst),
@@ -441,21 +518,16 @@ class _AirQualityDetailScreenState extends State<AirQualityDetailScreen>
                       Icon(Icons.home, color: Color(0xFF64748B), size: 24),
             ),
           ),
-
-          // Air Quality (Current - Active)
           GestureDetector(
-            onTap: () {}, // Already on this screen
+            onTap: () {},
             child: const Icon(
               Icons.analytics,
               color: AppColors.primary,
               size: 35,
             ),
           ),
-
-          // Scanner
           GestureDetector(
             onTap: () {
-              // Navigate to scanner - you'll need to import your scanner screen
               Navigator.push(
                 context,
                 MaterialPageRoute(builder: (context) => CameraScannerScreen()),
@@ -473,11 +545,8 @@ class _AirQualityDetailScreenState extends State<AirQualityDetailScreen>
                   ),
             ),
           ),
-
-          // Education/Food Allergy
           GestureDetector(
             onTap: () {
-              // Navigate to food allergy screen
               Navigator.push(
                 context,
                 MaterialPageRoute(builder: (context) => FoodAllergyScreen()),
@@ -489,11 +558,8 @@ class _AirQualityDetailScreenState extends State<AirQualityDetailScreen>
               size: 24,
             ),
           ),
-
-          // Profile
           GestureDetector(
             onTap: () {
-              // Navigate to profile
               Navigator.push(
                 context,
                 MaterialPageRoute(
@@ -519,22 +585,83 @@ class _AirQualityDetailScreenState extends State<AirQualityDetailScreen>
 
   @override
   Widget build(BuildContext context) {
-    // Show tabs immediately, let content handle loading/error states
     return Scaffold(
+      backgroundColor: const Color(0xFFF5F9FA),
       appBar: AppBar(
-        title: const Text('Health & Environment Details'),
+        title: const Text(
+          'Health & Environment',
+          style: TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.w600,
+            color: Color(0xFF0B8FAC),
+          ),
+        ),
         backgroundColor: Colors.white,
-        foregroundColor: Colors.black,
         elevation: 0,
-        bottom: TabBar(
-          controller: _tabController,
-          labelColor: const Color(0xFF0B8FAC),
-          unselectedLabelColor: Colors.grey,
-          indicatorColor: const Color(0xFF0B8FAC),
-          tabs: const [
-            Tab(icon: Icon(Icons.air), text: 'Air Quality'),
-            Tab(icon: Icon(Icons.analytics), text: 'Allergen Analytics'),
-          ],
+        automaticallyImplyLeading: widget.showBackButton,
+        leading:
+            widget.showBackButton
+                ? IconButton(
+                  icon: const Icon(Icons.arrow_back, color: Color(0xFF0B8FAC)),
+                  onPressed: () => Navigator.of(context).pop(),
+                )
+                : null,
+        // actions: [
+        //   IconButton(
+        //     icon: const Icon(Icons.help_outline, color: Color(0xFF0B8FAC)),
+        //     onPressed: () {},
+        //   ),
+        // ],
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(60),
+          child: Container(
+            margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            decoration: BoxDecoration(
+              color: const Color(0xFFE8F4F8),
+              borderRadius: BorderRadius.circular(30),
+            ),
+            child: TabBar(
+              controller: _tabController,
+              labelColor: Colors.white,
+              unselectedLabelColor: const Color(0xFF0B8FAC),
+              labelStyle: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+              ),
+              unselectedLabelStyle: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+              ),
+              indicator: BoxDecoration(
+                color: const Color(0xFF0B8FAC),
+                borderRadius: BorderRadius.circular(30),
+              ),
+              indicatorSize: TabBarIndicatorSize.tab,
+              dividerColor: Colors.transparent,
+              tabs: const [
+                Tab(
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.air, size: 18),
+                      SizedBox(width: 8),
+                      Text('Air Quality'),
+                    ],
+                  ),
+                ),
+                Tab(
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.analytics, size: 18),
+                      SizedBox(width: 8),
+                      Text('Analytics'),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
         ),
       ),
       body: Stack(
@@ -553,7 +680,6 @@ class _AirQualityDetailScreenState extends State<AirQualityDetailScreen>
                   AllergenAnalyticsTab(airQualityData: _airQualityData!),
                 ],
               ),
-          // Bottom Navigation
           Positioned(
             left: 0,
             right: 0,
