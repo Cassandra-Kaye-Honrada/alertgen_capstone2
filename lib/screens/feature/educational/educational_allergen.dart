@@ -1554,7 +1554,6 @@ class _AllergyScreenState extends State<AllergyScreen>
                                   ],
                                 ),
                               ),
-
                             const SizedBox(height: 32),
                           ],
                         ),
