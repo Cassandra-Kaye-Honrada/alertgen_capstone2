@@ -2,10 +2,12 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:allergen/screens/feature/allergen_analysis.dart';
 import 'package:allergen/screens/feature/dish_confimation_screen.dart';
+import 'package:allergen/screens/feature/educational/Informational_Screen.dart';
 import 'package:allergen/screens/feature/skin_allergy/skin_allergy.dart';
 import 'package:allergen/screens/feature/skin_allergy/skin_cache.dart';
 import 'package:allergen/screens/feature/skin_allergy/skin_result_option.dart';
 import 'package:allergen/screens/feature/trivia/trivia.dart';
+import 'package:allergen/screens/health_environment_analytics/AirQualityDetailScreen.dart';
 import 'package:allergen/screens/profile_screen_items/ProfileScreen.dart';
 import 'package:allergen/screens/feature/homescreen.dart';
 import 'package:allergen/screens/feature/result_screen.dart';
@@ -1862,7 +1864,6 @@ CRITICAL RULES:
 NOW ANALYZE THE IMAGE.
 ''';
 
-
   Future<void> analyzeOCRText(String ocrText, File imageFile) async {
     if (apiKey == 'YOUR_API_KEY_HERE') {
       setState(() => loading = false);
@@ -3308,7 +3309,44 @@ GUIDELINES:
                     MaterialPageRoute(builder: (_) => Homescreen()),
                   ),
                 ),
+                GestureDetector(
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder:
+                            (context) => AirQualityDetailScreen(
+                              apiKey: 'AIzaSyCWva81wgqeq5qIShLvoO9hs20ejk73gCE',
+                            ),
+                      ),
+                    );
+                  },
+                  child: const Icon(
+                    Icons.analytics_outlined,
+                    color: AppColors.primaryColor3,
+                    size: 24,
+                  ),
+                ),
                 const SizedBox(width: 70),
+
+                //   buildNavButton(assetPath, onTap)
+                GestureDetector(
+                  onTap: () {
+                    // Navigate to food allergy screen
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => FoodAllergyScreen(),
+                      ),
+                    );
+                  },
+                  child: const Icon(
+                    Icons.school,
+                    color: AppColors.primaryColor3,
+                    size: 24,
+                  ),
+                ),
+
                 buildNavButton(
                   'assets/navigation/Profile_inactive.png',
                   () => Navigator.push(
