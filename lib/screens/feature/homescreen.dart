@@ -1719,7 +1719,6 @@ class HomescreenState extends State<Homescreen> {
             child: Icon(Icons.home, color: AppColors.primary, size: 35),
           ),
 
-          // ✅ UPDATED: Navigate to Air Quality Home Screen
           GestureDetector(
             onTap: () {
               setState(() => currentIndex = 1);
@@ -1729,7 +1728,6 @@ class HomescreenState extends State<Homescreen> {
                   builder:
                       (context) => AirQualityDetailScreen(
                         apiKey: 'AIzaSyCWva81wgqeq5qIShLvoO9hs20ejk73gCE',
-                        // No data passed - will fetch on its own
                       ),
                 ),
               );
@@ -1761,7 +1759,6 @@ class HomescreenState extends State<Homescreen> {
                     size: 24,
                   ),
             ),
-            //Icon(Icons.camera_alt, color: AppColors.Gray, size: 24),
           ),
 
           GestureDetector(
