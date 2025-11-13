@@ -3334,11 +3334,24 @@ GUIDELINES:
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
-                buildNavButton(
-                  'assets/navigation/menu_inactive.png',
-                  () => Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => Homescreen()),
+                // buildNavButton(
+                //   'assets/navigation/menu_inactive.png',
+                //   () => Navigator.push(
+                //     context,
+                //     MaterialPageRoute(builder: (_) => Homescreen()),
+                //   ),
+                // ),
+                GestureDetector(
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => Homescreen()),
+                    );
+                  },
+                  child: const Icon(
+                    Icons.home,
+                    color: AppColors.Gray,
+                    size: 24,
                   ),
                 ),
                 GestureDetector(
@@ -3355,7 +3368,7 @@ GUIDELINES:
                   },
                   child: const Icon(
                     Icons.analytics_outlined,
-                    color: AppColors.primaryColor3,
+                    color: AppColors.Gray,
                     size: 24,
                   ),
                 ),
@@ -3374,22 +3387,41 @@ GUIDELINES:
                   },
                   child: const Icon(
                     Icons.school,
-                    color: AppColors.primaryColor3,
+                    color: AppColors.Gray,
+                    size: 24,
+                  ),
+                ),
+                GestureDetector(
+                  onTap: () {
+                    // Navigate to food allergy screen
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder:
+                            (context) => UserProfile(
+                              emergencyService: EmergencyService(),
+                            ),
+                      ),
+                    );
+                  },
+                  child: const Icon(
+                    Icons.person,
+                    color: AppColors.Gray,
                     size: 24,
                   ),
                 ),
 
-                buildNavButton(
-                  'assets/navigation/Profile_inactive.png',
-                  () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder:
-                          (_) =>
-                              UserProfile(emergencyService: EmergencyService()),
-                    ),
-                  ),
-                ),
+                // buildNavButton(
+                //   'assets/navigation/Profile_inactive.png',
+                //   () => Navigator.push(
+                //     context,
+                //     MaterialPageRoute(
+                //       builder:
+                //           (_) =>
+                //               UserProfile(emergencyService: EmergencyService()),
+                //     ),
+                //   ),
+                // ),
               ],
             ),
           ),

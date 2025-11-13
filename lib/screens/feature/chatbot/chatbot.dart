@@ -620,13 +620,14 @@ Each question should be:
                           Container(
                             padding: EdgeInsets.all(8),
                             decoration: BoxDecoration(
-                              color: Color(0xFF0B8FAC).withOpacity(0.1),
+                              color: Color(0xFF0B8FAC),
                               shape: BoxShape.circle,
                             ),
-                            child: Icon(
-                              Icons.smart_toy,
-                              color: Color(0xFF0B8FAC),
-                              size: 24,
+                            child: Image.asset(
+                              'assets/images/Allei.png',
+                              width: 28,
+                              height: 28,
+                              fit: BoxFit.contain,
                             ),
                           ),
                           SizedBox(width: 12),
@@ -867,11 +868,12 @@ Each question should be:
               margin: EdgeInsets.only(right: 8),
               child: CircleAvatar(
                 radius: 14,
-                backgroundColor: Color(0xFF0B8FAC).withOpacity(0.1),
-                child: Icon(
-                  Icons.smart_toy,
-                  color: Color(0xFF0B8FAC),
-                  size: 16,
+                backgroundColor: Color(0xFF0B8FAC),
+                child: Image.asset(
+                  'assets/images/Allei.png',
+                  width: 16,
+                  height: 16,
+                  fit: BoxFit.contain,
                 ),
               ),
             ),
