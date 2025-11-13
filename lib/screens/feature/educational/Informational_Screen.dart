@@ -712,6 +712,166 @@ Angioedema is swelling without itching in the deep layers of the skin. It is oft
 ''',
         ),
         ResourceLink(
+          title: 'Skin & Environmental Allergies',
+          description:
+              'Learn about skin allergies, environmental triggers, symptoms and treatments',
+          url:
+              'https://www.aaaai.org/conditions-treatments/allergies/skin-allergy',
+          icon: Icons.face,
+          color: AppColors.primaryColor2Teal,
+          category: 'Medical',
+          detailedContent: '''
+# Skin & Environmental Allergy Information
+
+## Overview
+Allergic conditions can affect both the skin and respiratory system. Skin allergies occur when allergens trigger immune responses in the skin, while environmental allergies are triggered by external factors like pollen, pollution, and climate changes.
+
+## Environmental Allergies
+
+### Growing Concern in the UK
+Environmental allergies are a growing concern for many, with factors such as climate change, air pollution, and seasonal changes significantly impacting people with conditions like hay fever (allergic rhinitis) and asthma.
+
+### Hay Fever and Allergic Rhinitis
+Hay fever affects millions of people and is closely linked to environmental factors. Exposure to allergens like pollen, dust, and mold can lead to symptoms such as sneezing, itchy eyes, runny nose, and congestion.
+
+**Key Seasonal Triggers:**
+- **Tree Pollen**: Released in spring, can affect people as early as February in the UK
+- **Grass Pollen**: Levels peak from late spring to early summer
+- **Weeds**: Like nettle, mugwort, and ragweed produce pollen in late summer and early autumn
+
+**Air Pollution Impact:**
+- Pollutants like nitrogen dioxide (NO₂) and particulate matter can intensify symptoms
+- Polluted air can alter pollen grains, making them more allergenic
+- Common in urban areas with vehicle emissions and industrial sources
+
+### Asthma and Environmental Factors
+People with asthma are highly sensitive to environmental changes, and climate change is increasingly affecting their quality of life.
+
+**Common Environmental Triggers:**
+- **Air Pollution**: Ground-level ozone and particulate matter can irritate airways
+- **Pollen**: From trees, grasses, and weeds can worsen asthma symptoms
+- **Weather Changes**: Humidity and temperature fluctuations can cause airway tightening
+- **Thunderstorm Asthma**: During high pollen seasons, thunderstorms break pollen into smaller, more inhalable particles
+
+## Types of Skin Allergies
+
+### Atopic Dermatitis (Eczema)
+Eczema is the most common skin condition, especially in children, affecting one in five infants.
+
+**Key Facts:**
+- Due to "leakiness" of the skin barrier causing dryness and inflammation
+- Some children with eczema can flare with particular foods
+- Often linked with asthma, allergic rhinitis, or food allergy (the "atopic march")
+
+### Allergic Contact Dermatitis
+Occurs when skin comes in direct contact with an allergen.
+
+**Common Triggers:**
+- Nickel allergy from jewelry
+- Poison ivy, poison oak, poison sumac
+- Can transfer via clothing, pets, or gardening tools
+
+### Urticaria (Hives)
+Inflammation triggered when immune system releases histamine.
+
+**Types:**
+- **Acute urticaria**: After eating particular food or contact with trigger
+- **Chronic urticaria**: Lasts more than six weeks
+- Often accompanied by angioedema (deep layer swelling)
+
+### Angioedema
+Swelling without itching in deep skin layers.
+
+**Characteristics:**
+- Often in soft tissues (eyelids, mouth, genitals)
+- **Acute**: Minutes to hours, from allergic reactions
+- **Chronic recurrent**: Returns over long periods
+
+### Hereditary Angioedema (HAE)
+- Rare but serious genetic condition
+- Does not respond to typical antihistamines or adrenaline
+
+## Symptoms & Diagnosis
+
+### Environmental Allergies
+**Hay Fever Symptoms:**
+- Sneezing, itchy eyes, runny nose, congestion
+- Seasonal patterns matching pollen releases
+- Worsened by air pollution and weather changes
+
+**Asthma Symptoms:**
+- Coughing, shortness of breath, wheezing, chest tightness
+- Triggered by pollen, pollution, humidity changes
+- Thunderstorm asthma can be severe and unexpected
+
+### Skin Allergies
+**Eczema Symptoms:**
+- Itchy, red or dry skin that may "weep" fluid
+- In infants: often on face
+- In children: elbows, wrists, behind knees and ears
+- In adults: same as children plus hands and feet
+
+**Hives and Angioedema Symptoms:**
+- Itchy, red and white raised welts
+- Welts disappear in minutes to hours
+- Angioedema: swelling without itch around eyes, cheeks, lips
+
+## Treatment & Management
+
+### Environmental Allergies
+**Hay Fever Management:**
+- Monitor pollen forecasts and air quality indexes
+- Limit outdoor activities during high pollen counts
+- Use air purifiers and keep windows closed during peak seasons
+- Medications: antihistamines, nasal corticosteroids
+- Immunotherapy for long-term relief
+
+**Asthma Management:**
+- Identify and avoid environmental triggers
+- Have asthma action plan for weather changes
+- Use preventative medications as prescribed
+- Emergency inhalers for acute attacks
+- Special caution during thunderstorm conditions
+
+### Skin Allergies
+**Eczema Treatment:**
+- Moisturizers and skin barrier repair creams
+- Topical steroids and calcineurin inhibitors
+- Advanced therapies: Dupilumab, Tralokinumab (injectable biologics)
+- Oral JAK inhibitors for severe cases
+- Avoid scratching and irritants like sodium laurel sulfate
+
+**Hives and Angioedema Management:**
+- Oral antihistamines to control itch
+- Increased doses if needed under medical supervision
+- Omalizumab (injectable biologic) for chronic cases
+- Identify and avoid triggers when possible
+
+## Climate Change Impact
+- Rising temperatures extending pollen seasons
+- Increased air pollution exacerbating allergic responses
+- More frequent extreme weather events affecting asthma control
+- Changing plant patterns introducing new allergens
+
+## Important Notes
+- Both skin and environmental allergies are common conditions treated by allergists
+- Always consult with a specialist for accurate diagnosis and personalized treatment
+- Chronic conditions require ongoing management strategies
+- Early intervention can prevent complications and improve quality of life
+
+## When to See a Specialist
+- Symptoms interfere with daily activities
+- Over-the-counter treatments ineffective
+- Condition lasts more than two weeks
+- Severe reactions involving breathing difficulties
+- Suspected hereditary conditions like HAE
+- Poor asthma control despite medication
+- Need for comprehensive allergy testing and immunotherapy
+
+*Sources: AAAAI, Allergy UK*
+''',
+        ),
+        ResourceLink(
           title: 'Cross-Contamination',
           description: 'Preventing accidental exposure risks',
           url:
