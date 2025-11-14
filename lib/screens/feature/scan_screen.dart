@@ -280,16 +280,16 @@ class _CameraScannerScreenState extends State<CameraScannerScreen>
       final prompt = '''
 You are an EXPERT image classifier. Analyze this image with STRICT rules:
 
-**FOOD/PRODUCT** - MUST show one of these:
+FOOD/PRODUCT - MUST show one of these:
 1. Actual food: dishes, meals, cooked food, fruits, vegetables, beverages
 2. Food product labels: packaged foods with visible ingredient lists or nutrition facts
 3. Food packaging: boxes, cans, bottles with clear food branding
 
-**SKIN** - MUST show:
+SKIN - MUST show:
 1. Human skin with visible allergic reactions (hives, rashes, eczema, dermatitis)
 2. Skin conditions clearly related to food allergies
 
-**OTHER** - Everything else including:
+OTHER - Everything else including:
 - Computer screens/monitors showing text
 - Screenshots of documents or websites
 - Random objects, scenery, animals, people
@@ -634,41 +634,41 @@ CRITICAL: Generate 3-4 DIFFERENT possible skin condition interpretations with co
 
 FOOD ALLERGY-RELATED SKIN CONDITIONS TO DETECT:
 
-1. **URTICARIA (HIVES)** - Allergic Reaction
+1. URTICARIA (HIVES) - Allergic Reaction
    - Raised, red, itchy welts on skin
    - Most common food allergy skin reaction
    - Can appear anywhere on body
    - Often caused by: shellfish, nuts, eggs, milk, soy, wheat, fish
 
-2. **ANGIOEDEMA** - Severe Allergic Swelling
+2. ANGIOEDEMA - Severe Allergic Swelling
    - Deep swelling under skin
    - Often affects face, lips, tongue, throat
    - Can accompany hives
    - Emergency if affects breathing
    - Triggered by: nuts, shellfish, eggs, milk
 
-3. **ATOPIC DERMATITIS (ECZEMA)** - Food-Triggered
+3. ATOPIC DERMATITIS (ECZEMA) - Food-Triggered
    - Red, inflamed, itchy patches
    - Dry, scaly skin
    - Can be triggered or worsened by food allergens
    - Common triggers: milk, eggs, peanuts, soy, wheat, fish
 
-4. **CONTACT DERMATITIS** - Direct Food Contact
+4. CONTACT DERMATITIS - Direct Food Contact
    - Red, itchy rash where food touched skin
    - Blistering possible
    - Common with: citrus fruits, tomatoes, garlic
 
-5. **FLUSHING** - Histamine Reaction
+5. FLUSHING - Histamine Reaction
    - Sudden redness and warmth of skin
    - Often face and neck
    - Can occur with food allergies
 
-6. **ERYTHEMA** - Allergic Redness
+6. ERYTHEMA - Allergic Redness
    - Red patches or widespread redness
    - Can indicate allergic reaction
    - May accompany other symptoms
 
-7. **PERIORAL DERMATITIS** - Around Mouth
+7. PERIORAL DERMATITIS - Around Mouth
    - Rash around mouth area
    - Can be triggered by certain foods
    - Red bumps, scaling
@@ -1163,7 +1163,7 @@ CRITICAL REQUIREMENTS:
   String get imageIngredientExtractionPrompt => '''
 CRITICAL INSTRUCTION - READ FIRST 
 
-**ABSOLUTE RULE: NEVER GROUP INGREDIENTS - LIST EACH ONE SEPARATELY**
+ABSOLUTE RULE: NEVER GROUP INGREDIENTS - LIST EACH ONE SEPARATELY
 
 WRONG EXAMPLES:
 - "mixed seafood (shrimp, crab, mussels)" 
@@ -1178,7 +1178,7 @@ WRONG EXAMPLES:
 - "carrots" (separate entry)
 - "peas" (separate entry)
 
-**MANDATORY REQUIREMENT:**
+MANDATORY REQUIREMENT:
 Each visible ingredient = One separate entry in the ingredients array
 If you see 5 different seafood items, you MUST create 5 separate ingredient entries.
 
@@ -1193,19 +1193,19 @@ CRITICAL IDENTIFICATION RULES:
 3. Identify based on what you SEE and what is known to be in the dish
 4. Be SPECIFIC with Filipino dish names
 5. If the food appears to be international (like chocolate cake, croissant, etc.), still analyze it but note that your primary expertise is Filipino cuisine
-6. **CRITICAL ALLERGEN RULE: When identifying ingredients like sauces, pastes, or broths, you MUST break them down and list their primary allergenic base ingredient.**
+6. CRITICAL ALLERGEN RULE: When identifying ingredients like sauces, pastes, or broths, you MUST break them down and list their primary allergenic base ingredient.
    - For Kare-Kare sauce, you MUST list "peanut butter" or "peanuts"
    - For bagoong, you MUST specify "shrimp paste (bagoong)" or "fish paste (bagoong)"
    - For soy-based sauces, you MUST list "soy sauce"
    - For creamy soups, you MUST list "milk" or "cream"
 
-**CRITICAL RULE #1: NEVER GROUP INGREDIENTS**
+CRITICAL RULE #1: NEVER GROUP INGREDIENTS
 - WRONG: "mixed seafood (shrimp, crab, mussels)"
 - CORRECT: List each as separate ingredients: "shrimp", "crab", "mussels"
 - WRONG: "assorted vegetables (carrots, peas)"
 - CORRECT: List each separately: "carrots", "peas"
 
-**CRITICAL RULE #2: ONE INGREDIENT PER ENTRY**
+CRITICAL RULE #2: ONE INGREDIENT PER ENTRY
 Each ingredient MUST be its own separate entry in the ingredients array.
 If you see multiple seafood items, create SEPARATE ingredient entries for EACH ONE.
 
@@ -1214,58 +1214,58 @@ SEAFOOD DISHES - LIST EACH ITEM SEPARATELY:
 - If you see crab → add ingredient entry: "crab"  
 - If you see mussels → add ingredient entry: "mussels"
 - If you see lobster → add ingredient entry: "lobster"
-- **NEVER combine them as "mixed seafood" or "seafood mix"**
+- NEVER combine them as "mixed seafood" or "seafood mix"
 
-**CRITICAL: LIST EACH INGREDIENT INDIVIDUALLY**
-- **NEVER use generic terms like "mixed seafood", "mixed vegetables", "assorted vegetables", or "various seafood"**
-- **ALWAYS list each specific ingredient separately:** 
+CRITICAL: LIST EACH INGREDIENT INDIVIDUALLY
+- NEVER use generic terms like "mixed seafood", "mixed vegetables", "assorted vegetables", or "various seafood"
+- ALWAYS list each specific ingredient separately: 
   - Instead of "mixed seafood" → list "shrimp", "squid", "mussels", "fish" (as separate entries)
   - Instead of "mixed vegetables" → list "cabbage", "carrots", "green beans", "eggplant" (as separate entries)
   - Instead of "assorted nuts" → list "cashews", "almonds", "peanuts" (as separate entries)
-- **Be as specific as possible with each ingredient you can visually identify**
+- Be as specific as possible with each ingredient you can visually identify
 
 FILIPINO DISHES - VISUAL IDENTIFICATION WITH ALLERGEN FOCUS (PRIMARY FOCUS):
 
 KARE-KARE:
-- Thick, orange/brown peanut-based sauce - **MUST include "peanut butter" in ingredients**
+- Thick, orange/brown peanut-based sauce - MUST include "peanut butter" in ingredients
 - Usually has oxtail, beef, or tripe
 - Vegetables: List individually: "bok choy", "string beans", "eggplant" (NOT "mixed vegetables")
-- Served with bagoong on the side - **MUST specify "shrimp paste" or "fish paste"**
+- Served with bagoong on the side - MUST specify "shrimp paste" or "fish paste"
 
 ADOBO:
-- Dark, soy sauce-colored - **MUST list "soy sauce"**
+- Dark, soy sauce-colored - MUST list "soy sauce"
 - Glossy appearance from oil and soy sauce
 - Chicken or pork pieces
 
 SINIGANG:
-- Clear, sour broth - may contain **fish sauce (patis)** - list if present
+- Clear, sour broth - may contain fish sauce (patis) - list if present
 - Vegetables clearly visible: List individually: "radish", "tomatoes", "water spinach", "long beans" (NOT "mixed vegetables")
 
 GINILING (Ground Pork/Beef):
 - Small, minced/ground meat pieces
-- Usually contains soy sauce - **MUST list "soy sauce"**
-- May have oyster sauce - **MUST list "oyster sauce" (contains shellfish)**
+- Usually contains soy sauce - MUST list "soy sauce"
+- May have oyster sauce - MUST list "oyster sauce" (contains shellfish)
 - List vegetables individually: "carrots", "potatoes", "peas" (NOT "mixed vegetables")
 
 DINENGDENG:
-- Clear broth with bagoong - **MUST specify "fish paste (bagoong)" or "shrimp paste (bagoong)"**
+- Clear broth with bagoong - MUST specify "fish paste (bagoong)" or "shrimp paste (bagoong)"
 - List vegetables individually: "bitter melon", "squash", "okra", "eggplant" (NOT "mixed vegetables")
 
 PINAKBET:
 - List vegetables individually: "bitter melon", "eggplant", "squash", "okra", "tomatoes" (NOT "mixed vegetables")
-- With bagoong - **MUST specify "shrimp paste" or "fish paste"**
+- With bagoong - MUST specify "shrimp paste" or "fish paste"
 
 BICOL EXPRESS:
-- Creamy, spicy dish - **MUST list "coconut milk" and "chili peppers"**
+- Creamy, spicy dish - MUST list "coconut milk" and "chili peppers"
 - List other ingredients: "pork", "shrimp paste", "garlic", "onions" (as separate entries)
 
 LAING:
-- Taro leaves in coconut milk - **MUST list "coconut milk" and "taro leaves"**
+- Taro leaves in coconut milk - MUST list "coconut milk" and "taro leaves"
 - List other ingredients: "coconut cream", "chili peppers", "ginger" (as separate entries)
 
 SEAFOOD DISHES - CRITICAL SEPARATION RULES:
-- **NEVER say "mixed seafood" or "assorted seafood"**
-- **ALWAYS list each type separately as individual entries:**
+- NEVER say "mixed seafood" or "assorted seafood"
+- ALWAYS list each type separately as individual entries:
   - "shrimp" (separate entry)
   - "squid" (separate entry)
   - "mussels" (separate entry)
@@ -1275,8 +1275,8 @@ SEAFOOD DISHES - CRITICAL SEPARATION RULES:
 - Be specific with fish types if identifiable: "tilapia", "bangus", "tuna"
 
 VEGETABLE DISHES - CRITICAL SEPARATION RULES:
-- **NEVER say "mixed vegetables" or "assorted vegetables"**
-- **ALWAYS list each vegetable separately as individual entries:**
+- NEVER say "mixed vegetables" or "assorted vegetables"
+- ALWAYS list each vegetable separately as individual entries:
   - "cabbage" (separate entry)
   - "carrots" (separate entry)
   - "green beans" (separate entry)
@@ -1291,10 +1291,10 @@ INTERNATIONAL FOODS (Secondary focus):
 INGREDIENT IDENTIFICATION RULES:
 1. Base ingredient identification on VISIBLE ingredients and the KNOWN TRADITIONAL RECIPE of the identified dish
 2. Include all common seasonings, sauces, and oils
-3. **List EVERY ingredient separately - no grouping or generic terms**
-4. **Your most important task is to ensure allergenic components are explicitly named.** Do not just say "sauce"; specify "peanut sauce" or "peanut butter"
+3. List EVERY ingredient separately - no grouping or generic terms
+4. Your most important task is to ensure allergenic components are explicitly named. Do not just say "sauce"; specify "peanut sauce" or "peanut butter"
 5. For international dishes, research typical ingredients used
-6. **If you can see multiple vegetables or seafood items, list each one individually as separate entries**
+6. If you can see multiple vegetables or seafood items, list each one individually as separate entries
 
 CORRECT JSON STRUCTURE EXAMPLE:
 
@@ -1362,8 +1362,8 @@ INGREDIENT BENEFITS GUIDELINES:
 - Highlight nutritional content (vitamins, minerals, macronutrients)
 - Mention specific health benefits (anti-inflammatory, antioxidant properties, etc.)
 - Include traditional medicinal uses if applicable (especially for Filipino ingredients)
-- **CRITICAL: For allergenic ingredients, ALWAYS provide BOTH health benefits AND allergen warning**
-- **DO NOT skip health benefits just because it's an allergen - balance both aspects**
+- CRITICAL: For allergenic ingredients, ALWAYS provide BOTH health benefits AND allergen warning
+- DO NOT skip health benefits just because it's an allergen - balance both aspects
 - Note potential concerns (high sodium, saturated fat, allergens)
 - Be specific: "Rich in Vitamin C and antioxidants" rather than "healthy"
 - For Filipino ingredients, mention cultural significance if relevant
@@ -1402,12 +1402,12 @@ CRITICAL REQUIREMENTS:
 1. PRIMARY FOCUS on Filipino cuisine identification
 2. Focus ONLY on dish identification and ingredient extraction
 3. Do NOT analyze allergens in this step
-4. **List EVERY ingredient individually - absolutely NO generic terms like "mixed vegetables", "mixed seafood", "assorted vegetables", "various seafood", "seafood mix", etc.**
-5. **Each visible ingredient must be a separate entry in the ingredients array**
-6. **Ensure base allergenic ingredients (peanuts, shrimp, fish, soy, milk, etc.) are explicitly listed in the ingredients array.** This is mandatory
-7. **Provide health benefits for EACH individual ingredient**
+4. List EVERY ingredient individually - absolutely NO generic terms like "mixed vegetables", "mixed seafood", "assorted vegetables", "various seafood", "seafood mix", etc.
+5. Each visible ingredient must be a separate entry in the ingredients array
+6. Ensure base allergenic ingredients (peanuts, shrimp, fish, soy, milk, etc.) are explicitly listed in the ingredients array. This is mandatory
+7. Provide health benefits for EACH individual ingredient
 8. If international dish, still analyze but note in description
-9. **When you see multiple seafood or vegetables, count them and create that many separate ingredient entries**
+9. When you see multiple seafood or vegetables, count them and create that many separate ingredient entries
 ''';
   String getAllergenAnalysisPrompt(List<String> userAllergens) {
     String userAllergensText =
@@ -1420,7 +1420,7 @@ CRITICAL DETECTION RULES:
 - Detect SPECIFIC allergens, NOT categories (e.g., "Shrimp" not "Shellfish", "Cashew" not "Tree Nuts")
 - AVOID DUPLICATE ALLERGENS - Each unique allergen should only appear ONCE in the results
 - If multiple specific allergens exist in the same FDA category, list them SEPARATELY (e.g., both "Shrimp" and "Crab" if both are present)
-- **CRITICAL**: When detecting tree nuts, list EACH TYPE separately (Cashew, Almond, Walnut, Hazelnut, Pecan, Pistachio, Macadamia, etc.)
+- CRITICAL: When detecting tree nuts, list EACH TYPE separately (Cashew, Almond, Walnut, Hazelnut, Pecan, Pistachio, Macadamia, etc.)
 
 FDA MAJOR ALLERGENS - DETECT SPECIFICALLY:
 
@@ -1454,7 +1454,7 @@ FDA MAJOR ALLERGENS - DETECT SPECIFICALLY:
     - Name as: "Snails"
 
 6. TREE NUT ALLERGENS (detect EACH nut separately - NOT peanuts, NOT coconut):
-    - **CRITICAL**: Each tree nut must be listed separately with its own entry
+    - CRITICAL: Each tree nut must be listed separately with its own entry
     - Name as: "Cashew" (kasuy, cashew nuts)
     - Name as: "Almonds"
     - Name as: "Walnuts"
@@ -1465,7 +1465,7 @@ FDA MAJOR ALLERGENS - DETECT SPECIFICALLY:
     - Name as: "Pine Nuts"
     - Name as: "Brazil Nuts"
     - Name as: "Chestnuts"
-    - **Example**: If ingredients contain "cashews, almonds, walnuts" → create 3 separate allergen entries: one for Cashew, one for Almonds, one for Walnuts
+    - Example: If ingredients contain "cashews, almonds, walnuts" → create 3 separate allergen entries: one for Cashew, one for Almonds, one for Walnuts
 
 7. PEANUTS ALLERGEN (LEGUME - NOT A TREE NUT):
    - Name as: "Peanuts"
@@ -1480,7 +1480,7 @@ FDA MAJOR ALLERGENS - DETECT SPECIFICALLY:
 9. SOY ALLERGEN:
     - Name as: "Soy"
     - Detect in: soybean, soy sauce, soybean oil, toyo, miso, tempeh, edamame, soy protein, soy lecithin
-    - CRITICAL: If the user's allergen list contains "tofu," identify the allergen as **"Tofu"** instead of **"Soy"** for tofu-specific ingredients/sources. **Tofu** itself can be a distinct user-allergen.
+    - CRITICAL: If the user's allergen list contains "tofu," identify the allergen as "Tofu" instead of "Soy" for tofu-specific ingredients/sources. Tofu itself can be a distinct user-allergen.
 
 10. SESAME ALLERGEN:
     - Name as: "Sesame"
@@ -1490,28 +1490,28 @@ USER'S CUSTOM ALLERGENS (also check for these): ${userAllergensText.isNotEmpty ?
 
 ENHANCED ALLERGEN DETECTION RULES WITH INTELLIGENT MATCHING:
 
-1. **SPECIFIC ALLERGEN NAMING**: Always use the most specific allergen name:
+1. SPECIFIC ALLERGEN NAMING: Always use the most specific allergen name:
     - If ingredient is "shrimp paste" → allergen name is "Shrimp" (NOT "Shellfish")
     - If ingredient is "oyster sauce" → allergen name is "Oysters" (NOT "Shellfish")
     - If ingredient is "cashew nuts" → allergen name is "Cashew" (NOT "Tree Nuts")
     - If ingredient is "tuna" → allergen name is "Tuna" (NOT "Fish")
     - If ingredient is "soy sauce" → allergen name is "Soy" (NOT just listing ingredient)
     - If ingredient is "bagoong alamang" → allergen name is "Shrimp" (NOT "Shellfish")
-    - **If ingredients contain multiple tree nuts (e.g., "cashews, almonds, walnuts") → create SEPARATE allergen entries for EACH: "Cashew", "Almonds", "Walnuts"**
+    - If ingredients contain multiple tree nuts (e.g., "cashews, almonds, walnuts") → create SEPARATE allergen entries for EACH: "Cashew", "Almonds", "Walnuts"
 
-2. **MULTIPLE SPECIFIC ALLERGENS**: If dish contains multiple specific allergens from same FDA category, list each separately:
+2. MULTIPLE SPECIFIC ALLERGENS: If dish contains multiple specific allergens from same FDA category, list each separately:
     - Example: If dish has both "shrimp paste" and "oyster sauce" → list TWO allergens: "Shrimp" and "Oysters"
-    - **Example: If dish has "cashews", "almonds", and "walnuts" → list THREE allergens: "Cashew", "Almonds", "Walnuts"**
+    - Example: If dish has "cashews", "almonds", and "walnuts" → list THREE allergens: "Cashew", "Almonds", "Walnuts"
     - Example: If dish has "tuna" and "anchovies" → list TWO allergens: "Tuna" and "Anchovies"
 
-3. **USER ALLERGEN MATCHING - CATEGORY EXPANSION**:
-    - **CRITICAL**: If user allergen is "shellfish" → detect ALL specific shellfish separately (Shrimp, Crab, Oysters, Clams, Mussels, etc.) and mark EACH as isUserAllergen: true
-    - **CRITICAL**: If user allergen is "nut", "nuts", or "tree nuts" → detect ALL specific tree nuts separately (Cashew, Almonds, Walnuts, Hazelnuts, Pecans, Pistachios, Macadamia, etc.) and mark EACH as isUserAllergen: true
-    - **CRITICAL**: If user allergen is "fish" → detect ALL specific fish separately (Tuna, Salmon, Bangus, Anchovies, etc.) and mark EACH as isUserAllergen: true
+3. USER ALLERGEN MATCHING - CATEGORY EXPANSION:
+    - CRITICAL: If user allergen is "shellfish" → detect ALL specific shellfish separately (Shrimp, Crab, Oysters, Clams, Mussels, etc.) and mark EACH as isUserAllergen: true
+    - CRITICAL: If user allergen is "nut", "nuts", or "tree nuts" → detect ALL specific tree nuts separately (Cashew, Almonds, Walnuts, Hazelnuts, Pecans, Pistachios, Macadamia, etc.) and mark EACH as isUserAllergen: true
+    - CRITICAL: If user allergen is "fish" → detect ALL specific fish separately (Tuna, Salmon, Bangus, Anchovies, etc.) and mark EACH as isUserAllergen: true
     - If user allergen is specific (e.g., "shrimp", "cashew") → only detect that specific allergen and mark it as isUserAllergen: true
-    - **Example**: User has "nuts" allergen, ingredients contain "cashews, almonds, walnuts" → create 3 separate entries ALL marked isUserAllergen: true
+    - Example: User has "nuts" allergen, ingredients contain "cashews, almonds, walnuts" → create 3 separate entries ALL marked isUserAllergen: true
 
-4. **SMART LINGUISTIC MATCHING**: Use AI intelligence to match allergens with variations:
+4. SMART LINGUISTIC MATCHING: Use AI intelligence to match allergens with variations:
     - SINGULAR/PLURAL: "egg" matches "eggs", "shrimp" matches "shrimps", "cashew" matches "cashews"
     - SYNONYM MATCHING: "soy" matches "soybean"/"soya", "milk" matches "dairy", "gatas" matches "milk"
     - DERIVATIVE MATCHING: "wheat" matches "flour"/"gluten", "soy" matches "tofu"/"soy sauce"
@@ -1532,13 +1532,13 @@ ENHANCED ALLERGEN DETECTION RULES WITH INTELLIGENT MATCHING:
       * "halaan" = "Clams"
       * "pusit" = "Squid"
 
-5. **DEDUPLICATE ALLERGENS**: If same allergen found in multiple ingredients, list it ONCE with ALL sources:
+5. DEDUPLICATE ALLERGENS: If same allergen found in multiple ingredients, list it ONCE with ALL sources:
     - Example: "soy sauce" and "tofu" both contain soy → ONE "Soy" allergen with sources: "soy sauce, tofu"
     - Example: "shrimp" and "shrimp paste" → ONE "Shrimp" allergen with sources: "shrimp, shrimp paste"
     - Example: "milk" and "cheese" → ONE "Milk" allergen with sources: "milk, cheese"
-    - **BUT**: "cashews" and "almonds" are DIFFERENT allergens → TWO separate entries
+    - BUT: "cashews" and "almonds" are DIFFERENT allergens → TWO separate entries
 
-6. **CONTEXT-AWARE DETECTION**:
+6. CONTEXT-AWARE DETECTION:
     - Fish sauce (patis) → detect as "Fish Sauce"
     - Bagoong isda → detect as "Fish Paste"  
     - Bagoong alamang → detect as "Shrimp"
@@ -1547,19 +1547,19 @@ ENHANCED ALLERGEN DETECTION RULES WITH INTELLIGENT MATCHING:
     - Soy sauce (toyo) → detect as "Soy"
     - Shrimp paste (alamang) → detect as "Shrimp"
 
-7. **WHOLE-WORD MATCHING**: Avoid false positives:
+7. WHOLE-WORD MATCHING: Avoid false positives:
     - "Eggplant" does NOT contain eggs
     - "Butternut squash" does NOT contain butter/milk
     - "Coconut" is NOT a tree nut (it's a fruit)
     - Use context to avoid matching unrelated words
 
-8. **RISK LEVEL ASSIGNMENT**:
+8. RISK LEVEL ASSIGNMENT:
     - severe: Life-threatening allergens, common severe reactions (peanuts, shellfish, tree nuts, fish)
     - moderate: Can cause significant reactions (milk, eggs, soy, wheat, sesame)
     - mild: Generally mild reactions
     - safe: No allergen detected or trace amounts
 
-9. **SYMPTOMS ASSIGNMENT**: Provide specific, relevant symptoms for each allergen:
+9. SYMPTOMS ASSIGNMENT: Provide specific, relevant symptoms for each allergen:
     - Severe allergens: anaphylaxis, difficulty breathing, swelling of throat, severe hives, drop in blood pressure
     - Moderate allergens: hives, itching, nausea, stomach cramps, diarrhea, vomiting
     - All: Always include relevant symptoms based on the specific allergen
@@ -1584,8 +1584,8 @@ CRITICAL REQUIREMENTS:
 2. Check for BOTH FDA major allergens AND user's custom allergens
 3. ELIMINATE DUPLICATES - each unique specific allergen appears only once
 4. COMBINE SOURCES - if same allergen in multiple ingredients, list all sources together
-5. **LIST EACH TREE NUT SEPARATELY** - never group as "Tree Nuts" or "Mixed Nuts"
-6. **When user has category allergen (nuts, shellfish, fish), mark ALL specific items in that category as isUserAllergen: true**
+5. LIST EACH TREE NUT SEPARATELY - never group as "Tree Nuts" or "Mixed Nuts"
+6. When user has category allergen (nuts, shellfish, fish), mark ALL specific items in that category as isUserAllergen: true
 7. Provide appropriate risk levels and symptoms
 ''';
   }
@@ -1593,28 +1593,28 @@ CRITICAL REQUIREMENTS:
   String get ingredientSimplificationPrompt => '''
 You are an expert ingredient name standardizer. Your task is to convert complex ingredient names into simple, recognizable names while preserving allergen-relevant context.
 
-**CRITICAL**: You MUST return a JSON array with BOTH "original" and "simplified" for EVERY ingredient, maintaining the EXACT same order.
+CRITICAL: You MUST return a JSON array with BOTH "original" and "simplified" for EVERY ingredient, maintaining the EXACT same order.
 
 
 SIMPLIFICATION RULES:
-1. **PRESERVE FOOD CONTEXT**: Keep recognizable food names intact
+1. PRESERVE FOOD CONTEXT: Keep recognizable food names intact
    - CORRECT: "Lumpia wrapper" -> "lumpia wrapper"
    - CORRECT: "Soy sauce" -> "soy sauce"  
    - CORRECT: "Fish sauce" -> "fish sauce"
    - INCORRECT: "Lumpia wrapper" -> "wheat"
    - INCORRECT: "Soy sauce" -> "soy"
 
-2. **SIMPLIFY TECHNICAL/MARKETING TERMS**: Remove unnecessary descriptors
+2. SIMPLIFY TECHNICAL/MARKETING TERMS: Remove unnecessary descriptors
    - "Enriched wheat flour" -> "wheat flour"
    - "Farm-fresh whole eggs" -> "eggs"
    - "Extra virgin olive oil" -> "olive oil"
 
-3. **PRESERVE ALLERGEN CONTEXT**: Keep allergen-containing ingredients recognizable
+3. PRESERVE ALLERGEN CONTEXT: Keep allergen-containing ingredients recognizable
    - "Creamy peanut butter" -> "peanut butter"
    - "Fermented shrimp paste" -> "shrimp paste"
    - "Whole milk powder" -> "milk powder"
 
-4. **CONVERT TECHNICAL NAMES**: Simplify scientific/chemical names
+4. CONVERT TECHNICAL NAMES: Simplify scientific/chemical names
    - "Monosodium glutamate" -> "MSG"
    - "Ascorbic acid" -> "Vitamin C"
 
