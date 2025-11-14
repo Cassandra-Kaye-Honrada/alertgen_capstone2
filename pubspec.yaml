@@ -32,6 +32,7 @@ dependencies:
   audioplayers: ^6.5.0
   cached_network_image: ^3.4.1
   camera: ^0.11.1
+  carousel_slider: ^5.1.1
   cloud_firestore: ^5.6.8
   cloud_functions: 5.6.2
   crypto: ^3.0.6
@@ -92,6 +93,8 @@ flutter:
     - assets/anaphylaxis/
     - assets/navigation/
     - assets/sounds/
+    - assets/resources/
+    - assets/statistics/
     - .env
 
 flutter_icons:

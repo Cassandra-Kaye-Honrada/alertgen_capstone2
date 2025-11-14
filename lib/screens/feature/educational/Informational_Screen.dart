@@ -1,3 +1,6 @@
+import 'package:allergen/screens/feature/educational/ResourceDetailScreen.dart';
+import 'package:allergen/screens/feature/educational/allergens_data.dart';
+import 'package:allergen/screens/feature/educational/resources_data.dart';
 import 'package:allergen/screens/feature/scan_screen.dart';
 import 'package:allergen/screens/first_Aid_screens/FirstAidScreen.dart';
 import 'package:allergen/screens/health_environment_analytics/AirQualityDetailScreen.dart';
@@ -5,8 +8,6 @@ import 'package:allergen/screens/profile_screen_items/ProfileScreen.dart';
 import 'package:allergen/services/emergency/emergency_service.dart';
 import 'package:allergen/styleguide.dart';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
-import 'dart:convert';
 import 'dart:async';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -19,6 +20,12 @@ class Allergen {
   final Color color;
   final List<String> symptoms;
   final List<String> hiddenSources;
+  final String? imagePath;
+  final String detailedInfo;
+  final String livingWith;
+  final String allergicReactions;
+  final String avoidance;
+  final String outgrow;
 
   Allergen({
     required this.name,
@@ -28,6 +35,12 @@ class Allergen {
     required this.color,
     required this.symptoms,
     required this.hiddenSources,
+    this.imagePath,
+    this.detailedInfo = '',
+    this.livingWith = '',
+    this.allergicReactions = '',
+    this.avoidance = '',
+    this.outgrow = '',
   });
 }
 
@@ -57,6 +70,7 @@ class ResourceLink {
   final Color color;
   final String category;
   final String detailedContent;
+  final List<String> imagePaths;
 
   ResourceLink({
     required this.title,
@@ -66,6 +80,25 @@ class ResourceLink {
     required this.color,
     required this.category,
     required this.detailedContent,
+    required this.imagePaths,
+  });
+}
+
+class StatisticCard {
+  final IconData icon;
+  final String number;
+  final String label;
+  final String description;
+  final Color color;
+  final String? imagePath;
+
+  StatisticCard({
+    required this.icon,
+    required this.number,
+    required this.label,
+    required this.description,
+    required this.color,
+    this.imagePath,
   });
 }
 
@@ -86,8 +119,46 @@ class _FoodAllergyScreenState extends State<FoodAllergyScreen>
   late AnimationController _fabController;
   late AnimationController _statsController;
   Timer? _refreshTimer;
+  final PageController _pageController = PageController();
+  int _currentPage = 0;
+  Timer? _autoScrollTimer;
 
   final List<String> filters = ['All', 'Children', 'Adults', 'Severe'];
+
+  final List<StatisticCard> statistics = [
+    StatisticCard(
+      icon: Icons.people,
+      number: '33 Million',
+      label: 'Americans Impacted',
+      description: 'People in the U.S. living with food allergies',
+      color: AppColors.primary,
+      imagePath: 'assets/statistics/people_stat.png',
+    ),
+    StatisticCard(
+      icon: Icons.child_care,
+      number: '1 in 13',
+      label: 'Children Affected',
+      description: 'Children have food allergies in the United States',
+      color: AppColors.primaryColor3,
+      imagePath: 'assets/statistics/children_stat.png',
+    ),
+    StatisticCard(
+      icon: Icons.person,
+      number: '11%',
+      label: 'Adult Population',
+      description: 'Adults living with food allergies',
+      color: AppColors.primary,
+      imagePath: 'assets/statistics/adults_stat.png',
+    ),
+    StatisticCard(
+      icon: Icons.restaurant,
+      number: '9 Major',
+      label: 'Food Allergens',
+      description: 'Recognized major food allergens by FASTER Act',
+      color: AppColors.primaryColor3,
+      imagePath: 'assets/statistics/allergens_stat.png',
+    ),
+  ];
 
   @override
   void initState() {
@@ -102,6 +173,7 @@ class _FoodAllergyScreenState extends State<FoodAllergyScreen>
     );
     loadData();
     _startAutoRefresh();
+    _startAutoScroll();
   }
 
   @override
@@ -109,12 +181,27 @@ class _FoodAllergyScreenState extends State<FoodAllergyScreen>
     _fabController.dispose();
     _statsController.dispose();
     _refreshTimer?.cancel();
+    _autoScrollTimer?.cancel();
+    _pageController.dispose();
     super.dispose();
   }
 
   void _startAutoRefresh() {
     _refreshTimer = Timer.periodic(const Duration(minutes: 5), (timer) {
       loadData();
+    });
+  }
+
+  void _startAutoScroll() {
+    _autoScrollTimer = Timer.periodic(const Duration(seconds: 5), (timer) {
+      if (_pageController.hasClients) {
+        int nextPage = (_currentPage + 1) % statistics.length;
+        _pageController.animateToPage(
+          nextPage,
+          duration: const Duration(milliseconds: 400),
+          curve: Curves.easeInOut,
+        );
+      }
     });
   }
 
@@ -132,813 +219,76 @@ class _FoodAllergyScreenState extends State<FoodAllergyScreen>
     }
   }
 
+  Widget _buildResourceImage({
+    required String? imagePath,
+    required double width,
+    required double height,
+    required Color placeholderColor,
+    required IconData placeholderIcon,
+    BoxFit fit = BoxFit.cover,
+    BorderRadius? borderRadius,
+  }) {
+    return Container(
+      width: width,
+      height: height,
+      decoration: BoxDecoration(
+        borderRadius: borderRadius ?? BorderRadius.circular(12),
+        color: placeholderColor.withOpacity(0.1),
+      ),
+      child:
+          imagePath != null
+              ? ClipRRect(
+                borderRadius: borderRadius ?? BorderRadius.circular(12),
+                child: Image.asset(
+                  imagePath,
+                  width: width,
+                  height: height,
+                  fit: fit,
+                  errorBuilder: (context, error, stackTrace) {
+                    return _buildResourcePlaceholder(
+                      width: width,
+                      height: height,
+                      color: placeholderColor,
+                      icon: placeholderIcon,
+                      borderRadius: borderRadius,
+                    );
+                  },
+                ),
+              )
+              : _buildResourcePlaceholder(
+                width: width,
+                height: height,
+                color: placeholderColor,
+                icon: placeholderIcon,
+                borderRadius: borderRadius,
+              ),
+    );
+  }
+
+  Widget _buildResourcePlaceholder({
+    required double width,
+    required double height,
+    required Color color,
+    required IconData icon,
+    BorderRadius? borderRadius,
+  }) {
+    return Container(
+      width: width,
+      height: height,
+      decoration: BoxDecoration(
+        borderRadius: borderRadius ?? BorderRadius.circular(12),
+        color: color.withOpacity(0.1),
+      ),
+      child: Icon(icon, color: color.withOpacity(0.5)),
+    );
+  }
+
   Future<void> loadData() async {
     setState(() => isLoading = true);
 
     setState(() {
-      allergens = [
-        Allergen(
-          name: 'Milk',
-          description:
-              'Most common food allergy in infants and young children. About 2.5% of children under age 3 are allergic.',
-          prevalence: '2.5% of children under 3',
-          icon: Icons.local_drink,
-          color: AppColors.primary,
-          symptoms: [
-            'Hives or skin rash',
-            'Digestive problems',
-            'Wheezing',
-            'Swelling of lips/throat',
-          ],
-          hiddenSources: [
-            'Baked goods',
-            'Processed meats',
-            'Margarine',
-            'Nougat',
-            'Caramel candies',
-          ],
-        ),
-        Allergen(
-          name: 'Eggs',
-          description:
-              'Among the most common food allergies in children. Most children eventually outgrow their egg allergy.',
-          prevalence: 'Common in children',
-          icon: Icons.egg,
-          color: AppColors.primaryColor2Teal,
-          symptoms: [
-            'Skin inflammation',
-            'Nasal congestion',
-            'Digestive upset',
-            'Asthma symptoms',
-          ],
-          hiddenSources: [
-            'Mayonnaise',
-            'Marshmallows',
-            'Pasta',
-            'Foam on coffee',
-            'Pretzels',
-          ],
-        ),
-        Allergen(
-          name: 'Peanuts',
-          description:
-              'One of the most common allergens associated with anaphylaxis. Affects about 2.5% of children.',
-          prevalence: '2.5% of children',
-          icon: Icons.circle,
-          color: AppColors.primary,
-          symptoms: [
-            'Anaphylaxis',
-            'Throat tightness',
-            'Difficulty breathing',
-            'Rapid pulse',
-          ],
-          hiddenSources: [
-            'Asian cuisine',
-            'Baked goods',
-            'Candy',
-            'Chili',
-            'Pet food',
-          ],
-        ),
-        Allergen(
-          name: 'Tree Nuts',
-          description:
-              'Includes almonds, walnuts, pecans, cashews. About 40% of peanut-allergic individuals also have tree nut allergy.',
-          prevalence: '0.4-0.5% of population',
-          icon: Icons.nature,
-          color: AppColors.primaryColor2Teal,
-          symptoms: [
-            'Severe reactions',
-            'Breathing problems',
-            'Skin reactions',
-            'GI distress',
-          ],
-          hiddenSources: [
-            'Pesto',
-            'Barbecue sauce',
-            'Cereals',
-            'Ice cream',
-            'Liqueurs',
-          ],
-        ),
-        Allergen(
-          name: 'Soy',
-          description:
-              'Common allergen derived from soybeans. Often found in processed foods and Asian cuisine.',
-          prevalence: 'Common in processed foods',
-          icon: Icons.eco,
-          color: AppColors.primary,
-          symptoms: [
-            'Itching',
-            'Tingling mouth',
-            'Runny nose',
-            'Skin reactions',
-          ],
-          hiddenSources: [
-            'Vegetable broth',
-            'Canned tuna',
-            'Processed meats',
-            'Energy bars',
-            'Worcestershire',
-          ],
-        ),
-        Allergen(
-          name: 'Wheat',
-          description:
-              'One of the eight major allergens. Different from celiac disease which is an autoimmune condition.',
-          prevalence: 'Major allergen',
-          icon: Icons.grass,
-          color: AppColors.primaryColor2Teal,
-          symptoms: [
-            'Hives',
-            'Difficulty breathing',
-            'Digestive upset',
-            'Nasal congestion',
-          ],
-          hiddenSources: [
-            'Soy sauce',
-            'Beer',
-            'Ice cream',
-            'Processed meats',
-            'Gelatinized starch',
-          ],
-        ),
-        Allergen(
-          name: 'Fish',
-          description:
-              'Includes bass, flounder, cod, and other finned fish. Must be labeled on packaged foods.',
-          prevalence: 'More common in adults',
-          icon: Icons.set_meal,
-          color: AppColors.primary,
-          symptoms: ['Hives', 'Vomiting', 'Diarrhea', 'Anaphylaxis possible'],
-          hiddenSources: [
-            'Caesar dressing',
-            'Worcestershire',
-            'Imitation crab',
-            'Asian sauces',
-            'Supplements',
-          ],
-        ),
-        Allergen(
-          name: 'Shellfish',
-          description:
-              'Includes crustacean shellfish (crab, lobster, shrimp). Most common food allergy in adults.',
-          prevalence: 'Most common in adults',
-          icon: Icons.water,
-          color: AppColors.primaryColor2Teal,
-          symptoms: [
-            'Anaphylaxis',
-            'Hives',
-            'Indigestion',
-            'Respiratory issues',
-          ],
-          hiddenSources: [
-            'Asian cuisine',
-            'Bouillabaisse',
-            'Cuttlefish ink',
-            'Glucosamine',
-            'Surimi',
-          ],
-        ),
-        Allergen(
-          name: 'Sesame',
-          description:
-              'The 9th major allergen as of January 1, 2023. Must now be labeled on all packaged foods.',
-          prevalence: 'Recently added to list',
-          icon: Icons.grain,
-          color: AppColors.primary,
-          symptoms: [
-            'Anaphylaxis',
-            'Skin rash',
-            'Digestive issues',
-            'Respiratory problems',
-          ],
-          hiddenSources: ['Bread', 'Crackers', 'Tahini', 'Hummus', 'Cosmetics'],
-        ),
-      ];
-
-      resources = [
-        ResourceLink(
-          title: 'Food Allergy Information',
-          description: 'Comprehensive guide to food allergies and management',
-          url:
-              'https://www.aaaai.org/conditions-treatments/allergies/food-allergy',
-          icon: Icons.food_bank,
-          color: AppColors.primary,
-          category: 'Educational',
-          detailedContent: '''
-# Comprehensive Food Allergy Guide
-
-## Understanding Food Allergies
-A food allergy occurs when the immune system mistakenly identifies a specific food or substance in food as harmful. When you eat the offending food, your immune system releases antibodies and chemicals like histamine.
-
-## Common Symptoms
-- Hives, itching, or eczema
-- Swelling of the lips, face, tongue, or throat
-- Wheezing, nasal congestion, or trouble breathing
-- Abdominal pain, diarrhea, nausea, or vomiting
-- Dizziness, lightheadedness, or fainting
-
-## Diagnosis and Testing
-- Skin prick tests
-- Blood tests (specific IgE)
-- Oral food challenges
-- Elimination diets
-
-## Management Strategies
-- Strict avoidance of allergens
-- Reading food labels carefully
-- Carrying emergency medication
-- Having an action plan
-          ''',
-        ),
-        ResourceLink(
-          title: 'Common Allergens',
-          description: 'Learn about the most common food allergens',
-          url:
-              'https://www.foodallergy.org/living-food-allergies/food-allergy-essentials/common-allergens',
-          icon: Icons.warning_amber_rounded,
-          color: AppColors.primaryColor2Teal,
-          category: 'Reference',
-          detailedContent: '''
-# The Big 9 Allergens
-
-## 1. Milk
-- Most common in children
-- Different from lactose intolerance
-- Often outgrown by adulthood
-
-## 2. Eggs
-- Second most common in children
-- Both yolk and white can cause reactions
-- Often outgrown
-
-## 3. Peanuts
-- One of the most severe allergens
-- Rarely outgrown
-- High risk of anaphylaxis
-
-## 4. Tree Nuts
-- Includes almonds, walnuts, cashews
-- Often lifelong allergy
-- Cross-reactivity common
-
-## 5. Soy
-- Common in processed foods
-- Often outgrown in childhood
-- Found in many Asian dishes
-
-## 6. Wheat
-- Different from celiac disease
-- Often outgrown
-- Many alternative grains available
-
-## 7. Fish
-- More common in adults
-- Can develop later in life
-- Specific to certain fish types
-
-## 8. Shellfish
-- Most common in adults
-- Includes crustaceans and mollusks
-- Often lifelong
-
-## 9. Sesame
-- Recently recognized major allergen
-- Must be labeled since 2023
-- Found in many baked goods
-          ''',
-        ),
-        ResourceLink(
-          title: 'Anaphylaxis Guide',
-          description: 'Emergency information and treatment protocols',
-          url: 'https://www.foodallergy.org/resources/anaphylaxis',
-          icon: Icons.emergency,
-          color: AppColors.primary,
-          category: 'Emergency',
-          detailedContent: '''
-# Anaphylaxis Emergency Guide
-
-## What is Anaphylaxis?
-Anaphylaxis is a severe, potentially life-threatening allergic reaction that can occur within seconds or minutes of exposure to an allergen.
-
-## Signs and Symptoms
-
-### Mild to Moderate Reactions
-- Hives, welts, or body redness
-- Tingling mouth
-- Swelling of lips, face, eyes
-- Vomiting, abdominal pain
-
-### Severe Reactions (Anaphylaxis)
-- Difficult or noisy breathing
-- Swelling of tongue and throat
-- Wheezing or persistent cough
-- Difficulty talking or hoarse voice
-- Persistent dizziness or collapse
-- Pale and floppy (young children)
-
-## Emergency Treatment
-
-### Step 1: Administer Epinephrine
-- Use auto-injector immediately
-- Don't wait to see if symptoms improve
-- Inject into outer thigh
-- Massage area for 10 seconds
-
-### Step 2: Call Emergency Services
-- Call 911 or local emergency number
-- Say "anaphylaxis" clearly
-- Request ambulance with epinephrine
-
-### Step 3: Additional Care
-- Lie person flat, don't allow standing
-- If breathing difficult, allow sitting
-- Don't give food or drink
-- Be prepared for second dose
-
-## Prevention
-- Always carry two epinephrine auto-injectors
-- Wear medical identification
-- Have an action plan
-- Educate family and friends
-          ''',
-        ),
-        ResourceLink(
-          title: 'Living with Allergies',
-          description: 'Daily management and lifestyle tips',
-          url:
-              'https://www.aaaai.org/conditions-treatments/allergies/drug-allergy',
-          icon: Icons.favorite,
-          color: AppColors.primaryColor2Teal,
-          category: 'Lifestyle',
-          detailedContent: '''
-# Daily Management Guide
-
-## Meal Planning
-### Safe Cooking Practices
-- Clean all surfaces thoroughly
-- Use separate utensils and cookware
-- Prepare allergen-free meals first
-- Label containers clearly
-
-### Grocery Shopping
-- Read labels every time (ingredients can change)
-- Look for "may contain" warnings
-- Choose certified allergen-free products
-- Shop during less busy hours
-
-## Social Situations
-
-### Eating Out Safely
-- Call ahead to discuss allergies
-- Speak to manager and chef directly
-- Choose simple preparation methods
-- Avoid buffet-style restaurants
-
-### Parties and Gatherings
-- Bring safe food to share
-- Educate hosts about cross-contamination
-- Have emergency medication accessible
-- Consider eating before attending
-
-## Travel Tips
-
-### Planning
-- Research medical facilities at destination
-- Learn key phrases in local language
-- Carry doctor's note and prescription
-- Pack extra medication
-
-### Air Travel
-- Notify airline in advance
-- Bring safe snacks and meals
-- Wipe down tray tables and armrests
-- Keep medication in carry-on
-
-## Emotional Well-being
-- Join support groups
-- Practice stress management
-- Educate friends and family
-- Focus on what you can eat
-          ''',
-        ),
-        ResourceLink(
-          title: 'Child Allergy Guide',
-          description: 'Managing allergies in children and schools',
-          url:
-              'https://www.aaaai.org/conditions-treatments/allergies/skin-allergy',
-          icon: Icons.child_care,
-          color: AppColors.primary,
-          category: 'Pediatric',
-          detailedContent: '''
-# Children's Allergy Management
-
-## School Preparation
-
-### Communication with School
-- Meet with school nurse and administration
-- Provide written allergy action plan
-- Educate teachers and staff
-- Discuss field trip safety
-
-### Classroom Safety
-- No-food sharing policies
-- Hand-washing routines
-- Clean eating surfaces
-- Allergy-aware classroom
-
-## Age-Specific Guidance
-
-### Infants and Toddlers
-- Introduce allergens one at a time
-- Watch for reaction signs
-- Keep emergency plans visible
-- Educate all caregivers
-
-### School-age Children
-- Teach them to recognize symptoms
-- Practice saying "no" to unsafe foods
-- Role-play asking for help
-- Build confidence in self-advocacy
-
-### Teenagers
-- Discuss social pressures
-- Review emergency procedures
-- Encourage carrying own medication
-- Address dating and social situations
-
-## Emergency Preparedness
-
-### Action Plan Components
-- Clear symptom identification
-- Step-by-step emergency instructions
-- Emergency contacts
-- Medication locations
-
-### Training
-- Train teachers and staff
-- Practice with substitute teachers
-- Update plans annually
-- Review with child as they age
-          ''',
-        ),
-        ResourceLink(
-          title: 'Skin Allergy Information',
-          description: 'Learn about skin allergies, symptoms, and treatments',
-          url:
-              'https://www.aaaai.org/conditions-treatments/allergies/skin-allergy',
-          icon: Icons.face,
-          color: AppColors.primaryColor2Teal,
-          category: 'Medical',
-          detailedContent: '''
-# Skin Allergy Information
-
-## Overview
-Irritated skin can be caused by a variety of factors. These include immune system disorders, medications and infections. When an allergen is responsible for triggering an immune system response in the skin, then it is an allergic skin condition.
-
-## Types of Skin Allergies
-
-### Atopic Dermatitis (Eczema)
-Eczema is the most common skin condition, especially in children. It affects one in five infants but only 10% of adults. One explanation for eczema is thought to be due to "leakiness" of the skin barrier, which causes it to dry out and become prone to irritation and inflammation by many environmental factors.
-
-**Key Facts:**
-- Some young children with eczema can flare with a particular food
-- In about half of patients with severe atopic dermatitis, the disease is due to inheritance of a faulty gene in their skin called filaggrin
-- Unlike with urticaria (hives), histamine is not the only cause of the itch of eczema so anti-histamines may not control the symptoms
-- Eczema is often linked with asthma, allergic rhinitis (hay fever) or food allergy
-- This order of progression is called the atopic march
-
-### Allergic Contact Dermatitis
-Allergic contact dermatitis occurs when your skin comes in direct contact with an allergen.
-
-**Common Triggers:**
-- Nickel allergy from jewelry
-- Poison ivy, poison oak and poison sumac
-- The red, itchy rash is caused by an oily coating covering these plants
-- Can also come from touching clothing, pets or gardening tools that have contact with the oil
-
-### Urticaria (Hives)
-Hives are an inflammation of the skin triggered when the immune system releases histamine. This causes small blood vessels to leak, which leads to swelling and itching.
-
-**Types:**
-- **Acute urticaria**: Occurs after eating a particular food or contact with a trigger
-- **Chronic urticaria**: Lasts more than six weeks and can last months or years
-- Swelling without itching in deep layers of the skin is called angioedema
-
-### Angioedema
-Angioedema is swelling without itching in the deep layers of the skin. It is often seen together with urticaria (hives).
-
-**Characteristics:**
-- Often occurs in soft tissues such as eyelids, mouth or genitals
-- **Acute**: Lasts minutes to hours, commonly caused by allergic reactions
-- **Chronic recurrent**: Returns over long periods, each episode lasting hours to days
-
-### Hereditary Angioedema (HAE)
-- Rare but serious genetic condition involving swelling in various body parts
-- Does not respond to typical angioedema treatment with antihistamines or adrenaline
-- Important to see a specialist for screening
-
-## Symptoms & Diagnosis
-
-### Atopic Dermatitis (Eczema)
-**Symptoms:**
-- Itchy, red or dry skin
-- May "weep" or leak fluid that crusts over when scratched
-- In infants: often appears on the face
-- In children: elbows, wrists, behind knees and ears
-- In adolescents/adults: same as children plus hands and feet
-
-**Diagnosis:**
-- Treatment depends on moisturizers and topical medicines
-- Topical steroids for inflammation
-- Severe cases may need antibiotics for infection
-- Infants with severe eczema should be evaluated for food allergy
-
-### Urticaria (Hives) and Angioedema
-**Symptoms:**
-- Itchy, red and white raised bumps or welts
-- Welts disappear in minutes to hours without scarring
-- Acute: lasts up to six weeks
-- Chronic: lasts more than six weeks, even months or years
-- Angioedema: swelling without itch around eyes, cheeks, lips
-
-**Diagnosis:**
-- Majority of chronic cases have no identifiable cause
-- Allergy testing helpful for acute cases with specific triggers
-- Food allergy rarely causes chronic hives
-
-## Treatment & Management
-
-### Atopic Dermatitis (Eczema)
-**Key Strategies:**
-- Avoid scratching - "itch which rashes"
-- Skin care to rehydrate and repair skin barrier
-- Trilipid creams and moisturizers
-- Topical medications: steroids, calcineurin inhibitors, phosphodiesterase 4 inhibitors, JAK inhibitors
-
-**Advanced Therapies:**
-- Dupilumab: injectable biologic for moderate-to-severe cases (ages 6 months+)
-- Tralokinumab: injectable biologic for adults with moderate-to-severe cases
-- Oral JAK/STAT inhibitors: Upadacitinib (age 12+), Abrocitinib (age 18+)
-
-**Additional Treatments:**
-- Antibiotics for bacterial infections
-- Antifungals for secondary fungal infections
-- Avoid oral steroids due to side effects and rebound
-- Cotton undergarments to protect skin
-- Avoid soap products with sodium laurel sulfate
-
-### Urticaria (Hives) and Angioedema
-**Management:**
-- Identify and avoid triggers when possible
-- Oral antihistamines to control itch and recurrence
-- Increased antihistamine doses if needed
-- Omalizumab: injectable biologic for chronic spontaneous urticaria (age 12+)
-- For angioedema with ACE inhibitors: consult doctor for medication change
-
-## Important Notes
-- Skin conditions are among the most common forms of allergy treated by allergists/immunologists
-- Always consult with a specialist for accurate diagnosis and personalized treatment
-- Chronic conditions may require ongoing management strategies
-- Early intervention can prevent complications and improve quality of life
-
-## When to See a Specialist
-- Symptoms interfere with daily activities
-- Over-the-counter treatments ineffective
-- Condition lasts more than two weeks
-- Severe reactions involving breathing difficulties
-- Suspected hereditary conditions like HAE
-''',
-        ),
-        ResourceLink(
-          title: 'Skin & Environmental Allergies',
-          description:
-              'Learn about skin allergies, environmental triggers, symptoms and treatments',
-          url:
-              'https://www.aaaai.org/conditions-treatments/allergies/skin-allergy',
-          icon: Icons.face,
-          color: AppColors.primaryColor2Teal,
-          category: 'Medical',
-          detailedContent: '''
-# Skin & Environmental Allergy Information
-
-## Overview
-Allergic conditions can affect both the skin and respiratory system. Skin allergies occur when allergens trigger immune responses in the skin, while environmental allergies are triggered by external factors like pollen, pollution, and climate changes.
-
-## Environmental Allergies
-
-### Growing Concern in the UK
-Environmental allergies are a growing concern for many, with factors such as climate change, air pollution, and seasonal changes significantly impacting people with conditions like hay fever (allergic rhinitis) and asthma.
-
-### Hay Fever and Allergic Rhinitis
-Hay fever affects millions of people and is closely linked to environmental factors. Exposure to allergens like pollen, dust, and mold can lead to symptoms such as sneezing, itchy eyes, runny nose, and congestion.
-
-**Key Seasonal Triggers:**
-- **Tree Pollen**: Released in spring, can affect people as early as February in the UK
-- **Grass Pollen**: Levels peak from late spring to early summer
-- **Weeds**: Like nettle, mugwort, and ragweed produce pollen in late summer and early autumn
-
-**Air Pollution Impact:**
-- Pollutants like nitrogen dioxide (NO₂) and particulate matter can intensify symptoms
-- Polluted air can alter pollen grains, making them more allergenic
-- Common in urban areas with vehicle emissions and industrial sources
-
-### Asthma and Environmental Factors
-People with asthma are highly sensitive to environmental changes, and climate change is increasingly affecting their quality of life.
-
-**Common Environmental Triggers:**
-- **Air Pollution**: Ground-level ozone and particulate matter can irritate airways
-- **Pollen**: From trees, grasses, and weeds can worsen asthma symptoms
-- **Weather Changes**: Humidity and temperature fluctuations can cause airway tightening
-- **Thunderstorm Asthma**: During high pollen seasons, thunderstorms break pollen into smaller, more inhalable particles
-
-## Types of Skin Allergies
-
-### Atopic Dermatitis (Eczema)
-Eczema is the most common skin condition, especially in children, affecting one in five infants.
-
-**Key Facts:**
-- Due to "leakiness" of the skin barrier causing dryness and inflammation
-- Some children with eczema can flare with particular foods
-- Often linked with asthma, allergic rhinitis, or food allergy (the "atopic march")
-
-### Allergic Contact Dermatitis
-Occurs when skin comes in direct contact with an allergen.
-
-**Common Triggers:**
-- Nickel allergy from jewelry
-- Poison ivy, poison oak, poison sumac
-- Can transfer via clothing, pets, or gardening tools
-
-### Urticaria (Hives)
-Inflammation triggered when immune system releases histamine.
-
-**Types:**
-- **Acute urticaria**: After eating particular food or contact with trigger
-- **Chronic urticaria**: Lasts more than six weeks
-- Often accompanied by angioedema (deep layer swelling)
-
-### Angioedema
-Swelling without itching in deep skin layers.
-
-**Characteristics:**
-- Often in soft tissues (eyelids, mouth, genitals)
-- **Acute**: Minutes to hours, from allergic reactions
-- **Chronic recurrent**: Returns over long periods
-
-### Hereditary Angioedema (HAE)
-- Rare but serious genetic condition
-- Does not respond to typical antihistamines or adrenaline
-
-## Symptoms & Diagnosis
-
-### Environmental Allergies
-**Hay Fever Symptoms:**
-- Sneezing, itchy eyes, runny nose, congestion
-- Seasonal patterns matching pollen releases
-- Worsened by air pollution and weather changes
-
-**Asthma Symptoms:**
-- Coughing, shortness of breath, wheezing, chest tightness
-- Triggered by pollen, pollution, humidity changes
-- Thunderstorm asthma can be severe and unexpected
-
-### Skin Allergies
-**Eczema Symptoms:**
-- Itchy, red or dry skin that may "weep" fluid
-- In infants: often on face
-- In children: elbows, wrists, behind knees and ears
-- In adults: same as children plus hands and feet
-
-**Hives and Angioedema Symptoms:**
-- Itchy, red and white raised welts
-- Welts disappear in minutes to hours
-- Angioedema: swelling without itch around eyes, cheeks, lips
-
-## Treatment & Management
-
-### Environmental Allergies
-**Hay Fever Management:**
-- Monitor pollen forecasts and air quality indexes
-- Limit outdoor activities during high pollen counts
-- Use air purifiers and keep windows closed during peak seasons
-- Medications: antihistamines, nasal corticosteroids
-- Immunotherapy for long-term relief
-
-**Asthma Management:**
-- Identify and avoid environmental triggers
-- Have asthma action plan for weather changes
-- Use preventative medications as prescribed
-- Emergency inhalers for acute attacks
-- Special caution during thunderstorm conditions
-
-### Skin Allergies
-**Eczema Treatment:**
-- Moisturizers and skin barrier repair creams
-- Topical steroids and calcineurin inhibitors
-- Advanced therapies: Dupilumab, Tralokinumab (injectable biologics)
-- Oral JAK inhibitors for severe cases
-- Avoid scratching and irritants like sodium laurel sulfate
-
-**Hives and Angioedema Management:**
-- Oral antihistamines to control itch
-- Increased doses if needed under medical supervision
-- Omalizumab (injectable biologic) for chronic cases
-- Identify and avoid triggers when possible
-
-## Climate Change Impact
-- Rising temperatures extending pollen seasons
-- Increased air pollution exacerbating allergic responses
-- More frequent extreme weather events affecting asthma control
-- Changing plant patterns introducing new allergens
-
-## Important Notes
-- Both skin and environmental allergies are common conditions treated by allergists
-- Always consult with a specialist for accurate diagnosis and personalized treatment
-- Chronic conditions require ongoing management strategies
-- Early intervention can prevent complications and improve quality of life
-
-## When to See a Specialist
-- Symptoms interfere with daily activities
-- Over-the-counter treatments ineffective
-- Condition lasts more than two weeks
-- Severe reactions involving breathing difficulties
-- Suspected hereditary conditions like HAE
-- Poor asthma control despite medication
-- Need for comprehensive allergy testing and immunotherapy
-
-*Sources: AAAAI, Allergy UK*
-''',
-        ),
-        ResourceLink(
-          title: 'Cross-Contamination',
-          description: 'Preventing accidental exposure risks',
-          url:
-              'https://www.aaaai.org/conditions-treatments/allergies/hay-fever-rhinitis',
-          icon: Icons.cleaning_services,
-          color: AppColors.primary,
-          category: 'Safety',
-          detailedContent: '''
-# Cross-Contamination Prevention
-
-## Understanding Risks
-
-### Direct Cross-Contact
-- Using same utensils for different foods
-- Shared cooking surfaces and oils
-- Food preparation on contaminated surfaces
-- Hand-to-food contact
-
-### Indirect Cross-Contact
-- Airborne particles during cooking
-- Residual allergens in shared equipment
-- Storage of allergen-containing foods
-- Improper cleaning procedures
-
-## Home Safety Measures
-
-### Kitchen Organization
-- Designate allergen-free zones
-- Use color-coded utensils and cutting boards
-- Store allergen-free foods separately
-- Label all containers clearly
-
-### Cleaning Protocols
-- Wash hands with soap and water
-- Use separate sponges and cloths
-- Clean surfaces with dedicated cleaners
-- Run empty cycle in dishwasher between loads
-
-## Reading Labels Effectively
-
-### Required Labeling
-The FDA requires clear labeling of the 9 major allergens:
-- Milk
-- Eggs
-- Fish
-- Shellfish
-- Tree nuts
-- Peanuts
-- Wheat
-- Soybeans
-- Sesame
-
-### Advisory Statements
-Voluntary warnings include:
-- "May contain [allergen]"
-- "Processed in a facility that also processes [allergen]"
-- "Made on shared equipment with [allergen]"
-
-## Best Practices
-- Always read labels, even on familiar products
-- Contact manufacturers when in doubt
-- Choose products with clear allergen statements
-- When unsure, choose certified allergen-free products
-          ''',
-        ),
-      ];
-
+      allergens = AllergensData.getAllergens();
+      resources = ResourcesData.getResources();
       isLoading = false;
     });
 
@@ -1054,13 +404,11 @@ Voluntary warnings include:
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         children: [
-          // Home
           GestureDetector(
             onTap:
                 () => Navigator.of(context).popUntil((route) => route.isFirst),
             child: Icon(Icons.home, color: AppColors.Gray, size: 24),
           ),
-
           GestureDetector(
             onTap: () {
               Navigator.push(
@@ -1079,11 +427,8 @@ Voluntary warnings include:
               size: 24,
             ),
           ),
-
-          // Scanner
           GestureDetector(
             onTap: () {
-              // Navigate to scanner - you'll need to import your scanner screen
               Navigator.push(
                 context,
                 MaterialPageRoute(builder: (context) => CameraScannerScreen()),
@@ -1101,11 +446,8 @@ Voluntary warnings include:
                   ),
             ),
           ),
-
-          // Education/Food Allergy
           GestureDetector(
             onTap: () {
-              // Navigate to food allergy screen
               Navigator.push(
                 context,
                 MaterialPageRoute(builder: (context) => FoodAllergyScreen()),
@@ -1113,11 +455,8 @@ Voluntary warnings include:
             },
             child: const Icon(Icons.school, color: AppColors.primary, size: 35),
           ),
-
-          // Profile
           GestureDetector(
             onTap: () {
-              // Navigate to profile
               Navigator.push(
                 context,
                 MaterialPageRoute(
@@ -1128,6 +467,183 @@ Voluntary warnings include:
               );
             },
             child: Icon(Icons.person, color: AppColors.Gray, size: 24),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStatisticsCarousel() {
+    return AnimatedBuilder(
+      animation: _statsController,
+      builder: (context, child) {
+        return Opacity(
+          opacity: _statsController.value,
+          child: Transform.translate(
+            offset: Offset(0, 20 * (1 - _statsController.value)),
+            child: Container(
+              margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              height: 240,
+              child: Column(
+                children: [
+                  Expanded(
+                    child: PageView.builder(
+                      controller: _pageController,
+                      onPageChanged: (index) {
+                        setState(() {
+                          _currentPage = index;
+                        });
+                      },
+                      itemCount: statistics.length,
+                      itemBuilder: (context, index) {
+                        return _buildStatCard(statistics[index]);
+                      },
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: List.generate(
+                      statistics.length,
+                      (index) => AnimatedContainer(
+                        duration: const Duration(milliseconds: 300),
+                        margin: const EdgeInsets.symmetric(horizontal: 4),
+                        width: _currentPage == index ? 24 : 8,
+                        height: 8,
+                        decoration: BoxDecoration(
+                          color:
+                              _currentPage == index
+                                  ? statistics[index].color
+                                  : Colors.grey.withOpacity(0.3),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildStatCard(StatisticCard stat) {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 8),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [stat.color, stat.color.withOpacity(0.8)],
+        ),
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: stat.color.withOpacity(0.4),
+            blurRadius: 12,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Stack(
+        children: [
+          // Background pattern/image
+          if (stat.imagePath != null)
+            Positioned.fill(
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(24),
+                child: Opacity(
+                  opacity: 0.2,
+                  child: Image.asset(
+                    stat.imagePath!,
+                    fit: BoxFit.cover,
+                    alignment: Alignment.centerRight,
+                    errorBuilder: (context, error, stackTrace) => SizedBox(),
+                  ),
+                ),
+              ),
+            ),
+          // Content
+          Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.25),
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: Icon(stat.icon, color: Colors.white, size: 32),
+                    ),
+                    const Spacer(),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 6,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(Icons.schedule, color: Colors.white, size: 14),
+                          SizedBox(width: 4),
+                          Text(
+                            'Live',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      stat.number,
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 40,
+                        fontWeight: FontWeight.bold,
+                        height: 1.1,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      stat.label,
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 18,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      stat.description,
+                      style: TextStyle(
+                        color: Colors.white.withOpacity(0.9),
+                        fontSize: 13,
+                        height: 1.3,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
         ],
       ),
@@ -1150,13 +666,14 @@ Voluntary warnings include:
         automaticallyImplyLeading: false,
         backgroundColor: AppColors.primary,
         elevation: 0,
-        actions: [
-          IconButton(
-            icon: Icon(Icons.info_outline, color: Colors.white),
-            onPressed: () => _showInfoDialog(context),
-            tooltip: 'About',
-          ),
-        ],
+        // actions: [
+        //   IconButton(
+        //     icon: Icon(Icons.info_outline, color: Colors.white),
+        //     onPressed: () =>{},
+        //     // _showInfoDialog(context),
+        //     tooltip: 'About',
+        //   ),
+        // ],
       ),
       body:
           isLoading
@@ -1171,35 +688,30 @@ Voluntary warnings include:
                 color: Colors.white,
                 child: SingleChildScrollView(
                   physics: const AlwaysScrollableScrollPhysics(),
-                  child: Stack(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          _buildSearchBar(),
-                          _buildFilterChips(),
-                          _buildAnimatedStatsCard(),
-                          const SizedBox(height: 8),
-                          _buildSectionHeader(
-                            context,
-                            'Major Food Allergens',
-                            Icons.restaurant,
-                          ),
-                          _buildAllergensGrid(),
-                          const SizedBox(height: 16),
-                          buildTreatmentSection(),
-
-                          _buildSectionHeader(
-                            context,
-                            'Educational Resources',
-                            Icons.menu_book,
-                          ),
-                          ...resources.map(
-                            (resource) => _buildResourceItem(resource, context),
-                          ),
-                          const SizedBox(height: 32),
-                        ],
+                      _buildSearchBar(),
+                      _buildFilterChips(),
+                      _buildStatisticsCarousel(),
+                      const SizedBox(height: 8),
+                      _buildSectionHeader(
+                        context,
+                        'Major Food Allergens',
+                        Icons.restaurant,
                       ),
+                      _buildAllergensGrid(),
+                      const SizedBox(height: 16),
+                      buildTreatmentSection(),
+                      _buildSectionHeader(
+                        context,
+                        'Educational Resources',
+                        Icons.menu_book,
+                      ),
+                      ...resources.map(
+                        (resource) => _buildResourceItem(resource, context),
+                      ),
+                      const SizedBox(height: 32),
                     ],
                   ),
                 ),
@@ -1301,139 +813,6 @@ Voluntary warnings include:
             ),
           );
         },
-      ),
-    );
-  }
-
-  Widget _buildAnimatedStatsCard() {
-    return AnimatedBuilder(
-      animation: _statsController,
-      builder: (context, child) {
-        return Opacity(
-          opacity: _statsController.value,
-          child: Transform.translate(
-            offset: Offset(0, 20 * (1 - _statsController.value)),
-            child: _buildStatsCard(),
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _buildStatsCard() {
-    return Container(
-      margin: const EdgeInsets.all(16),
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: AppColors.primary,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.primary.withOpacity(0.4),
-            blurRadius: 12,
-            offset: const Offset(0, 6),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                padding: EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.2),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Icon(Icons.analytics, color: Colors.white, size: 28),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  'Food Allergy Statistics',
-                  style: AppTextStyles.headline.copyWith(
-                    color: Colors.white,
-                    fontSize: 20,
-                  ),
-                ),
-              ),
-              IconButton(
-                icon: Icon(Icons.refresh, color: Colors.white),
-                onPressed: loadData,
-                tooltip: 'Refresh',
-              ),
-            ],
-          ),
-          const SizedBox(height: 20),
-          _buildStatRow(Icons.people, '33 million', 'People in U.S. impacted'),
-          _buildStatRow(
-            Icons.child_care,
-            '1 in 13',
-            'Children have food allergies',
-          ),
-          _buildStatRow(Icons.person, '11%', 'Adults with food allergies'),
-          const SizedBox(height: 16),
-          Container(
-            padding: EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.15),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Row(
-              children: [
-                Icon(Icons.schedule, color: Colors.white70, size: 16),
-                SizedBox(width: 8),
-                Text(
-                  'Last updated: ${DateTime.now().hour}:${DateTime.now().minute.toString().padLeft(2, '0')}',
-                  style: TextStyle(
-                    color: Colors.white70,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildStatRow(IconData icon, String number, String label) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      child: Row(
-        children: [
-          Container(
-            padding: EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.2),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Icon(icon, color: Colors.white, size: 20),
-          ),
-          SizedBox(width: 12),
-          Text(
-            number,
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 22,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              label,
-              style: TextStyle(
-                color: Colors.white.withOpacity(0.95),
-                fontSize: 14,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-          ),
-        ],
       ),
     );
   }
@@ -1615,13 +994,14 @@ Voluntary warnings include:
               padding: const EdgeInsets.all(16),
               child: Row(
                 children: [
-                  Container(
-                    padding: const EdgeInsets.all(14),
-                    decoration: BoxDecoration(
-                      color: resource.color.withOpacity(0.15),
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                    child: Icon(resource.icon, color: resource.color, size: 28),
+                  _buildResourceImage(
+                    imagePath: resource.imagePaths[0],
+                    width: 56,
+                    height: 56,
+                    placeholderColor: resource.color,
+                    placeholderIcon: resource.icon,
+                    borderRadius: BorderRadius.circular(12),
+                    fit: BoxFit.cover,
                   ),
                   const SizedBox(width: 16),
                   Expanded(
@@ -1711,6 +1091,207 @@ Voluntary warnings include:
     );
   }
 
+  Widget _buildAccordionSection(Allergen allergen) {
+    return Column(
+      children: [
+        // Allergic Reactions
+        if (allergen.allergicReactions.isNotEmpty)
+          _buildAccordionItem(
+            title: 'Allergic Reactions to ${allergen.name}',
+            content: allergen.allergicReactions,
+            color: allergen.color,
+            icon: Icons.warning_amber_rounded,
+          ),
+
+        // Hidden Sources
+
+        // Avoiding section
+        if (allergen.avoidance.isNotEmpty)
+          _buildAccordionItem(
+            title: 'Avoiding ${allergen.name}',
+            content: allergen.avoidance,
+            color: allergen.color,
+            icon: Icons.block,
+          ),
+
+        // Outgrow section
+        if (allergen.outgrow.isNotEmpty)
+          _buildAccordionItem(
+            title: 'Will My Child Outgrow a ${allergen.name} Allergy?',
+            content: allergen.outgrow,
+            color: allergen.color,
+            icon: Icons.child_care,
+          ),
+        if (allergen.hiddenSources.isNotEmpty)
+          _buildAccordionItemWithList(
+            title: 'Hidden Sources of ${allergen.name}',
+            items: allergen.hiddenSources,
+            color: allergen.color,
+            icon: Icons.search,
+          ),
+      ],
+    );
+  }
+
+  Widget _buildAccordionItem({
+    required String title,
+    required String content,
+    required Color color,
+    required IconData icon,
+  }) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Theme(
+        data: ThemeData(
+          dividerColor: Colors.transparent,
+          splashColor: color.withOpacity(0.1),
+          highlightColor: color.withOpacity(0.05),
+        ),
+        child: ExpansionTile(
+          tilePadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+          childrenPadding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+          leading: Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(icon, color: color, size: 24),
+          ),
+          title: Text(
+            title,
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: AppColors.textBlack,
+            ),
+          ),
+          iconColor: color,
+          collapsedIconColor: color.withOpacity(0.6),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          collapsedShape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          children: [
+            Text(
+              content,
+              style: TextStyle(
+                fontSize: 14,
+                height: 1.6,
+                color: AppColors.textGray,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAccordionItemWithList({
+    required String title,
+    required List<String> items,
+    required Color color,
+    required IconData icon,
+  }) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Theme(
+        data: ThemeData(
+          dividerColor: Colors.transparent,
+          splashColor: color.withOpacity(0.1),
+          highlightColor: color.withOpacity(0.05),
+        ),
+        child: ExpansionTile(
+          tilePadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+          childrenPadding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+          leading: Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(icon, color: color, size: 24),
+          ),
+          title: Text(
+            title,
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: AppColors.textBlack,
+            ),
+          ),
+          iconColor: color,
+          collapsedIconColor: color.withOpacity(0.6),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          collapsedShape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          children: [
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children:
+                  items.map((item) {
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Container(
+                            margin: const EdgeInsets.only(top: 6, right: 12),
+                            width: 6,
+                            height: 6,
+                            decoration: BoxDecoration(
+                              color: color,
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                          Expanded(
+                            child: Text(
+                              item,
+                              style: TextStyle(
+                                fontSize: 14,
+                                height: 1.6,
+                                color: AppColors.textGray,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  }).toList(),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   void _showAllergenDetails(Allergen allergen) {
     showModalBottomSheet(
       context: context,
@@ -1718,7 +1299,7 @@ Voluntary warnings include:
       backgroundColor: Colors.transparent,
       builder:
           (context) => DraggableScrollableSheet(
-            initialChildSize: 0.75,
+            initialChildSize: 0.9,
             maxChildSize: 0.95,
             minChildSize: 0.5,
             expand: false,
@@ -1730,163 +1311,473 @@ Voluntary warnings include:
                       top: Radius.circular(24),
                     ),
                   ),
-                  child: SingleChildScrollView(
-                    controller: scrollController,
-                    child: Padding(
-                      padding: const EdgeInsets.all(24),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Center(
-                            child: Container(
-                              width: 50,
-                              height: 5,
-                              decoration: BoxDecoration(
-                                color: AppColors.lightGray,
-                                borderRadius: BorderRadius.circular(3),
-                              ),
+                  child: Column(
+                    children: [
+                      // Drag handle
+                      Padding(
+                        padding: const EdgeInsets.only(top: 12, bottom: 8),
+                        child: Center(
+                          child: Container(
+                            width: 50,
+                            height: 5,
+                            decoration: BoxDecoration(
+                              color: AppColors.lightGray,
+                              borderRadius: BorderRadius.circular(3),
                             ),
                           ),
-                          const SizedBox(height: 24),
-                          Row(
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.all(18),
-                                decoration: BoxDecoration(
-                                  color: allergen.color.withOpacity(0.15),
-                                  shape: BoxShape.circle,
-                                ),
-                                child: Icon(
-                                  allergen.icon,
-                                  color: allergen.color,
-                                  size: 48,
+                        ),
+                      ),
+                      // Header with image
+                      Container(
+                        height: 180,
+                        margin: EdgeInsets.symmetric(horizontal: 16),
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(20),
+                          boxShadow: [
+                            BoxShadow(
+                              color: allergen.color.withOpacity(0.3),
+                              blurRadius: 10,
+                              offset: Offset(0, 4),
+                            ),
+                          ],
+                        ),
+                        child: Stack(
+                          children: [
+                            // Background image
+                            if (allergen.imagePath != null)
+                              Positioned.fill(
+                                child: ClipRRect(
+                                  borderRadius: BorderRadius.circular(20),
+                                  child: Image.asset(
+                                    allergen.imagePath!,
+                                    fit: BoxFit.cover,
+                                    errorBuilder: (context, error, stackTrace) {
+                                      return Container(
+                                        decoration: BoxDecoration(
+                                          gradient: LinearGradient(
+                                            begin: Alignment.topLeft,
+                                            end: Alignment.bottomRight,
+                                            colors: [
+                                              allergen.color,
+                                              allergen.color.withOpacity(0.7),
+                                            ],
+                                          ),
+                                        ),
+                                      );
+                                    },
+                                  ),
                                 ),
                               ),
-                              const SizedBox(width: 16),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      allergen.name,
-                                      style: AppTextStyles.headline.copyWith(
-                                        fontSize: 28,
-                                        color: AppColors.textBlack,
+                            // Gradient overlay
+                            Positioned.fill(
+                              child: Container(
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(20),
+                                  gradient: LinearGradient(
+                                    begin: Alignment.topCenter,
+                                    end: Alignment.bottomCenter,
+                                    colors: [
+                                      Colors.black.withOpacity(0.1),
+                                      Colors.black.withOpacity(0.7),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+                            // Content
+                            Positioned(
+                              bottom: 20,
+                              left: 20,
+                              right: 20,
+                              child: Row(
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.all(12),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white.withOpacity(0.2),
+                                      shape: BoxShape.circle,
+                                      border: Border.all(
+                                        color: Colors.white.withOpacity(0.3),
+                                        width: 2,
                                       ),
                                     ),
-                                    SizedBox(height: 6),
-                                    Container(
-                                      padding: EdgeInsets.symmetric(
-                                        horizontal: 12,
-                                        vertical: 6,
+                                    child: Icon(
+                                      allergen.icon,
+                                      color: Colors.white,
+                                      size: 32,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 16),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          allergen.name,
+                                          style: TextStyle(
+                                            fontSize: 32,
+                                            fontWeight: FontWeight.bold,
+                                            color: Colors.white,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 4),
+                                        Container(
+                                          padding: EdgeInsets.symmetric(
+                                            horizontal: 12,
+                                            vertical: 6,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: Colors.white.withOpacity(
+                                              0.25,
+                                            ),
+                                            borderRadius: BorderRadius.circular(
+                                              8,
+                                            ),
+                                            border: Border.all(
+                                              color: Colors.white.withOpacity(
+                                                0.3,
+                                              ),
+                                            ),
+                                          ),
+                                          child: Text(
+                                            allergen.prevalence,
+                                            style: TextStyle(
+                                              fontSize: 12,
+                                              color: Colors.white,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      // Scrollable content
+                      Expanded(
+                        child: SingleChildScrollView(
+                          controller: scrollController,
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              // Main information section
+                              if (allergen.detailedInfo.isNotEmpty)
+                                _buildInfoSection(
+                                  'What Is ${allergen.name} Allergy?',
+                                  allergen.detailedInfo,
+                                  allergen.color,
+                                ),
+
+                              // Living With section
+                              Text(
+                                'Living With ${allergen.name} Allergy',
+                                style: TextStyle(
+                                  color: AppColors.primary,
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              SizedBox(height: 20),
+
+                              _buildAccordionSection(allergen),
+
+                              const SizedBox(height: 24),
+
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: ElevatedButton.icon(
+                                      onPressed: () {
+                                        Navigator.pop(context);
+                                        _showEmergencyInfo();
+                                      },
+                                      icon: const Icon(
+                                        Icons.emergency,
+                                        size: 20,
                                       ),
-                                      decoration: BoxDecoration(
-                                        color: allergen.color.withOpacity(0.15),
-                                        borderRadius: BorderRadius.circular(8),
-                                      ),
-                                      child: Text(
-                                        allergen.prevalence,
+                                      label: const Text(
+                                        'Emergency Info',
                                         style: TextStyle(
-                                          fontSize: 12,
-                                          color: allergen.color,
                                           fontWeight: FontWeight.bold,
                                         ),
                                       ),
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: AppColors.primary,
+                                        foregroundColor: Colors.white,
+                                        padding: const EdgeInsets.symmetric(
+                                          vertical: 16,
+                                        ),
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(
+                                            12,
+                                          ),
+                                        ),
+                                      ),
                                     ),
-                                  ],
-                                ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: OutlinedButton.icon(
+                                      onPressed: () => Navigator.pop(context),
+                                      icon: const Icon(Icons.check, size: 20),
+                                      label: const Text(
+                                        'Got it',
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                      style: OutlinedButton.styleFrom(
+                                        foregroundColor: allergen.color,
+                                        padding: const EdgeInsets.symmetric(
+                                          vertical: 16,
+                                        ),
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(
+                                            12,
+                                          ),
+                                        ),
+                                        side: BorderSide(
+                                          color: allergen.color,
+                                          width: 2,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
                               ),
+                              const SizedBox(height: 24),
                             ],
                           ),
-                          const SizedBox(height: 28),
-                          _buildDetailSection(
-                            'About',
-                            allergen.description,
-                            Icons.info_outline,
-                            allergen.color,
-                          ),
-                          _buildDetailSection(
-                            'Common Symptoms',
-                            allergen.symptoms.map((s) => '• $s').join('\n'),
-                            Icons.warning_amber_rounded,
-                            allergen.color,
-                          ),
-                          _buildDetailSection(
-                            'Hidden Sources',
-                            allergen.hiddenSources
-                                .map((s) => '• $s')
-                                .join('\n'),
-                            Icons.visibility_off,
-                            allergen.color,
-                          ),
-                          _buildDetailSection(
-                            'Labeling Requirements',
-                            'This allergen must be clearly labeled on all packaged foods according to FALCPA and FASTER Act requirements.',
-                            Icons.label,
-                            allergen.color,
-                          ),
-                          const SizedBox(height: 24),
-                          Row(
-                            children: [
-                              Expanded(
-                                child: ElevatedButton.icon(
-                                  onPressed: () {
-                                    Navigator.pop(context);
-                                    _showEmergencyInfo();
-                                  },
-                                  icon: const Icon(Icons.emergency, size: 20),
-                                  label: const Text(
-                                    'Emergency Info',
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: AppColors.primary,
-                                    foregroundColor: Colors.white,
-                                    padding: const EdgeInsets.symmetric(
-                                      vertical: 16,
-                                    ),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(12),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: OutlinedButton.icon(
-                                  onPressed: () => Navigator.pop(context),
-                                  icon: const Icon(Icons.check, size: 20),
-                                  label: const Text(
-                                    'Got it',
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                  style: OutlinedButton.styleFrom(
-                                    foregroundColor: allergen.color,
-                                    padding: const EdgeInsets.symmetric(
-                                      vertical: 16,
-                                    ),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(12),
-                                    ),
-                                    side: BorderSide(
-                                      color: allergen.color,
-                                      width: 2,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
+                        ),
                       ),
-                    ),
+                    ],
                   ),
                 ),
           ),
+    );
+  }
+
+  Widget _buildInfoSection(String title, String content, Color color) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: color.withOpacity(0.2), width: 1),
+        boxShadow: [
+          BoxShadow(
+            color: color.withOpacity(0.08),
+            blurRadius: 8,
+            offset: Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 4,
+                height: 24,
+                decoration: BoxDecoration(
+                  color: color,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  title,
+                  style: AppTextStyles.body.copyWith(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.textBlack,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Text(
+            content,
+            style: AppTextStyles.body.copyWith(
+              fontSize: 14,
+              color: AppColors.textGray,
+              height: 1.6,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSymptomsList(String title, List<String> symptoms, Color color) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: color.withOpacity(0.2), width: 1),
+        boxShadow: [
+          BoxShadow(
+            color: color.withOpacity(0.08),
+            blurRadius: 8,
+            offset: Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: color.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(
+                  Icons.warning_amber_rounded,
+                  color: color,
+                  size: 20,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Text(
+                title,
+                style: AppTextStyles.body.copyWith(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.textBlack,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          ...symptoms.map(
+            (symptom) => Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    margin: const EdgeInsets.only(top: 6),
+                    width: 6,
+                    height: 6,
+                    decoration: BoxDecoration(
+                      color: color,
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      symptom,
+                      style: AppTextStyles.body.copyWith(
+                        fontSize: 14,
+                        color: AppColors.textGray,
+                        height: 1.5,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHiddenSourcesList(
+    String title,
+    List<String> sources,
+    Color color,
+  ) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: color.withOpacity(0.2), width: 1),
+        boxShadow: [
+          BoxShadow(
+            color: color.withOpacity(0.08),
+            blurRadius: 8,
+            offset: Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: color.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(Icons.visibility_off, color: color, size: 20),
+              ),
+              const SizedBox(width: 12),
+              Text(
+                title,
+                style: AppTextStyles.body.copyWith(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.textBlack,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children:
+                sources
+                    .map(
+                      (source) => Container(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 8,
+                        ),
+                        decoration: BoxDecoration(
+                          color: color.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color: color.withOpacity(0.3),
+                            width: 1,
+                          ),
+                        ),
+                        child: Text(
+                          source,
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: color,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    )
+                    .toList(),
+          ),
+        ],
+      ),
     );
   }
 
@@ -2138,559 +2029,159 @@ Voluntary warnings include:
     );
   }
 
-  void _showInfoDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder:
-          (context) => AlertDialog(
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(20),
-            ),
-            title: Row(
-              children: [
-                Container(
-                  padding: EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: AppColors.textBackground,
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(Icons.info, color: AppColors.primary, size: 24),
-                ),
-                SizedBox(width: 12),
-                Text(
-                  'About This App',
-                  style: AppTextStyles.headline.copyWith(fontSize: 18),
-                ),
-              ],
-            ),
-            content: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'This educational app provides information about food allergies based on data from FoodAllergy.org (FARE) and AAAAI.',
-                    style: AppTextStyles.body.copyWith(height: 1.5),
-                  ),
-                  const SizedBox(height: 20),
-                  _buildInfoSection(
-                    'Key Facts',
-                    Icons.analytics,
-                    AppColors.primary,
-                    [
-                      '33 million Americans impacted',
-                      '1 in 13 children affected',
-                      '9 major allergens recognized',
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  _buildInfoSection(
-                    'Features',
-                    Icons.stars,
-                    AppColors.primaryColor2Teal,
-                    [
-                      'Search allergens',
-                      'Filter by category',
-                      'Emergency info access',
-                      'Educational resources',
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  Container(
-                    padding: EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: AppColors.primary.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(
-                        color: AppColors.primary.withOpacity(0.3),
-                      ),
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(
-                          Icons.medical_information,
-                          color: AppColors.primary,
-                          size: 20,
-                        ),
-                        SizedBox(width: 10),
-                        Expanded(
-                          child: Text(
-                            'Always consult healthcare providers for medical advice.',
-                            style: TextStyle(
-                              fontStyle: FontStyle.italic,
-                              fontSize: 12,
-                              color: AppColors.primary,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: Text(
-                  'Close',
-                  style: AppTextStyles.body.copyWith(
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.primary,
-                  ),
-                ),
-              ),
-            ],
-          ),
-    );
-  }
+  // void _showInfoDialog(BuildContext context) {
+  //   showDialog(
+  //     context: context,
+  //     builder: (context) => AlertDialog(
+  //       shape: RoundedRectangleBorder(
+  //         borderRadius: BorderRadius.circular(20),
+  //       ),
+  //       title: Row(
+  //         children: [
+  //           Container(
+  //             padding: EdgeInsets.all(8),
+  //             decoration: BoxDecoration(
+  //               color: AppColors.textBackground,
+  //               shape: BoxShape.circle,
+  //             ),
+  //             child: Icon(Icons.info, color: AppColors.primary, size: 24),
+  //           ),
+  //           SizedBox(width: 12),
+  //           Text(
+  //             'About This App',
+  //             style: AppTextStyles.headline.copyWith(fontSize: 18),
+  //           ),
+  //         ],
+  //       ),
+  //       content: SingleChildScrollView(
+  //         child: Column(
+  //           mainAxisSize: MainAxisSize.min,
+  //           crossAxisAlignment: CrossAxisAlignment.start,
+  //           children: [
+  //             Text(
+  //               'This educational app provides information about food allergies based on data from FoodAllergy.org (FARE) and AAAAI.',
+  //               style: AppTextStyles.body.copyWith(height: 1.5),
+  //             ),
+  //             const SizedBox(height: 20),
+  //             _buildInfoSection(
+  //               'Key Facts',
+  //               Icons.analytics,
+  //               AppColors.primary,
+  //               [
+  //                 '33 million Americans impacted',
+  //                 '1 in 13 children affected',
+  //                 '9 major allergens recognized',
+  //               ],
+  //             ),
+  //             const SizedBox(height: 16),
+  //             _buildInfoSection(
+  //               'Features',
+  //               Icons.stars,
+  //               AppColors.primaryColor2Teal,
+  //               [
+  //                 'Search allergens',
+  //                 'Filter by category',
+  //                 'Emergency info access',
+  //                 'Educational resources',
+  //               ],
+  //             ),
+  //             const SizedBox(height: 16),
+  //             Container(
+  //               padding: EdgeInsets.all(12),
+  //               decoration: BoxDecoration(
+  //                 color: AppColors.primary.withOpacity(0.1),
+  //                 borderRadius: BorderRadius.circular(10),
+  //                 border: Border.all(
+  //                   color: AppColors.primary.withOpacity(0.3),
+  //                 ),
+  //               ),
+  //               child: Row(
+  //                 children: [
+  //                   Icon(
+  //                     Icons.medical_information,
+  //                     color: AppColors.primary,
+  //                     size: 20,
+  //                   ),
+  //                   SizedBox(width: 10),
+  //                   Expanded(
+  //                     child: Text(
+  //                       'Always consult healthcare providers for medical advice.',
+  //                       style: TextStyle(
+  //                         fontStyle: FontStyle.italic,
+  //                         fontSize: 12,
+  //                         color: AppColors.primary,
+  //                       ),
+  //                     ),
+  //                   ),
+  //                 ],
+  //               ),
+  //             ),
+  //           ],
+  //         ),
+  //       ),
+  //       actions: [
+  //         TextButton(
+  //           onPressed: () => Navigator.pop(context),
+  //           child: Text(
+  //             'Close',
+  //             style: AppTextStyles.body.copyWith(
+  //               fontWeight: FontWeight.w600,
+  //               color: AppColors.primary,
+  //             ),
+  //           ),
+  //         ),
+  //       ],
+  //     ),
+  //   );
+  // }
 
-  Widget _buildInfoSection(
-    String title,
-    IconData icon,
-    Color color,
-    List<String> items,
-  ) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Icon(icon, color: color, size: 18),
-            SizedBox(width: 8),
-            Text(
-              title,
-              style: AppTextStyles.body.copyWith(
-                fontWeight: FontWeight.bold,
-                fontSize: 15,
-                color: AppColors.textBlack,
-              ),
-            ),
-          ],
-        ),
-        SizedBox(height: 8),
-        ...items.map(
-          (item) => Padding(
-            padding: const EdgeInsets.only(left: 26, bottom: 4),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('• ', style: TextStyle(color: color)),
-                Expanded(
-                  child: Text(
-                    item,
-                    style: AppTextStyles.body.copyWith(
-                      fontSize: 13,
-                      height: 1.3,
-                      color: AppColors.textGray,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-// Enhanced Resource Detail Screen
-class ResourceDetailScreen extends StatelessWidget {
-  final ResourceLink resource;
-
-  const ResourceDetailScreen({Key? key, required this.resource})
-    : super(key: key);
-
-  Future<void> _launchURL(BuildContext context, String urlString) async {
-    final Uri url = Uri.parse(urlString);
-    try {
-      if (!await launchUrl(url, mode: LaunchMode.externalApplication)) {
-        if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Row(
-                children: [
-                  Icon(Icons.error_outline, color: Colors.white),
-                  SizedBox(width: 12),
-                  Expanded(child: Text('Could not open $urlString')),
-                ],
-              ),
-              backgroundColor: AppColors.primary,
-              behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
-              ),
-            ),
-          );
-        }
-      } else {
-        if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Row(
-                children: [
-                  Icon(Icons.open_in_new, color: Colors.white, size: 20),
-                  SizedBox(width: 12),
-                  Expanded(child: Text('Opening external link...')),
-                ],
-              ),
-              backgroundColor: resource.color,
-              behavior: SnackBarBehavior.floating,
-              duration: Duration(seconds: 2),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
-              ),
-            ),
-          );
-        }
-      }
-    } catch (e) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error: $e'),
-            backgroundColor: AppColors.primary,
-          ),
-        );
-      }
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.defaultbackground,
-      appBar: AppBar(
-        title: Text(
-          resource.title,
-          style: AppTextStyles.headline.copyWith(
-            color: Colors.white,
-            fontSize: 18,
-          ),
-        ),
-        backgroundColor: resource.color,
-        foregroundColor: Colors.white,
-        elevation: 0,
-        actions: [
-          IconButton(
-            icon: Icon(Icons.open_in_new),
-            onPressed: () => _launchURL(context, resource.url),
-            tooltip: 'Open in browser',
-          ),
-        ],
-      ),
-      body: SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Header Section
-            Container(
-              width: double.infinity,
-              color: resource.color,
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(20),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      shape: BoxShape.circle,
-                      boxShadow: [
-                        BoxShadow(
-                          color: AppColors.textBlack.withOpacity(0.1),
-                          blurRadius: 12,
-                          offset: Offset(0, 4),
-                        ),
-                      ],
-                    ),
-                    child: Icon(resource.icon, color: resource.color, size: 48),
-                  ),
-                  SizedBox(height: 16),
-                  Container(
-                    padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.3),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Text(
-                      resource.category,
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 13,
-                        letterSpacing: 0.5,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            // Content Section
-            Padding(
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Description Card
-                  Card(
-                    elevation: 2,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsets.all(20),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              Icon(
-                                Icons.description,
-                                color: resource.color,
-                                size: 20,
-                              ),
-                              SizedBox(width: 8),
-                              Text(
-                                'Overview',
-                                style: AppTextStyles.headline.copyWith(
-                                  fontSize: 18,
-                                  color: AppColors.textBlack,
-                                ),
-                              ),
-                            ],
-                          ),
-                          SizedBox(height: 12),
-                          Text(
-                            resource.description,
-                            style: AppTextStyles.body.copyWith(
-                              fontSize: 15,
-                              color: AppColors.textGray,
-                              height: 1.5,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-
-                  const SizedBox(height: 20),
-
-                  // Detailed Content
-                  _buildMarkdownContent(resource.detailedContent),
-
-                  const SizedBox(height: 24),
-
-                  // External Link Card
-                  Card(
-                    elevation: 3,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: Container(
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(16),
-                        color: resource.color.withOpacity(0.05),
-                      ),
-                      padding: const EdgeInsets.all(20),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              Icon(
-                                Icons.public,
-                                color: resource.color,
-                                size: 22,
-                              ),
-                              SizedBox(width: 10),
-                              Text(
-                                'External Resource',
-                                style: AppTextStyles.headline.copyWith(
-                                  fontSize: 17,
-                                  color: AppColors.textBlack,
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 16),
-                          Container(
-                            padding: EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(10),
-                              border: Border.all(
-                                color: resource.color.withOpacity(0.3),
-                              ),
-                            ),
-                            child: Row(
-                              children: [
-                                Icon(
-                                  Icons.link,
-                                  color: resource.color,
-                                  size: 18,
-                                ),
-                                const SizedBox(width: 10),
-                                Expanded(
-                                  child: Text(
-                                    resource.url,
-                                    style: TextStyle(
-                                      color: resource.color,
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.w500,
-                                    ),
-                                    maxLines: 2,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(height: 16),
-                          SizedBox(
-                            width: double.infinity,
-                            child: ElevatedButton.icon(
-                              onPressed:
-                                  () => _launchURL(context, resource.url),
-                              icon: const Icon(Icons.open_in_new, size: 20),
-                              label: const Text(
-                                'Visit Source Website',
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 15,
-                                ),
-                              ),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: resource.color,
-                                foregroundColor: Colors.white,
-                                padding: EdgeInsets.symmetric(vertical: 16),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                elevation: 2,
-                              ),
-                            ),
-                          ),
-                          SizedBox(height: 12),
-                          Container(
-                            padding: EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              color: AppColors.textBackground,
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            child: Row(
-                              children: [
-                                Icon(
-                                  Icons.info_outline,
-                                  color: AppColors.primary,
-                                  size: 18,
-                                ),
-                                SizedBox(width: 10),
-                                Expanded(
-                                  child: Text(
-                                    'This will open in your default browser',
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      color: AppColors.primary,
-                                      fontStyle: FontStyle.italic,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-
-                  const SizedBox(height: 32),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildMarkdownContent(String content) {
-    final lines = content.split('\n');
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children:
-          lines.map((line) {
-            if (line.startsWith('#')) {
-              final level = line.split(' ')[0].length;
-              final text = line.substring(level).trim();
-              return Container(
-                margin: EdgeInsets.only(top: level == 1 ? 0 : 16, bottom: 12),
-                child: Text(
-                  text,
-                  style: AppTextStyles.headline.copyWith(
-                    fontSize: level == 1 ? 22 : (level == 2 ? 18 : 16),
-                    color: level == 1 ? resource.color : AppColors.textBlack,
-                  ),
-                ),
-              );
-            } else if (line.startsWith('-') || line.startsWith('•')) {
-              return Container(
-                margin: const EdgeInsets.only(bottom: 8),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Container(
-                      margin: EdgeInsets.only(top: 8, right: 12),
-                      width: 6,
-                      height: 6,
-                      decoration: BoxDecoration(
-                        color: resource.color,
-                        shape: BoxShape.circle,
-                      ),
-                    ),
-                    Expanded(
-                      child: Text(
-                        line.substring(1).trim(),
-                        style: AppTextStyles.body.copyWith(
-                          fontSize: 15,
-                          height: 1.6,
-                          color: AppColors.textGray,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              );
-            } else if (line.trim().isEmpty) {
-              return const SizedBox(height: 12);
-            } else if (line.startsWith('###')) {
-              final text = line.substring(3).trim();
-              return Padding(
-                padding: const EdgeInsets.only(top: 16, bottom: 8),
-                child: Text(
-                  text,
-                  style: AppTextStyles.body.copyWith(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.textBlack,
-                  ),
-                ),
-              );
-            } else {
-              return Padding(
-                padding: const EdgeInsets.only(bottom: 12),
-                child: Text(
-                  line,
-                  style: AppTextStyles.body.copyWith(
-                    fontSize: 15,
-                    height: 1.6,
-                    color: AppColors.textGray,
-                  ),
-                ),
-              );
-            }
-          }).toList(),
-    );
-  }
+  //   Widget _buildInfoSection(
+  //     String title,
+  //     IconData icon,
+  //     Color color,
+  //     List<String> items,
+  //   ) {
+  //     return Column(
+  //       crossAxisAlignment: CrossAxisAlignment.start,
+  //       children: [
+  //         Row(
+  //           children: [
+  //             Icon(icon, color: color, size: 18),
+  //             SizedBox(width: 8),
+  //             Text(
+  //               title,
+  //               style: AppTextStyles.body.copyWith(
+  //                 fontWeight: FontWeight.bold,
+  //                 fontSize: 15,
+  //                 color: AppColors.textBlack,
+  //               ),
+  //             ),
+  //           ],
+  //         ),
+  //         SizedBox(height: 8),
+  //         ...items.map(
+  //           (item) => Padding(
+  //             padding: const EdgeInsets.only(left: 26, bottom: 4),
+  //             child: Row(
+  //               crossAxisAlignment: CrossAxisAlignment.start,
+  //               children: [
+  //                 Text('• ', style: TextStyle(color: color)),
+  //                 Expanded(
+  //                   child: Text(
+  //                     item,
+  //                     style: AppTextStyles.body.copyWith(
+  //                       fontSize: 13,
+  //                       height: 1.3,
+  //                       color: AppColors.textGray,
+  //                     ),
+  //                   ),
+  //                 ),
+  //               ],
+  //             ),
+  //           ),
+  //         ),
+  //       ],
+  //     );
+  //   }
+  // }
 }
