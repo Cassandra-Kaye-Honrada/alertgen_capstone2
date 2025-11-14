@@ -21,6 +21,8 @@
     <!-- Location permissions -->
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
+
 
     <!-- Notification permissions -->
     <uses-permission android:name="android.permission.WAKE_LOCK"/>
@@ -83,38 +85,41 @@
         </receiver>
 
         <!-- Widget Receivers -->
-        <receiver
-            android:name=".EmergencyWidgetProvider"
-            android:exported="true">
-            <intent-filter>
-                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
-            </intent-filter>
-            <meta-data
-                android:name="android.appwidget.provider"
-                android:resource="@xml/emergency_widget_info" />
-        </receiver>
+   <receiver 
+       android:name=".EmergencyWidgetProvider"
+       android:exported="true">
+       <intent-filter>
+           <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+       </intent-filter>
+       <meta-data 
+           android:name="android.appwidget.provider"
+           android:resource="@xml/emergency_widget_info" />
+   </receiver>
+
         
-        <receiver
+   
+        <receiver 
             android:name=".ScanWidgetProvider"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
             </intent-filter>
-            <meta-data
+            <meta-data 
                 android:name="android.appwidget.provider"
                 android:resource="@xml/scan_widget_info" />
         </receiver>
 
-          <receiver
-        android:name=".AirQualityWidgetProvider"
-        android:exported="true">
-        <intent-filter>
-            <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
-        </intent-filter>
-        <meta-data
-            android:name="android.appwidget.provider"
-            android:resource="@xml/air_quality_widget_info" />
-    </receiver>
+        <receiver
+            android:name=".AirQualityWidgetProvider"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/air_quality_widget_info" />
+        </receiver>
+
 
         <!--  CRITICAL: Flutter Local Notifications Receivers -->
         <receiver 

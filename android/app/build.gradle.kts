@@ -11,7 +11,6 @@ android {
     ndkVersion = "27.0.12077973"
 
     compileOptions {
-        // ✅ Enable core library desugaring
         isCoreLibraryDesugaringEnabled = true
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
@@ -24,7 +23,7 @@ android {
     defaultConfig {
         applicationId = "com.example.allergen"
         //minSdk = flutter.minSdkVersion
-        minSdk = 23
+        minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
@@ -48,6 +47,9 @@ flutter {
 
 dependencies {
     implementation("com.google.android.play:core-common:2.0.3")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
+    implementation("androidx.core:core-ktx:1.12.0")
     
     // ML Kit dependencies
     implementation("com.google.mlkit:text-recognition:16.0.0")
@@ -56,6 +58,6 @@ dependencies {
     implementation("com.google.mlkit:text-recognition-japanese:16.0.0")
     implementation("com.google.mlkit:text-recognition-korean:16.0.0")
     
-    // ✅ Core library desugaring (Kotlin DSL syntax)
+    // Core library desugaring (Kotlin DSL syntax)
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
 }

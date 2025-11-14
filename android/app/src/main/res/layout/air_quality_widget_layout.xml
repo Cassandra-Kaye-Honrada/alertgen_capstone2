@@ -8,49 +8,69 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:layout_margin="8dp"
-        android:background="@drawable/widget_background"
+        android:background="@drawable/air_quality_widget_bg"
         android:orientation="vertical"
         android:gravity="center"
         android:padding="16dp"
         android:id="@+id/air_quality_widget_container"
         android:elevation="6dp">
 
-        <LinearLayout
-            android:layout_width="64dp"
-            android:layout_height="64dp"
-            android:background="@drawable/air_quality_icon_bg"
-            android:gravity="center"
-            android:layout_marginBottom="12dp"
-            android:elevation="2dp">
+        <!-- AQI Value -->
+        <TextView
+            android:id="@+id/aqi_value"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="••"
+            android:textSize="32sp"
+            android:textColor="#FFFFFF"
+            android:fontFamily="sans-serif-medium"
+            android:layout_marginBottom="4dp" />
 
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="🌤️"
-                android:textSize="36sp" />
-        </LinearLayout>
-
-        <!-- Air Quality Label -->
+        <!-- AQI Label -->
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Air Quality"
-            android:textSize="16sp"
-            android:textColor="#1E293B"
+            android:text="AQI"
+            android:textSize="12sp"
+            android:textColor="#E0F7FA"
+            android:fontFamily="sans-serif"
+            android:layout_marginBottom="8dp" />
+
+        <!-- Quality Level -->
+        <TextView
+            android:id="@+id/quality_level"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Tap to load"
+            android:textSize="14sp"
+            android:textColor="#FFFFFF"
             android:fontFamily="sans-serif-medium"
             android:gravity="center"
-            android:letterSpacing="0.02" />
+            android:layout_marginBottom="4dp" />
 
-        <!-- Subtitle -->
+        <!-- Dominant Pollutant -->
         <TextView
+            android:id="@+id/dominant_pollutant"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Check AQI"
-            android:textSize="12sp"
-            android:textColor="#0B8FAC"
+            android:text="••"
+            android:textSize="10sp"
+            android:textColor="#E0F7FA"
             android:gravity="center"
-            android:layout_marginTop="4dp"
             android:fontFamily="sans-serif"
-            android:alpha="0.9" />
+            android:layout_marginTop="4dp"
+            android:layout_marginBottom="4dp" />
+
+        <!-- Location -->
+        <TextView
+            android:id="@+id/location"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="📍 ••"
+            android:textSize="11sp"
+            android:textColor="#B2EBF2"
+            android:gravity="center"
+            android:fontFamily="sans-serif" />
+
     </LinearLayout>
 </FrameLayout>

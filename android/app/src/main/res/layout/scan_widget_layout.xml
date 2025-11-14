@@ -1,3 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
@@ -8,47 +9,44 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:layout_margin="8dp"
-        android:background="@drawable/widget_background"
+        android:background="@drawable/scan_widget_square_bg"
         android:orientation="vertical"
         android:gravity="center"
         android:padding="16dp"
         android:id="@+id/scan_widget_container"
         android:elevation="6dp">
 
-        <LinearLayout
-            android:layout_width="64dp"
-            android:layout_height="64dp"
-            android:background="@drawable/scan_icon_bg"
-            android:gravity="center"
-            android:layout_marginBottom="12dp"
-            android:elevation="2dp">
-            
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="📷"
-                android:textSize="36sp" />
-        </LinearLayout>
+        <!-- App Logo -->
+        <ImageView
+            android:layout_width="80dp"
+            android:layout_height="80dp"
+            android:layout_marginTop="42dp"
+            android:src="@drawable/scan_icon_square"
+            android:contentDescription="Start Scanning"
+            android:scaleType="fitCenter" />
 
+        <!-- text -->
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Quick Scan"
             android:textSize="16sp"
-            android:textColor="#1E293B"
-            android:fontFamily="sans-serif-medium"
+            android:textColor="#FFFFFF"
+            android:fontFamily="sans-serif"
             android:gravity="center"
-            android:letterSpacing="0.02" />
+            android:layout_marginTop="8dp"
+            android:lineSpacingExtra="2dp" />
 
-        <TextView
+           <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Check allergens"
-            android:textSize="12sp"
-            android:textColor="#000000"
-            android:gravity="center"
-            android:layout_marginTop="4dp"
+            android:text="check allergens"
+            android:textSize="14sp"
+            android:textColor="#FFFFFF"
             android:fontFamily="sans-serif"
-            android:alpha="0.9" />
+            android:gravity="center"
+            android:layout_marginTop="2dp"
+            android:lineSpacingExtra="2dp" />
+
     </LinearLayout>
 </FrameLayout>

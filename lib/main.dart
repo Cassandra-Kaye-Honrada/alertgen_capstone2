@@ -9,13 +9,22 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
+
+Future<void> requestLocationPermissions() async {
+  final status = await Permission.location.request();
+  if (status.isDenied) {
+    await Permission.location.request();
+  }
+}
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   await dotenv.load(fileName: ".env");
+  await requestLocationPermissions();
 
   try {
     await PushNotificationService().initialize();
@@ -77,28 +86,56 @@ class _ShortcutHandlerState extends State<ShortcutHandler> {
     print('Received method call: ${call.method} with args: ${call.arguments}');
 
     if (call.method == 'navigate') {
-      final String route = call.arguments;
-      print('Navigating to route: $route');
+      if (call.arguments is Map) {
+        final args = call.arguments as Map;
+        final String route = args['route'] ?? '';
+        final bool needsPermission = args['needs_permission'] ?? false;
+        
+        print('Navigating to route: $route, needsPermission: $needsPermission');
 
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (route == '/emergency') {
-          triggerEmergency();
-        } else if (route == '/scan') {
-          navigatorKey.currentState?.pushNamed(route);
-        } else if (route == '/air_quality') {
-          triggerAirQuality();
-        }
-      });
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (route == '/emergency') {
+            triggerEmergency();
+          } else if (route == '/scan') {
+            navigatorKey.currentState?.pushNamed(route);
+          } else if (route == '/air_quality') {
+            triggerAirQuality(needsPermission: needsPermission);
+          }
+        });
+      } else if (call.arguments is String) {
+        final String route = call.arguments;
+        print('Navigating to route: $route');
+
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (route == '/emergency') {
+            triggerEmergency();
+          } else if (route == '/scan') {
+            navigatorKey.currentState?.pushNamed(route);
+          } else if (route == '/air_quality') {
+            triggerAirQuality(needsPermission: false);
+          }
+        });
+      }
     }
   }
 
-  Future<void> triggerAirQuality() async {
-    print('Triggering air quality from widget');
+  Future<void> triggerAirQuality({bool needsPermission = false}) async {
+    print('Triggering air quality from widget, needsPermission: $needsPermission');
     final context = navigatorKey.currentContext;
 
     if (context == null) {
       print('No context available');
       return;
+    }
+
+    if (needsPermission) {
+      await _handleLocationPermission(context);
+      
+      try {
+        await platform.invokeMethod('updateWidget');
+      } catch (e) {
+        print('Error updating widget: $e');
+      }
     }
 
     if (context.mounted) {
@@ -107,6 +144,91 @@ class _ShortcutHandlerState extends State<ShortcutHandler> {
         context,
         MaterialPageRoute(builder: (context) => AirQualityLoader()),
       );
+    }
+  }
+
+  Future<void> _handleLocationPermission(BuildContext context) async {
+    var status = await Permission.location.status;
+    
+    if (status.isGranted) {
+      print('Location permission already granted');
+      return;
+    }
+
+    if (status.isDenied) {
+      bool shouldRequest = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: Text('Location Permission'),
+          content: Text(
+            'This app needs location access to show accurate air quality data for your area.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: Text('Grant Permission'),
+            ),
+          ],
+        ),
+      ) ?? false;
+
+      if (!shouldRequest) {
+        print('User declined to grant location permission');
+        return;
+      }
+
+      status = await Permission.location.request();
+      
+      if (status.isGranted) {
+        print('Location permission granted');
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Location permission granted! Updating widget...'),
+              duration: Duration(seconds: 2),
+            ),
+          );
+        }
+      } else if (status.isPermanentlyDenied) {
+        if (context.mounted) {
+          showOpenSettingsDialog(context);
+        }
+      }
+    } else if (status.isPermanentlyDenied) {
+      if (context.mounted) {
+        showOpenSettingsDialog(context);
+      }
+    }
+  }
+
+  Future<void> showOpenSettingsDialog(BuildContext context) async {
+    bool shouldOpenSettings = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Permission Required'),
+        content: Text(
+          'Location permission is required to show accurate air quality data. '
+          'Please enable it in app settings.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: Text('Open Settings'),
+          ),
+        ],
+      ),
+    ) ?? false;
+
+    if (shouldOpenSettings) {
+      await openAppSettings();
     }
   }
 
@@ -151,11 +273,10 @@ class _ShortcutHandlerState extends State<ShortcutHandler> {
       await Navigator.push(
         context,
         MaterialPageRoute(
-          builder:
-              (context) => EmergencyScreen(
-                emergencyContacts: emergencyService.emergencyContacts,
-                emergencySettings: emergencyService.emergencySettings,
-              ),
+          builder: (context) => EmergencyScreen(
+            emergencyContacts: emergencyService.emergencyContacts,
+            emergencySettings: emergencyService.emergencySettings,
+          ),
         ),
       );
     }

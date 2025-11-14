@@ -1,4 +1,3 @@
-// android/app/src/main/kotlin/com/example/allergen/AirQualityWidgetProvider.kt
 package com.example.allergen
 
 import android.appwidget.AppWidgetManager
@@ -8,10 +7,25 @@ import android.content.Intent
 import android.widget.RemoteViews
 import android.app.PendingIntent
 import android.util.Log
+import android.location.Location
+import android.location.LocationManager
+import android.Manifest
+import android.content.pm.PackageManager
+import androidx.core.content.ContextCompat
+import kotlinx.coroutines.*
+import org.json.JSONObject
+import java.net.HttpURLConnection
+import java.net.URL
+import android.location.Geocoder
+import java.util.Locale
 
 class AirQualityWidgetProvider : AppWidgetProvider() {
     companion object {
         private const val TAG = "AirQualityWidget"
+        private const val API_KEY = "AIzaSyCWva81wgqeq5qIShLvoO9hs20ejk73gCE"
+        
+        private const val DEFAULT_LATITUDE = 16.0447
+        private const val DEFAULT_LONGITUDE = 120.4794
     }
 
     override fun onUpdate(
@@ -33,6 +47,7 @@ class AirQualityWidgetProvider : AppWidgetProvider() {
         try {
             Log.d(TAG, "🌤️ Updating widget ID: $appWidgetId")
             
+            // Set up click intent
             val intent = Intent(context, MainActivity::class.java).apply {
                 action = "AIR_QUALITY_ACTION"
                 flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
@@ -40,7 +55,7 @@ class AirQualityWidgetProvider : AppWidgetProvider() {
             
             val pendingIntent = PendingIntent.getActivity(
                 context,
-                2, // Unique request code
+                2,
                 intent,
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
             )
@@ -48,13 +63,275 @@ class AirQualityWidgetProvider : AppWidgetProvider() {
             val views = RemoteViews(context.packageName, R.layout.air_quality_widget_layout)
             views.setOnClickPendingIntent(R.id.air_quality_widget_container, pendingIntent)
             
-            // Update the widget
-            appWidgetManager.updateAppWidget(appWidgetId, views)
-            Log.d(TAG, "✅ Air Quality widget updated successfully")
+            // Fetch air quality data asynchronously
+            CoroutineScope(Dispatchers.IO).launch {
+                try {
+                    val location = getLocation(context)
+                    val (latitude, longitude, locationName) = if (location != null) {
+                        Log.d(TAG, "Using actual location")
+                        Triple(
+                            location.latitude,
+                            location.longitude,
+                            getLocationName(context, location.latitude, location.longitude)
+                        )
+                    } else {
+                        Log.d(TAG, " Using default location (permissions not granted)")
+                        Triple(
+                            DEFAULT_LATITUDE,
+                            DEFAULT_LONGITUDE,
+                            "Tap to enable location"
+                        )
+                    }
+                    
+                    val airQualityData = fetchAirQuality(latitude, longitude)
+                    
+                    withContext(Dispatchers.Main) {
+                        updateWidgetWithData(
+                            context,
+                            appWidgetManager,
+                            appWidgetId,
+                            airQualityData,
+                            locationName,
+                            location == null // Show permission hint if no location
+                        )
+                    }
+                } catch (e: Exception) {
+                    Log.e(TAG, " Error fetching air quality: ${e.message}")
+                    withContext(Dispatchers.Main) {
+                        updateWidgetWithError(context, appWidgetManager, appWidgetId)
+                    }
+                }
+            }
+            
+            Log.d(TAG, " Air Quality widget update initiated")
         } catch (e: Exception) {
-            Log.e(TAG, "❌ Error updating air quality widget: ${e.message}")
+            Log.e(TAG, " Error updating air quality widget: ${e.message}")
             e.printStackTrace()
         }
+    }
+
+    private fun getLocation(context: Context): Location? {
+        try {
+            // Check permissions
+            if (ContextCompat.checkSelfPermission(
+                    context,
+                    Manifest.permission.ACCESS_FINE_LOCATION
+                ) != PackageManager.PERMISSION_GRANTED &&
+                ContextCompat.checkSelfPermission(
+                    context,
+                    Manifest.permission.ACCESS_COARSE_LOCATION
+                ) != PackageManager.PERMISSION_GRANTED
+            ) {
+                Log.e(TAG, "❌ Location permissions not granted")
+                return null
+            }
+
+            val locationManager = context.getSystemService(Context.LOCATION_SERVICE) as LocationManager
+            
+            // Try GPS first
+            var location = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER)
+            
+            // Fallback to network
+            if (location == null) {
+                location = locationManager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER)
+            }
+            
+            // Fallback to passive provider
+            if (location == null) {
+                location = locationManager.getLastKnownLocation(LocationManager.PASSIVE_PROVIDER)
+            }
+            
+            if (location != null) {
+                Log.d(TAG, " Location: ${location.latitude}, ${location.longitude}")
+            } else {
+                Log.e(TAG, "No location available from any provider")
+            }
+            
+            return location
+        } catch (e: Exception) {
+            Log.e(TAG, "Error getting location: ${e.message}")
+            return null
+        }
+    }
+
+    private fun getLocationName(context: Context, latitude: Double, longitude: Double): String {
+        return try {
+            val geocoder = Geocoder(context, Locale.getDefault())
+            val addresses = geocoder.getFromLocation(latitude, longitude, 1)
+            if (addresses != null && addresses.isNotEmpty()) {
+                val address = addresses[0]
+                address.locality ?: address.subAdminArea ?: "Current Location"
+            } else {
+                "Current Location"
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "❌ Error getting location name: ${e.message}")
+            "Current Location"
+        }
+    }
+
+    private fun fetchAirQuality(latitude: Double, longitude: Double): AirQualityResult {
+        val url = URL("https://airquality.googleapis.com/v1/currentConditions:lookup?key=$API_KEY")
+        val connection = url.openConnection() as HttpURLConnection
+        
+        try {
+            connection.requestMethod = "POST"
+            connection.setRequestProperty("Content-Type", "application/json")
+            connection.doOutput = true
+            connection.connectTimeout = 10000
+            connection.readTimeout = 10000
+            
+            val requestBody = """
+                {
+                    "location": {
+                        "latitude": $latitude,
+                        "longitude": $longitude
+                    },
+                    "extraComputations": [
+                        "HEALTH_RECOMMENDATIONS",
+                        "DOMINANT_POLLUTANT_CONCENTRATION",
+                        "LOCAL_AQI"
+                    ],
+                    "languageCode": "en",
+                    "universalAqi": false
+                }
+            """.trimIndent()
+            
+            connection.outputStream.use { os ->
+                os.write(requestBody.toByteArray())
+            }
+            
+            val responseCode = connection.responseCode
+            if (responseCode == HttpURLConnection.HTTP_OK) {
+                val response = connection.inputStream.bufferedReader().use { it.readText() }
+                Log.d(TAG, "✅ API Response: $response")
+                return parseAirQualityResponse(response)
+            } else {
+                val errorBody = connection.errorStream?.bufferedReader()?.use { it.readText() } ?: "No error details"
+                Log.e(TAG, "❌ API Error: $responseCode - $errorBody")
+                return AirQualityResult(0, "API Error", "N/A")
+            }
+        } finally {
+            connection.disconnect()
+        }
+    }
+
+    private fun parseAirQualityResponse(jsonString: String): AirQualityResult {
+        try {
+            val json = JSONObject(jsonString)
+            val indexes = json.optJSONArray("indexes")
+            
+            if (indexes != null && indexes.length() > 0) {
+                // Look for local AQI (India NAQI)
+                var aqiIndex: JSONObject? = null
+                for (i in 0 until indexes.length()) {
+                    val index = indexes.getJSONObject(i)
+                    val code = index.optString("code")
+                    if (code == "ind_cpcb") {
+                        aqiIndex = index
+                        break
+                    }
+                }
+                
+                // Fallback to first index
+                if (aqiIndex == null) {
+                    aqiIndex = indexes.getJSONObject(0)
+                }
+                
+                val aqi = aqiIndex.optInt("aqi", 0)
+                val category = aqiIndex.optString("category", "Unknown")
+                val dominantPollutantCode = aqiIndex.optString("dominantPollutant", "N/A")
+                
+                // Format pollutant name for display
+                val dominantPollutant = formatPollutantName(dominantPollutantCode)
+                
+                Log.d(TAG, "✅ Parsed AQI: $aqi, Category: $category, Pollutant: $dominantPollutant")
+                return AirQualityResult(aqi, category, dominantPollutant)
+            }
+            
+            return AirQualityResult(0, "No Data", "N/A")
+        } catch (e: Exception) {
+            Log.e(TAG, "❌ Error parsing response: ${e.message}")
+            e.printStackTrace()
+            return AirQualityResult(0, "Parse Error", "N/A")
+        }
+    }
+
+    private fun formatPollutantName(code: String): String {
+        return when (code.lowercase()) {
+            "pm25" -> "PM2.5"
+            "pm10" -> "PM10"
+            "o3" -> "Ozone"
+            "no2" -> "NO₂"
+            "so2" -> "SO₂"
+            "co" -> "CO"
+            else -> code.uppercase()
+        }
+    }
+
+    private fun updateWidgetWithData(
+        context: Context,
+        appWidgetManager: AppWidgetManager,
+        appWidgetId: Int,
+        data: AirQualityResult,
+        locationName: String,
+        showPermissionHint: Boolean = false
+    ) {
+        val views = RemoteViews(context.packageName, R.layout.air_quality_widget_layout)
+        
+        // Set up click intent
+        val intent = Intent(context, MainActivity::class.java).apply {
+            action = "AIR_QUALITY_ACTION"
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+        }
+        val pendingIntent = PendingIntent.getActivity(
+            context,
+            2,
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+        views.setOnClickPendingIntent(R.id.air_quality_widget_container, pendingIntent)
+        
+        // Update with actual data
+        views.setTextViewText(R.id.aqi_value, data.aqi.toString())
+        views.setTextViewText(R.id.quality_level, data.category)
+        
+        // Show location with permission hint if needed
+        val locationText = if (showPermissionHint) {
+            "📍 $locationName"
+        } else {
+            "📍 $locationName"
+        }
+        views.setTextViewText(R.id.location, locationText)
+        
+        appWidgetManager.updateAppWidget(appWidgetId, views)
+        Log.d(TAG, "✅ Widget updated with data: AQI ${data.aqi}, Location: $locationName")
+    }
+
+    private fun updateWidgetWithError(
+        context: Context,
+        appWidgetManager: AppWidgetManager,
+        appWidgetId: Int
+    ) {
+        val views = RemoteViews(context.packageName, R.layout.air_quality_widget_layout)
+        
+        val intent = Intent(context, MainActivity::class.java).apply {
+            action = "AIR_QUALITY_ACTION"
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+        }
+        val pendingIntent = PendingIntent.getActivity(
+            context,
+            2,
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+        views.setOnClickPendingIntent(R.id.air_quality_widget_container, pendingIntent)
+        
+        views.setTextViewText(R.id.aqi_value, "!")
+        views.setTextViewText(R.id.quality_level, "Tap to refresh")
+        views.setTextViewText(R.id.location, "📍 Check connection")
+        
+        appWidgetManager.updateAppWidget(appWidgetId, views)
     }
 
     override fun onEnabled(context: Context) {
@@ -66,6 +343,12 @@ class AirQualityWidgetProvider : AppWidgetProvider() {
     }
 
     override fun onDeleted(context: Context, appWidgetIds: IntArray) {
-        Log.d(TAG, "🌤️ Air Quality widgets deleted: ${appWidgetIds.size}")
+        Log.d(TAG, "Air Quality widgets deleted: ${appWidgetIds.size}")
     }
+
+    data class AirQualityResult(
+        val aqi: Int,
+        val category: String,
+        val dominantPollutant: String
+    )
 }
