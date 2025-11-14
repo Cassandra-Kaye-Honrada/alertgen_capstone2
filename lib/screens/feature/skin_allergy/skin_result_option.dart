@@ -1,7 +1,7 @@
 import 'dart:ui';
+import 'package:allergen/screens/feature/skin_allergy/image_search_service.dart';
 import 'package:allergen/styleguide.dart';
 import 'package:flutter/material.dart';
-import 'image_search_service.dart';
 
 class SkinConditionOption {
   final String conditionName;
@@ -142,7 +142,8 @@ class _SkinConditionSelectionScreenState
       });
 
       try {
-        final imageUrls = await ImageSearchService.fetchConditionImages(
+        // Use ImageCacheService which checks Firebase first, then Google API
+        final imageUrls = await ImageCacheService.fetchConditionImages(
           widget.options[i].conditionName,
           maxResults: 3,
         );
@@ -151,10 +152,12 @@ class _SkinConditionSelectionScreenState
           setState(() {
             if (imageUrls.isNotEmpty) {
               imageCache[i] = imageUrls;
+              // Save back to the option object
+              widget.options[i].imageUrls = imageUrls;
             } else {
               imageCache[i] = List.generate(
                 3,
-                (index) => ImageSearchService.getPlaceholderImage(
+                (index) => ImageCacheService.getPlaceholderImage(
                   '${widget.options[i].conditionName} ${index + 1}',
                 ),
               );
@@ -167,7 +170,7 @@ class _SkinConditionSelectionScreenState
           setState(() {
             imageCache[i] = List.generate(
               3,
-              (index) => ImageSearchService.getPlaceholderImage(
+              (index) => ImageCacheService.getPlaceholderImage(
                 '${widget.options[i].conditionName} ${index + 1}',
               ),
             );
