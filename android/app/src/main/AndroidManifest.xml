@@ -8,6 +8,7 @@
     <uses-permission android:name="android.permission.READ_CONTACTS" /> 
     <uses-permission android:name="android.permission.WRITE_CONTACTS" />
 
+
     <!-- SMS permissions -->
     <uses-permission android:name="android.permission.SEND_SMS" />
     <uses-permission android:name="android.permission.READ_SMS" />
@@ -120,6 +121,16 @@
                 android:resource="@xml/air_quality_widget_info" />
         </receiver>
 
+        
+        <!-- <receiver
+                android:name=".BootReceiver"
+                android:enabled="true"
+                android:exported="true">
+                <intent-filter>
+                    <action android:name="android.intent.action.BOOT_COMPLETED" />
+                    <action android:name="android.intent.action.QUICKBOOT_POWERON" />
+                </intent-filter>
+            </receiver> -->
 
         <!--  CRITICAL: Flutter Local Notifications Receivers -->
         <receiver 
