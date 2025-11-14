@@ -25,9 +25,8 @@ class AirQualityWidgetProvider : AppWidgetProvider() {
     companion object {
         private const val TAG = "AirQualityWidget"
         private const val API_KEY = "AIzaSyCWva81wgqeq5qIShLvoO9hs20ejk73gCE"
-        
-        private const val DEFAULT_LATITUDE = 16.0447
-        private const val DEFAULT_LONGITUDE = 120.4794
+        private const val DEFAULT_LATITUDE = 28.6448
+        private const val DEFAULT_LONGITUDE = 77.2169
         
         private const val ACTION_REFRESH = "com.example.allergen.ACTION_REFRESH_AIR_QUALITY"
     }
@@ -37,7 +36,7 @@ class AirQualityWidgetProvider : AppWidgetProvider() {
         appWidgetManager: AppWidgetManager,
         appWidgetIds: IntArray
     ) {
-        Log.d(TAG, "🌤️ Updating Air Quality widgets: ${appWidgetIds.size}")
+        Log.d(TAG, " Updating Air Quality widgets: ${appWidgetIds.size}")
         for (appWidgetId in appWidgetIds) {
             updateWidget(context, appWidgetManager, appWidgetId)
         }
@@ -47,7 +46,7 @@ class AirQualityWidgetProvider : AppWidgetProvider() {
         super.onReceive(context, intent)
         
         if (intent.action == ACTION_REFRESH) {
-            Log.d(TAG, "🔄 Refresh button clicked")
+            Log.d(TAG, " Refresh button clicked")
             val appWidgetManager = AppWidgetManager.getInstance(context)
             val appWidgetIds = appWidgetManager.getAppWidgetIds(
                 android.content.ComponentName(context, AirQualityWidgetProvider::class.java)
@@ -62,11 +61,10 @@ class AirQualityWidgetProvider : AppWidgetProvider() {
         appWidgetId: Int
     ) {
         try {
-            Log.d(TAG, "🌤️ Updating widget ID: $appWidgetId")
+            Log.d(TAG, " Updating widget ID: $appWidgetId")
             
             val views = RemoteViews(context.packageName, R.layout.air_quality_widget_layout)
             
-            // Set up main click intent (opens app)
             val mainIntent = Intent(context, MainActivity::class.java).apply {
                 action = "AIR_QUALITY_ACTION"
                 flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
@@ -93,6 +91,10 @@ class AirQualityWidgetProvider : AppWidgetProvider() {
             
             // Show loading state
             views.setTextViewText(R.id.timestamp, "Updating...")
+            
+            views.setViewVisibility(R.id.circular_progress_good, android.view.View.VISIBLE)
+            views.setProgressBar(R.id.circular_progress_good, 500, 0, false)
+            
             appWidgetManager.updateAppWidget(appWidgetId, views)
             
             // Fetch air quality data asynchronously
@@ -100,18 +102,18 @@ class AirQualityWidgetProvider : AppWidgetProvider() {
                 try {
                     val location = getLocation(context)
                     val (latitude, longitude, locationName) = if (location != null) {
-                        Log.d(TAG, "✅ Using actual location")
+                        Log.d(TAG, " Using actual location")
                         Triple(
                             location.latitude,
                             location.longitude,
                             getLocationName(context, location.latitude, location.longitude)
                         )
                     } else {
-                        Log.d(TAG, "⚠️ Using default location (permissions not granted)")
+                        Log.d(TAG, " Using default location (permissions not granted)")
                         Triple(
                             DEFAULT_LATITUDE,
                             DEFAULT_LONGITUDE,
-                            "Tap to enable location"
+                            ""
                         )
                     }
                     
@@ -128,16 +130,16 @@ class AirQualityWidgetProvider : AppWidgetProvider() {
                         )
                     }
                 } catch (e: Exception) {
-                    Log.e(TAG, "❌ Error fetching air quality: ${e.message}")
+                    Log.e(TAG, " Error fetching air quality: ${e.message}")
                     withContext(Dispatchers.Main) {
                         updateWidgetWithError(context, appWidgetManager, appWidgetId)
                     }
                 }
             }
             
-            Log.d(TAG, "✅ Air Quality widget update initiated")
+            Log.d(TAG, "Air Quality widget update initiated")
         } catch (e: Exception) {
-            Log.e(TAG, "❌ Error updating air quality widget: ${e.message}")
+            Log.e(TAG, " Error updating air quality widget: ${e.message}")
             e.printStackTrace()
         }
     }
@@ -153,7 +155,7 @@ class AirQualityWidgetProvider : AppWidgetProvider() {
                     Manifest.permission.ACCESS_COARSE_LOCATION
                 ) != PackageManager.PERMISSION_GRANTED
             ) {
-                Log.e(TAG, "❌ Location permissions not granted")
+                Log.e(TAG, " Location permissions not granted")
                 return null
             }
 
@@ -170,14 +172,14 @@ class AirQualityWidgetProvider : AppWidgetProvider() {
             }
             
             if (location != null) {
-                Log.d(TAG, "📍 Location: ${location.latitude}, ${location.longitude}")
+                Log.d(TAG, " Location: ${location.latitude}, ${location.longitude}")
             } else {
-                Log.e(TAG, "❌ No location available from any provider")
+                Log.e(TAG, " No location available from any provider")
             }
             
             return location
         } catch (e: Exception) {
-            Log.e(TAG, "❌ Error getting location: ${e.message}")
+            Log.e(TAG, " Error getting location: ${e.message}")
             return null
         }
     }
@@ -193,7 +195,7 @@ class AirQualityWidgetProvider : AppWidgetProvider() {
                 "Current Location"
             }
         } catch (e: Exception) {
-            Log.e(TAG, "❌ Error getting location name: ${e.message}")
+            Log.e(TAG, " Error getting location name: ${e.message}")
             "Current Location"
         }
     }
@@ -232,11 +234,11 @@ class AirQualityWidgetProvider : AppWidgetProvider() {
             val responseCode = connection.responseCode
             if (responseCode == HttpURLConnection.HTTP_OK) {
                 val response = connection.inputStream.bufferedReader().use { it.readText() }
-                Log.d(TAG, "✅ API Response: $response")
+                Log.d(TAG, "API Response: $response")
                 return parseAirQualityResponse(response)
             } else {
                 val errorBody = connection.errorStream?.bufferedReader()?.use { it.readText() } ?: "No error details"
-                Log.e(TAG, "❌ API Error: $responseCode - $errorBody")
+                Log.e(TAG, "API Error: $responseCode - $errorBody")
                 return AirQualityResult(0, "API Error", "N/A")
             }
         } finally {
@@ -270,13 +272,13 @@ class AirQualityWidgetProvider : AppWidgetProvider() {
                 
                 val dominantPollutant = formatPollutantName(dominantPollutantCode)
                 
-                Log.d(TAG, "✅ Parsed AQI: $aqi, Category: $category, Pollutant: $dominantPollutant")
+                Log.d(TAG, "Parsed AQI: $aqi, Category: $category, Pollutant: $dominantPollutant")
                 return AirQualityResult(aqi, category, dominantPollutant)
             }
             
             return AirQualityResult(0, "No Data", "N/A")
         } catch (e: Exception) {
-            Log.e(TAG, "❌ Error parsing response: ${e.message}")
+            Log.e(TAG, " Error parsing response: ${e.message}")
             e.printStackTrace()
             return AirQualityResult(0, "Parse Error", "N/A")
         }
@@ -295,7 +297,7 @@ class AirQualityWidgetProvider : AppWidgetProvider() {
     }
 
     private fun getCurrentTimestamp(): String {
-        val sdf = SimpleDateFormat("MMM dd, h:mm a", Locale.getDefault())
+        val sdf = SimpleDateFormat("h:mm a", Locale.getDefault())
         return "Updated: ${sdf.format(Date())}"
     }
 
@@ -337,7 +339,7 @@ class AirQualityWidgetProvider : AppWidgetProvider() {
         // Update with actual data
         views.setTextViewText(R.id.aqi_value, data.aqi.toString())
         views.setTextViewText(R.id.quality_level, data.category)
-        views.setTextViewText(R.id.dominant_pollutant, "Dominant Pollutant: ${data.dominantPollutant}")
+        views.setTextViewText(R.id.dominant_pollutant, "Dominant: ${data.dominantPollutant}")
         
         val locationText = if (showPermissionHint) {
             "$locationName"
@@ -349,8 +351,32 @@ class AirQualityWidgetProvider : AppWidgetProvider() {
         // Update timestamp
         views.setTextViewText(R.id.timestamp, getCurrentTimestamp())
         
+        // Hide all progress bars first
+        views.setViewVisibility(R.id.circular_progress_good, android.view.View.GONE)
+        views.setViewVisibility(R.id.circular_progress_satisfactory, android.view.View.GONE)
+        views.setViewVisibility(R.id.circular_progress_moderate, android.view.View.GONE)
+        views.setViewVisibility(R.id.circular_progress_poor, android.view.View.GONE)
+        views.setViewVisibility(R.id.circular_progress_very_poor, android.view.View.GONE)
+        views.setViewVisibility(R.id.circular_progress_severe, android.view.View.GONE)
+        
+        // Show and update the appropriate progress bar based on AQI level
+        val progressBarId = when {
+            data.aqi <= 50 -> R.id.circular_progress_good
+            data.aqi <= 100 -> R.id.circular_progress_satisfactory
+            data.aqi <= 200 -> R.id.circular_progress_moderate
+            data.aqi <= 300 -> R.id.circular_progress_poor
+            data.aqi <= 400 -> R.id.circular_progress_very_poor
+            else -> R.id.circular_progress_severe
+        }
+        
+        views.setProgressBar(progressBarId, 500, data.aqi, false)
+        views.setViewVisibility(progressBarId, android.view.View.VISIBLE)
+        
+        // Background color stays neutral (defined in air_quality_widget_bg.xml)
+        // Only the circular progress ring changes color based on AQI
+        
         appWidgetManager.updateAppWidget(appWidgetId, views)
-        Log.d(TAG, "✅ Widget updated with data: AQI ${data.aqi}, Category: ${data.category}, Pollutant: ${data.dominantPollutant}, Location: $locationName")
+        Log.d(TAG, "Widget updated with data: AQI ${data.aqi}, Category: ${data.category}, Pollutant: ${data.dominantPollutant}, Location: $locationName")
     }
 
     private fun updateWidgetWithError(
@@ -390,19 +416,27 @@ class AirQualityWidgetProvider : AppWidgetProvider() {
         views.setTextViewText(R.id.location, "Check connection")
         views.setTextViewText(R.id.timestamp, "Failed at ${SimpleDateFormat("h:mm a", Locale.getDefault()).format(Date())}")
         
+        // Hide all progress indicators on error
+        views.setViewVisibility(R.id.circular_progress_good, android.view.View.GONE)
+        views.setViewVisibility(R.id.circular_progress_satisfactory, android.view.View.GONE)
+        views.setViewVisibility(R.id.circular_progress_moderate, android.view.View.GONE)
+        views.setViewVisibility(R.id.circular_progress_poor, android.view.View.GONE)
+        views.setViewVisibility(R.id.circular_progress_very_poor, android.view.View.GONE)
+        views.setViewVisibility(R.id.circular_progress_severe, android.view.View.GONE)
+        
         appWidgetManager.updateAppWidget(appWidgetId, views)
     }
 
     override fun onEnabled(context: Context) {
-        Log.d(TAG, "🌤️ Air Quality widget enabled")
+        Log.d(TAG, " Air Quality widget enabled")
     }
 
     override fun onDisabled(context: Context) {
-        Log.d(TAG, "🌤️ Air Quality widget disabled")
+        Log.d(TAG, " Air Quality widget disabled")
     }
 
     override fun onDeleted(context: Context, appWidgetIds: IntArray) {
-        Log.d(TAG, "🌤️ Air Quality widgets deleted: ${appWidgetIds.size}")
+        Log.d(TAG, " Air Quality widgets deleted: ${appWidgetIds.size}")
     }
 
     data class AirQualityResult(

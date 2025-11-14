@@ -582,13 +582,8 @@ class _IngredientAllergenModalState extends State<IngredientAllergenModal> {
                   width: double.infinity,
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [Colors.green.shade50, Colors.blue.shade50],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
+                    color: AppColors.defaultbackground,
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Colors.green.shade200),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -597,26 +592,26 @@ class _IngredientAllergenModalState extends State<IngredientAllergenModal> {
                         children: [
                           Icon(
                             Icons.local_hospital_rounded,
-                            color: Colors.green.shade700,
+                            color: AppColors.primary,
                             size: 20,
                           ),
                           const SizedBox(width: 8),
                           Text(
                             'Health Information',
                             style: TextStyle(
-                              fontSize: 15,
-                              fontWeight: FontWeight.w700,
-                              color: Colors.green.shade900,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.primary,
                             ),
                           ),
                         ],
                       ),
-                      const SizedBox(height: 12),
+                      const SizedBox(height: 8),
                       Text(
                         widget.ingredientBenefits!,
                         style: TextStyle(
-                          fontSize: 14,
-                          color: Colors.grey.shade800,
+                          fontSize: 12,
+                          color: AppColors.textGray,
                           height: 1.5,
                         ),
                       ),
@@ -629,9 +624,9 @@ class _IngredientAllergenModalState extends State<IngredientAllergenModal> {
                   width: double.infinity,
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: Colors.grey.shade100,
+                    color: Colors.white,
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Colors.grey.shade300),
+                    border: Border.all(color: Color(0xFFE2E8F0)),
                   ),
                   child: Row(
                     children: [
@@ -644,12 +639,11 @@ class _IngredientAllergenModalState extends State<IngredientAllergenModal> {
                       Expanded(
                         child: Text(
                           widget.isFromHistory
-                              ? 'No health information was recorded for this ingredient during the original scan.'
+                              ? 'No health information for this ingredient.'
                               : 'No health information available for this ingredient.',
                           style: TextStyle(
-                            fontSize: 13,
-                            color: Colors.grey.shade700,
-                            fontStyle: FontStyle.italic,
+                            fontSize: 12,
+                            color: AppColors.textGray,
                           ),
                         ),
                       ),

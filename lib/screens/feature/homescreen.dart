@@ -714,7 +714,6 @@ class HomescreenState extends State<Homescreen> {
         child: Column(
           children: [
             Container(
-              //color: Color(0xFFF8F9FA),
               child: SafeArea(
                 bottom: false,
                 child: Container(
@@ -1433,7 +1432,7 @@ class HomescreenState extends State<Homescreen> {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: AppColors.moderate.withOpacity(0.3)),
+          border: Border.all(color: Color(0xFFE2E8F0)),
         ),
         child: Row(
           children: [
@@ -1454,47 +1453,27 @@ class HomescreenState extends State<Homescreen> {
                           width: 50,
                           height: 50,
                           fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) {
-                            return Icon(
-                              Icons.medical_services,
-                              color: AppColors.moderate,
-                              size: 24,
-                            );
-                          },
                         )
-                        : Icon(
-                          Icons.medical_services,
-                          color: AppColors.moderate,
-                          size: 24,
-                        ),
+                        : Container(), 
               ),
             ),
+
             SizedBox(width: 12),
+
+            // TEXT AREA
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
-                    children: [
-                      Icon(
-                        Icons.medical_services,
-                        size: 14,
-                        color: AppColors.moderate,
-                      ),
-                      SizedBox(width: 4),
-                      Expanded(
-                        child: Text(
-                          conditionName,
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                            color: Color(0xFF2D3748),
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                    ],
+                  Text(
+                    conditionName,
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF2D3748),
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
                   SizedBox(height: 4),
                   Text(
@@ -1504,42 +1483,29 @@ class HomescreenState extends State<Homescreen> {
                 ],
               ),
             ),
+
             Column(
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 Container(
                   padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
-                    color:
-                        isFoodAllergyRelated
-                            ? AppColors.moderate.withOpacity(0.1)
-                            : Colors.grey.withOpacity(0.1),
+                    color: (isFoodAllergyRelated
+                            ? AppColors.moderate
+                            : Colors.grey)
+                        .withOpacity(0.1),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        Icons.medical_services,
-                        size: 12,
-                        color:
-                            isFoodAllergyRelated
-                                ? AppColors.moderate
-                                : Colors.grey,
-                      ),
-                      SizedBox(width: 4),
-                      Text(
-                        'Skin',
-                        style: TextStyle(
-                          fontSize: 10,
-                          fontWeight: FontWeight.w600,
-                          color:
-                              isFoodAllergyRelated
-                                  ? AppColors.moderate
-                                  : Colors.grey,
-                        ),
-                      ),
-                    ],
+                  child: Text(
+                    'Skin',
+                    style: TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w600,
+                      color:
+                          isFoodAllergyRelated
+                              ? AppColors.moderate
+                              : Colors.grey,
+                    ),
                   ),
                 ),
                 SizedBox(height: 4),
