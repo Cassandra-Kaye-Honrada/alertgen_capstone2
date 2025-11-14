@@ -517,9 +517,7 @@ class _IngredientAllergenModalState extends State<IngredientAllergenModal> {
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(
-                    widget.isFromHistory
-                        ? 'Historical Ingredient Analysis'
-                        : 'Ingredient Analysis',
+                    'Ingredient Analysis',
                     style: const TextStyle(
                       fontSize: 18,
                       color: AppColors.primary,
@@ -559,7 +557,7 @@ class _IngredientAllergenModalState extends State<IngredientAllergenModal> {
                   children: [
                     Icon(
                       widget.isFromHistory ? Icons.history : Icons.psychology,
-                      size: 14,
+                      size: 16,
                       color: Colors.grey.shade600,
                     ),
                     const SizedBox(width: 4),
@@ -599,7 +597,7 @@ class _IngredientAllergenModalState extends State<IngredientAllergenModal> {
                           Text(
                             'Health Information',
                             style: TextStyle(
-                              fontSize: 14,
+                              fontSize: 16,
                               fontWeight: FontWeight.w600,
                               color: AppColors.primary,
                             ),
@@ -610,7 +608,7 @@ class _IngredientAllergenModalState extends State<IngredientAllergenModal> {
                       Text(
                         widget.ingredientBenefits!,
                         style: TextStyle(
-                          fontSize: 12,
+                          fontSize: 14,
                           color: AppColors.textGray,
                           height: 1.5,
                         ),
