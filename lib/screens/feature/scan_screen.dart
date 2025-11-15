@@ -623,22 +623,38 @@ Return JSON:
     );
   }
 
-  String get skinAnalysisPrompt => '''
-You are an expert dermatologist AI specializing in identifying skin allergic reactions and conditions related to FOOD ALLERGIES.
+ String get skinAnalysisPrompt => '''
+You are an expert dermatologist AI specializing in identifying skin allergic reactions and conditions related to FOOD ALLERGIES AND ENVIRONMENTAL FACTORS.
+
+CRITICAL ANALYSIS GUIDELINES:
+- Analyze PRIMARY LESION CHARACTERISTICS (papules, vesicles, wheals, plaques)
+- Examine DISTRIBUTION PATTERN (scattered, grouped, linear, symmetric)
+- Assess COLOR AND TEXTURE (red, pink, raised, flat, scaly)
+- Consider TYPICAL BODY LOCATIONS for each condition
+- Evaluate SIZE AND CLUSTERING of lesions
 
 CRITICAL: Generate 3-4 DIFFERENT possible skin condition interpretations with confidence scores. Consider:
-1. Most likely condition based on visual characteristics
-2. Alternative conditions with similar appearance  
-3. Conditions that are commonly mistaken for each other
-4. Different severity levels of the same condition
+1. Most likely condition based on PRIMARY visual characteristics (lesion type, pattern, color)
+2. Alternative conditions with similar PRIMARY features
+3. Conditions at different severity stages
+4. Conditions commonly mistaken due to similar lesion morphology
+
+IMPORTANT: When comparing similar conditions (e.g., Heat Rash vs Atopic Dermatitis):
+- Heat Rash: Small uniform papules/vesicles, sweaty areas, clustered pattern
+- Atopic Dermatitis: Larger irregular patches, dry scaly skin, flexural areas
+- Hives: Raised wheals, well-defined borders, can appear anywhere
+- Contact Dermatitis: Irregular patches, limited to contact area
+
 
 FOOD ALLERGY-RELATED SKIN CONDITIONS TO DETECT:
+
 
 1. URTICARIA (HIVES) - Allergic Reaction
    - Raised, red, itchy welts on skin
    - Most common food allergy skin reaction
    - Can appear anywhere on body
    - Often caused by: shellfish, nuts, eggs, milk, soy, wheat, fish
+
 
 2. ANGIOEDEMA - Severe Allergic Swelling
    - Deep swelling under skin
@@ -647,74 +663,166 @@ FOOD ALLERGY-RELATED SKIN CONDITIONS TO DETECT:
    - Emergency if affects breathing
    - Triggered by: nuts, shellfish, eggs, milk
 
+
 3. ATOPIC DERMATITIS (ECZEMA) - Food-Triggered
    - Red, inflamed, itchy patches
    - Dry, scaly skin
    - Can be triggered or worsened by food allergens
    - Common triggers: milk, eggs, peanuts, soy, wheat, fish
 
+
 4. CONTACT DERMATITIS - Direct Food Contact
    - Red, itchy rash where food touched skin
    - Blistering possible
    - Common with: citrus fruits, tomatoes, garlic
+
 
 5. FLUSHING - Histamine Reaction
    - Sudden redness and warmth of skin
    - Often face and neck
    - Can occur with food allergies
 
+
 6. ERYTHEMA - Allergic Redness
    - Red patches or widespread redness
    - Can indicate allergic reaction
    - May accompany other symptoms
+
 
 7. PERIORAL DERMATITIS - Around Mouth
    - Rash around mouth area
    - Can be triggered by certain foods
    - Red bumps, scaling
 
+
+TEMPERATURE-RELATED SKIN CONDITIONS:
+
+
+8. HEAT RASH (MILIARIA)
+   - Small red bumps or blisters
+   - Caused by blocked sweat glands
+   - Common in hot, humid weather
+   - NOT food-related but can be confused with food allergies
+   - Triggers: excessive heat, humidity, tight clothing
+
+
+9. COLD URTICARIA - Cold-Induced Hives
+   - Hives triggered by cold exposure
+   - Red, itchy welts after cold contact
+   - Can be severe with sudden temperature changes
+   - NOT directly food-related but environmental trigger
+
+
+10. CHOLINERGIC URTICARIA - Heat/Exercise-Induced
+    - Small hives from increased body temperature
+    - Triggered by: exercise, hot showers, stress, spicy foods
+    - Can be mistaken for food allergies
+    - Environmental + potential food trigger combination
+
+
+11. CHILBLAINS (PERNIO)
+    - Red, swollen, itchy patches from cold exposure
+    - Usually on fingers, toes, ears, nose
+    - NOT food-related, purely temperature-induced
+
+
+ENVIRONMENTAL & MIXED CONDITIONS:
+
+
+12. SUN ALLERGY (PHOTOSENSITIVITY)
+    - Rash from sun exposure
+    - Can be triggered by certain foods (citrus, celery) + sun
+    - Red, itchy, blistering skin
+    - Mixed environmental + potential food trigger
+
+
+CRITICAL ALLERGEN FORMATTING RULES:
+❌ WRONG: "allergen": "eggs, milk, peanuts"
+✅ CORRECT: Create SEPARATE trigger objects for EACH allergen
+
+
+Example of CORRECT format:
+"likelyFoodTriggers": [
+  {
+    "allergen": "eggs",
+    "likelihood": "high",
+    "reasoning": "Common trigger for urticaria reactions"
+  },
+  {
+    "allergen": "milk",
+    "likelihood": "high",
+    "reasoning": "Dairy products frequently cause hives"
+  },
+  {
+    "allergen": "peanuts",
+    "likelihood": "moderate",
+    "reasoning": "Possible cross-reactivity with tree nuts"
+  }
+]
+
+
+NEVER combine multiple allergens in a single "allergen" field.
+Each allergen MUST be its own separate object in the array.
+
+
 Return JSON with this exact structure:
 {
   "options": [
     {
-      "conditionName": "Primary condition name (e.g., 'Urticaria (Hives)', 'Atopic Dermatitis')",
+      "conditionName": "Primary condition name (e.g., 'Urticaria (Hives)', 'Heat Rash', 'Cold Urticaria')",
       "isFoodAllergyRelated": true/false,
+      "isTemperatureRelated": true/false,
+      "isEnvironmentalTrigger": true/false,
       "confidence": 0.XX,
       "description": "Detailed description of what you see in the image",
       "severity": "mild|moderate|severe|emergency",
       "likelyFoodTriggers": [
         {
-          "allergen": "Specific allergen name",
-          "likelihood": "high|moderate|low",
-          "reasoning": "Why this allergen is suspected"
+          "allergen": "SINGLE allergen name ONLY (e.g., 'eggs' NOT 'eggs, milk')",
+          "likelihood": "high|moderate|low|none",
+          "reasoning": "Why this specific allergen is suspected"
+        }
+      ],
+      "environmentalTriggers": [
+        {
+          "trigger": "Temperature/environmental factor (e.g., 'Excessive heat', 'Cold exposure', 'Sun exposure')",
+          "likelihood": "high|moderate|low|none",
+          "reasoning": "Why this environmental factor is suspected"
         }
       ],
       "symptoms": ["symptom1", "symptom2", "symptom3"],
       "immediateActions": ["action1", "action2", "action3"],
       "foodsToAvoid": ["food1", "food2", "food3"],
+      "environmentalPrecautions": ["precaution1", "precaution2" or "N/A if not environmental"],
       "whenToSeekHelp": "Description of when to seek immediate medical attention",
       "additionalNotes": "Any important additional information"
     }
   ]
 }
 
+
 CONFIDENCE SCORING RULES:
 - 0.90-1.00: Very clear visual match
 - 0.70-0.89: Good match but could be similar condition
 - 0.50-0.69: Moderate match, some ambiguity
 
+
 CRITICAL REQUIREMENTS:
 1. Generate 3-4 distinct options ordered by confidence
-2. ONLY identify conditions RELATED TO FOOD ALLERGIES
-3. If a condition is NOT food allergy-related, set isFoodAllergyRelated: false
-4. Be specific about likely food allergen triggers
-5. Provide actionable advice
-6. Indicate severity accurately
-7. Include emergency warning signs
-8. Focus on the 9 FDA major allergens as primary triggers
+2. Identify conditions RELATED TO FOOD ALLERGIES, TEMPERATURE, OR ENVIRONMENT
+3. Set isFoodAllergyRelated: false if NOT food-related
+4. Set isTemperatureRelated: true if temperature-triggered
+5. Set isEnvironmentalTrigger: true if environmental factors involved
+6. Be specific about likely triggers (food, temperature, or environmental)
+7. Provide actionable advice for both food and environmental management
+8. Indicate severity accurately
+9. Include emergency warning signs
+10. Focus on the 9 FDA major allergens as primary FOOD triggers
+11. Clearly distinguish between food allergies and environmental/temperature triggers
+12. **EACH ALLERGEN MUST BE A SEPARATE OBJECT - NEVER COMBINE IN ONE STRING**
 ''';
 
-  Future<void> analyzeSkinCondition(File imageFile) async {
+Future<void> analyzeSkinCondition(File imageFile) async {
     if (apiKey == 'YOUR_API_KEY_HERE') {
       setState(() => loading = false);
       return;
@@ -723,43 +831,35 @@ CRITICAL REQUIREMENTS:
     try {
       setState(() {
         isSkinAnalysis = true;
-        analysisStatus = 'Analyzing skin allergy...';
+        analysisStatus = 'Analyzing skin condition...';
       });
 
       final imageHash = skinCache.generateImageHash(imageFile);
+
+      print('Starting cache check - Level 1: Exact image hash');
       final exactMatch = await skinCache.checkExactImageMatch(imageHash);
 
       if (exactMatch != null) {
+        print('Cache HIT - Level 1: Exact image match');
         setState(() {
           loading = false;
-          // analysisStatus = '';
         });
+
+        saveSkinToFirebase(exactMatch, imageFile)
+            .catchError((e) {
+              print('Error saving cached skin scan to history: $e');
+            })
+            .then((_) {
+              print('Cached skin scan saved to history successfully');
+            });
 
         navigateToSkinResults(exactMatch, imageFile, fromCache: true);
         return;
       }
 
+      print('Level 2: Getting condition name from AI...');
       setState(() {
-        analysisStatus = 'Analyzing skin allergy...';
-      });
-
-      final similarMatch = await skinCache.checkSimilarSkinCondition(
-        imageFile,
-        apiKey,
-      );
-
-      if (similarMatch != null) {
-        setState(() {
-          loading = false;
-          analysisStatus = 'Analyzing skin allergy...';
-        });
-
-        navigateToSkinResults(similarMatch, imageFile, fromCache: true);
-        return;
-      }
-
-      setState(() {
-        analysisStatus = 'Analyzing skin allergy...';
+        analysisStatus = 'Identifying skin allergy...';
       });
 
       final model = GenerativeModel(model: 'gemini-2.5-pro', apiKey: apiKey);
@@ -776,32 +876,88 @@ CRITICAL REQUIREMENTS:
         response.text ?? '',
       );
 
+      if (skinOptions.isEmpty) {
+        setState(() {
+          loading = false;
+          analysisStatus = '';
+        });
+        showSnackBar('Unable to analyze skin condition', Colors.red);
+        return;
+      }
+
+      skinOptions.sort((a, b) => b.confidence.compareTo(a.confidence));
+      final topCondition = skinOptions.first;
+
+      print(
+        'Top condition identified: ${topCondition.conditionName} (${topCondition.confidence})',
+      );
+
+      print('Level 2: Checking cache by condition name...');
+      final conditionMatch = await skinCache.checkConditionNameMatch(
+        topCondition.conditionName,
+      );
+
+      if (conditionMatch != null) {
+        print('Cache HIT - Level 2: Condition name match');
+        setState(() {
+          loading = false;
+          analysisStatus = '';
+        });
+
+        saveSkinToFirebase(conditionMatch, imageFile)
+            .catchError((e) {
+              print('Error saving cached skin scan to history: $e');
+            })
+            .then((_) {
+              print('Cached skin scan saved to history successfully');
+            });
+
+        navigateToSkinResults(conditionMatch, imageFile, fromCache: true);
+        return;
+      }
+
+      print('Level 3: Checking visual similarity...');
+      setState(() {
+        analysisStatus = 'Identifying skin allergy...';
+      });
+
+      final similarMatch = await skinCache.checkSimilarSkinCondition(
+        imageFile,
+        apiKey,
+      );
+
+      if (similarMatch != null) {
+        print('Cache HIT - Level 3: Visual similarity match');
+        setState(() {
+          loading = false;
+          analysisStatus = '';
+        });
+
+        saveSkinToFirebase(similarMatch, imageFile)
+            .catchError((e) {
+              print('Error saving cached skin scan to history: $e');
+            })
+            .then((_) {
+              print('Cached skin scan saved to history successfully');
+            });
+
+        navigateToSkinResults(similarMatch, imageFile, fromCache: true);
+        return;
+      }
+
+      print('No cache match at any level - showing selection screen');
       setState(() {
         loading = false;
         analysisStatus = '';
       });
 
-      if (skinOptions.isNotEmpty) {
-        skinOptions.sort((a, b) => b.confidence.compareTo(a.confidence));
-
-        await showSkinConditionSelectionScreen(
-          skinOptions,
-          imageFile,
-          imageHash,
-        );
-      } else {
-        showSnackBar('Unable to analyze skin allergy', Colors.red);
-        setState(() {
-          image = null;
-          loading = false;
-        });
-      }
+      await showSkinConditionSelectionScreen(skinOptions, imageFile, imageHash);
     } catch (e) {
       setState(() {
         loading = false;
         analysisStatus = '';
       });
-      showSnackBar('Error analyzing skin allergy: $e', Colors.red);
+      showSnackBar('Error analyzing skin condition: $e', Colors.red);
     }
   }
 
@@ -952,13 +1108,17 @@ CRITICAL REQUIREMENTS:
         'type': 'skin_analysis',
         'conditionName': skinData['conditionName'] ?? 'Unknown Condition',
         'isFoodAllergyRelated': skinData['isFoodAllergyRelated'] ?? false,
+        'isTemperatureRelated': skinData['isTemperatureRelated'] ?? false,
+        'isEnvironmentalTrigger': skinData['isEnvironmentalTrigger'] ?? false,
         'confidence': skinData['confidence'] ?? 0.5,
         'description': skinData['description'] ?? '',
         'severity': skinData['severity'] ?? 'unknown',
         'likelyFoodTriggers': skinData['likelyFoodTriggers'] ?? [],
+        'environmentalTriggers': skinData['environmentalTriggers'] ?? [],
         'symptoms': skinData['symptoms'] ?? [],
         'immediateActions': skinData['immediateActions'] ?? [],
         'foodsToAvoid': skinData['foodsToAvoid'] ?? [],
+        'environmentalPrecautions': skinData['environmentalPrecautions'] ?? [],
         'whenToSeekHelp': skinData['whenToSeekHelp'] ?? '',
         'additionalNotes': skinData['additionalNotes'] ?? '',
         'imageUrl': imageUrl ?? '',
@@ -973,9 +1133,44 @@ CRITICAL REQUIREMENTS:
           .doc(user.uid)
           .collection('skin_history')
           .add(scanData);
+
+      print('Skin scan saved to Firebase history');
     } catch (e) {
       print('Failed to save skin scan: $e');
     }
+  }
+
+  List<Map<String, dynamic>> splitCombinedAllergens(List<dynamic> triggers) {
+    List<Map<String, dynamic>> splitTriggers = [];
+
+    for (var trigger in triggers) {
+      if (trigger is! Map<String, dynamic>) continue;
+
+      String allergenString = trigger['allergen']?.toString() ?? '';
+      String likelihood = trigger['likelihood']?.toString() ?? 'unknown';
+      String reasoning = trigger['reasoning']?.toString() ?? '';
+
+      if (allergenString.contains(',')) {
+        List<String> allergens =
+            allergenString
+                .split(',')
+                .map((a) => a.trim())
+                .where((a) => a.isNotEmpty)
+                .toList();
+
+        for (String allergen in allergens) {
+          splitTriggers.add({
+            'allergen': allergen,
+            'likelihood': likelihood,
+            'reasoning': 'Common trigger: $reasoning',
+          });
+        }
+      } else {
+        splitTriggers.add(trigger);
+      }
+    }
+
+    return splitTriggers;
   }
 
   Future<void> preloadUserAllergens() async {
