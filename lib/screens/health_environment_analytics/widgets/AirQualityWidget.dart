@@ -1134,6 +1134,7 @@ class _AirQualityWidgetState extends State<AirQualityWidget> {
   }
 }
 
+
 class AQIGaugePainter extends CustomPainter {
   final double aqi;
   final Color color;
@@ -1145,7 +1146,7 @@ class AQIGaugePainter extends CustomPainter {
     final center = Offset(size.width / 2, size.height / 2);
     final radius = size.width / 2 - 10;
 
-    // Background arc
+    // Background arc (light grey)
     final backgroundPaint =
         Paint()
           ..color = Colors.grey[200]!
@@ -1153,52 +1154,90 @@ class AQIGaugePainter extends CustomPainter {
           ..strokeWidth = 14
           ..strokeCap = StrokeCap.round;
 
+    final startAngle = math.pi * 0.65;
+    final totalSweepAngle = math.pi * 1.7;
+
     canvas.drawArc(
       Rect.fromCircle(center: center, radius: radius),
-      math.pi * 0.65,
-      math.pi * 1.7,
+      startAngle,
+      totalSweepAngle,
       false,
       backgroundPaint,
     );
 
-    // NAQI (India) color gradient
-    final colors = [
-      const Color(0xFF00E400), // Green (0-50: Good)
-      const Color(0xFF92D050), // Light Green (51-100: Satisfactory)
-      const Color(0xFFFFFF00), // Yellow (101-200: Moderate)
-      const Color(0xFFFF7E00), // Orange (201-300: Poor)
-      const Color(0xFFFF0000), // Red (301-400: Very Poor)
-      const Color(0xFF990000), // Dark Red (401-500: Severe)
-    ];
-
-    final gradient = SweepGradient(
-      startAngle: math.pi * 0.65,
-      endAngle: math.pi * 2.35,
-      colors: colors,
-    );
-
-    final foregroundPaint =
-        Paint()
-          ..shader = gradient.createShader(
-            Rect.fromCircle(center: center, radius: radius),
-          )
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = 14
-          ..strokeCap = StrokeCap.round;
-
-    // Calculate sweep angle (max AQI 500)
     final normalizedAqi = (aqi / 500).clamp(0.0, 1.0);
-    final sweepAngle = normalizedAqi * math.pi * 1.7;
+    final sweepAngle = normalizedAqi * totalSweepAngle;
 
-    canvas.drawArc(
-      Rect.fromCircle(center: center, radius: radius),
-      math.pi * 0.65,
-      sweepAngle,
-      false,
-      foregroundPaint,
-    );
+    final rect = Rect.fromCircle(center: center, radius: radius);
+    final int segments = 100;
+    final segmentAngle = sweepAngle / segments;
+
+    Color getColorForAqi(double aqiValue) {
+      if (aqiValue <= 100) {
+        return Color.lerp(
+          const Color(0xFF00E400),
+          const Color(0xFFA8D96E),
+          aqiValue / 100,
+        )!;
+      } else if (aqiValue <= 150) {
+        return Color.lerp(
+          const Color(0xFFA8D96E),
+          const Color(0xFFFFFF00),
+          (aqiValue - 100) / 50,
+        )!;
+      } else if (aqiValue <= 200) {
+        return Color.lerp(
+          const Color(0xFFFFFF00),
+          const Color(0xFFFF7E00),
+          (aqiValue - 150) / 50,
+        )!;
+      } else if (aqiValue <= 300) {
+        return Color.lerp(
+          const Color(0xFFFF7E00),
+          const Color(0xFFFF0000),
+          (aqiValue - 200) / 100,
+        )!;
+      } else if (aqiValue <= 400) {
+        return Color.lerp(
+          const Color(0xFFFF0000),
+          const Color(0xFF990000),
+          (aqiValue - 300) / 100,
+        )!;
+      } else {
+        return const Color(0xFF990000);
+      }
+    }
+
+    for (int i = 0; i <= segments; i++) {
+      final progress = i / segments;
+      final aqiAtProgress = progress * aqi;
+      final segmentColor = getColorForAqi(aqiAtProgress);
+
+      final segmentPaint =
+          Paint()
+            ..color = segmentColor
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = 14
+            ..strokeCap =
+                (i == 0 || i == segments) ? StrokeCap.round : StrokeCap.butt;
+
+      canvas.drawArc(
+        rect,
+        startAngle + (i * segmentAngle),
+        segmentAngle,
+        false,
+        segmentPaint,
+      );
+    }
   }
 
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) => true;
+}
+
+class _ColorStop {
+  final double position;
+  final Color color;
+
+  _ColorStop(this.position, this.color);
 }
