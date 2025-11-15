@@ -3,7 +3,7 @@
     <string name="emergency_widget_description">Quick access to emergency contacts</string>
     <string name="scan_widget_description">Quick access to scan feature</string>
     <string name="air_quality_widget_description">Live air quality data based on your location</string>
-
+    <string name="widget_description">Shows current air quality index and recommendations</string>
      <string name="facebook_app_id">603475422280095</string>
     <string name="facebook_client_token">b1d42838dd8c102f917dc1b26a970eee</string>
     <string name="fb_login_protocol_scheme">fb603475422280095</string>

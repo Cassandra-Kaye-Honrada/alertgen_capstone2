@@ -121,15 +121,17 @@
                 android:resource="@xml/air_quality_widget_info" />
         </receiver>
 
-        <receiver android:name="HomeWidgetProvider" android:exported="true">
+        <receiver
+            android:name="com.example.allergen.HomeWidgetProvider"
+            android:exported="true">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <action android:name="com.example.allergen.REFRESH_WIDGET" />
             </intent-filter>
             <meta-data
                 android:name="android.appwidget.provider"
-                android:resource="@xml/home_widget" />
+                android:resource="@xml/home_widget_info" />
         </receiver>
-
         
         <!-- <receiver
                 android:name=".BootReceiver"
