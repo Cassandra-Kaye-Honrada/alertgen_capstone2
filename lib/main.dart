@@ -5,6 +5,7 @@ import 'package:allergen/screens/feature/scan_screen.dart';
 import 'package:allergen/screens/health_environment_analytics/aqi_loader.dart';
 import 'package:allergen/services/emergency/emergency_service.dart';
 import 'package:allergen/services/push_notification_service.dart';
+import 'package:allergen/widgets/air_quality_widget_manager.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -22,6 +23,7 @@ Future<void> requestLocationPermissions() async {
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await AirQualityWidgetManager.initialize();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   await dotenv.load(fileName: ".env");
   await requestLocationPermissions();

@@ -10,6 +10,7 @@ import 'package:allergen/screens/health_environment_analytics/widgets/AirQuality
 import 'package:allergen/screens/profile_screen_items/ProfileScreen.dart';
 import 'package:allergen/services/emergency/emergency_service.dart';
 import 'package:allergen/styleguide.dart';
+import 'package:allergen/widgets/air_quality_widget_manager.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
@@ -17,6 +18,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart';
+import 'package:home_widget/home_widget.dart';
+import 'dart:async';
 
 class AirQualityDetailScreen extends StatefulWidget {
   final AirQualityData? airQualityData;
@@ -53,10 +56,16 @@ class _AirQualityDetailScreenState extends State<AirQualityDetailScreen>
   double? _latitude;
   double? _longitude;
 
+  // Widget refresh listener
+  StreamSubscription<Uri?>? _widgetRefreshSubscription;
+
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
+
+    // Setup widget refresh listener
+    _setupWidgetRefreshListener();
 
     if (widget.airQualityData != null) {
       _airQualityData = widget.airQualityData;
@@ -65,6 +74,42 @@ class _AirQualityDetailScreenState extends State<AirQualityDetailScreen>
           widget.applicablePopulations ?? [Population.generalPopulation];
     } else {
       _initialize();
+    }
+  }
+
+  void _setupWidgetRefreshListener() {
+    _widgetRefreshSubscription = HomeWidget.widgetClicked.listen((Uri? uri) {
+      // Widget refresh button was clicked
+      print('Widget refresh triggered');
+      _refreshFromWidget();
+    });
+  }
+
+  Future<void> _refreshFromWidget() async {
+    // Refresh the air quality data when widget refresh button is clicked
+    if (_latitude != null && _longitude != null) {
+      await _fetchAirQuality();
+
+      // Show a snackbar to indicate refresh
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Row(
+              children: [
+                Icon(Icons.refresh, color: Colors.white, size: 20),
+                SizedBox(width: 8),
+                Text('Air quality data updated'),
+              ],
+            ),
+            duration: Duration(seconds: 2),
+            backgroundColor: Color(0xFF0B8FAC),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } else {
+      // If location not available, reinitialize
+      await _initialize();
     }
   }
 
@@ -331,6 +376,14 @@ class _AirQualityDetailScreenState extends State<AirQualityDetailScreen>
             );
             _isLoadingData = false;
           });
+
+          // Update the home screen widget
+          if (_airQualityData != null) {
+            AirQualityWidgetManager.updateFromAirQualityData(
+              airQualityData: _airQualityData!,
+              location: _location,
+            );
+          }
         }
       } else {
         if (mounted) {
@@ -353,6 +406,7 @@ class _AirQualityDetailScreenState extends State<AirQualityDetailScreen>
   @override
   void dispose() {
     _tabController.dispose();
+    _widgetRefreshSubscription?.cancel(); // Cancel the subscription
     super.dispose();
   }
 
@@ -593,12 +647,6 @@ class _AirQualityDetailScreenState extends State<AirQualityDetailScreen>
                   onPressed: () => Navigator.of(context).pop(),
                 )
                 : null,
-        // actions: [
-        //   IconButton(
-        //     icon: const Icon(Icons.help_outline, color: Color(0xFF0B8FAC)),
-        //     onPressed: () {},
-        //   ),
-        // ],
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(60),
           child: Container(
@@ -658,8 +706,8 @@ class _AirQualityDetailScreenState extends State<AirQualityDetailScreen>
               : TabBarView(
                 controller: _tabController,
                 children: [
-                 AirQualityTab(
-                    airQualityData: _airQualityData!, 
+                  AirQualityTab(
+                    airQualityData: _airQualityData!,
                     location: _location,
                     applicablePopulations: _applicablePopulations,
                     weatherData: WeatherData.mock(),

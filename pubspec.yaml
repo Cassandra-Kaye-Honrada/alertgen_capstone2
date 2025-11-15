@@ -58,6 +58,7 @@ dependencies:
   google_generative_ai: ^0.4.7
   google_mlkit_text_recognition: ^0.15.0
   google_sign_in: ^6.3.0
+  home_widget: ^0.8.1
   html: ^0.15.6
   http: ^1.4.0
   image: ^4.5.4
