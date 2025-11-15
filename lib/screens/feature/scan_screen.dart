@@ -623,7 +623,7 @@ Return JSON:
     );
   }
 
- String get skinAnalysisPrompt => '''
+  String get skinAnalysisPrompt => '''
 You are an expert dermatologist AI specializing in identifying skin allergic reactions and conditions related to FOOD ALLERGIES AND ENVIRONMENTAL FACTORS.
 
 CRITICAL ANALYSIS GUIDELINES:
@@ -822,7 +822,7 @@ CRITICAL REQUIREMENTS:
 12. **EACH ALLERGEN MUST BE A SEPARATE OBJECT - NEVER COMBINE IN ONE STRING**
 ''';
 
-Future<void> analyzeSkinCondition(File imageFile) async {
+  Future<void> analyzeSkinCondition(File imageFile) async {
     if (apiKey == 'YOUR_API_KEY_HERE') {
       setState(() => loading = false);
       return;
@@ -1221,9 +1221,27 @@ Future<void> analyzeSkinCondition(File imageFile) async {
   bool isLabeledProduct(String ocrText) {
     final lowerText = ocrText.toLowerCase();
 
+    final watermarkKeywords = [
+      'panlasang pinoy',
+      'kawaling pinoy',
+      'lutong bahay',
+      'pinoy recipe',
+      'recipe',
+      'cooking',
+      'kitchen',
+      'food blog',
+      'food vlog',
+    ];
+
+    for (var watermark in watermarkKeywords) {
+      if (lowerText.contains(watermark) && lowerText.length < 100) {
+        return false;
+      }
+    }
+
     final labelKeywords = [
       'ingredients:',
-      'ingredients',
+      'ingredients list',
       'contains:',
       'allergens:',
       'nutrition facts',
@@ -1235,24 +1253,13 @@ Future<void> analyzeSkinCondition(File imageFile) async {
       'exp date',
       'use by',
       'serving size',
-      'calories',
+      'calories per serving',
       'total fat',
       'may contain',
       'allergen information',
-      'mg',
-      'g ',
-      ' g',
-      'ml',
-      ' ml',
-      'kcal',
-      'kj',
-      'sodium',
-      'protein',
-      'carbohydrate',
-      'sugar',
-      'barcode',
-      'upc',
-      'sku',
+      'distributed by',
+      'net weight',
+      'net wt',
     ];
 
     bool hasLabelKeywords = labelKeywords.any(
@@ -1260,11 +1267,23 @@ Future<void> analyzeSkinCondition(File imageFile) async {
     );
 
     bool hasIngredientPattern =
-        lowerText.contains(',') && (lowerText.split(',').length >= 3);
+        lowerText.contains(',') &&
+        (lowerText.split(',').length >= 3) &&
+        lowerText.contains('ingredients');
 
-    bool hasPercentages = RegExp(r'\d+%').hasMatch(lowerText);
+    bool hasNutritionPattern =
+        RegExp(r'\d+\s*(mg|g|ml|kcal|kj)').hasMatch(lowerText) &&
+        (lowerText.contains('sodium') ||
+            lowerText.contains('protein') ||
+            lowerText.contains('carbohydrate'));
 
-    return hasLabelKeywords || hasIngredientPattern || hasPercentages;
+    bool hasPercentages =
+        RegExp(r'\d+%').hasMatch(lowerText) &&
+        (lowerText.contains('daily value') || lowerText.contains('dv'));
+
+    return hasLabelKeywords ||
+        (hasIngredientPattern && hasNutritionPattern) ||
+        (hasPercentages && hasNutritionPattern);
   }
 
   String get ocrIngredientExtractionPrompt => '''
@@ -1898,9 +1917,9 @@ CRITICAL REQUIREMENTS:
 ''';
 
   String get multiOptionImagePrompt => '''
-You are an EXPERT food identification system specializing in Filipino cuisine and regional/international dishes.
+You are an EXPERT food identification system with DEEP SPECIALIZATION in Filipino regional cuisine from Luzon, Visayas, and Mindanao, AND international dishes.
 
-PRIMARY MISSION: IDENTIFY DISHES WITH CLEAN, RECOGNIZABLE NAMES
+PRIMARY MISSION: ACCURATELY IDENTIFY FILIPINO REGIONAL DISHES AND POPULAR INTERNATIONAL DISHES WITH CLEAN, RECOGNIZABLE NAMES
 
 CRITICAL DISH NAMING RULES:
 - Use BASE DISH NAME + PROTEIN TYPE only
@@ -1908,185 +1927,941 @@ CRITICAL DISH NAMING RULES:
 - NEVER include location/region in dish name
 - Keep names SHORT and RECOGNIZABLE (2-3 words maximum)
 - Use generic dish names, not regional variations
+- For regional dishes, use the most common/recognized name
 
-CORRECT DISH NAMING EXAMPLES:
+═══════════════════════════════════════════════════════════════════════════════
+LUZON REGIONAL DISHES (Northern Philippines)
+═══════════════════════════════════════════════════════════════════════════════
 
-FILIPINO DISHES - Base + Protein:
- "Pork Menudo" (NOT "Pork Menudo with Hotdog")
- "Oxtail Kare-Kare" (NOT "Oxtail Kare-Kare with Vegetables")
- "Chicken Adobo" (NOT "Chicken Adobo with Eggs")
- "Shrimp Sinigang" (NOT "Shrimp Sinigang with Vegetables")
- "Beef Caldereta" (NOT "Beef Caldereta with Olives")
- "Dinuguan" (NOT "Ilocos Dinuguan")
- "Dinardaraan" (NOT "Ilocano Dinardaraan")
+ILOCOS REGION SPECIALTIES:
 
-GENERIC DISHES - Simple Names:
- "Seafood Boil" (NOT "Cajun Seafood Boil" or "Louisiana Crawfish Boil")
- "Crawfish Boil" (NOT "Louisiana Crawfish Boil")
- "Clam Bake" (NOT "New England Clam Bake")
- "Paella" (NOT "Spanish Paella")
- "Cioppino" (NOT "Italian Cioppino")
- "Tom Yum" (NOT "Thai Tom Yum")
- "Seafood Platter"
- "Mixed Grill"
- "Seafood Pasta"
- "Fried Chicken"
+1. PINAPAITAN (also called Papaitan)
+   CRITICAL DISTINCTION FROM DINUGUAN:
+   - COLOR: Bitter GREEN-BROWN or DARK OLIVE broth (NOT BLACK)
+   - KEY INGREDIENT: Bile (apdo) gives BITTER taste and greenish color
+   - TEXTURE: Clear to slightly cloudy broth with visible organ meat chunks
+   - TASTE PROFILE: BITTER, sour, savory
+   - COMMON PROTEINS: Goat innards, beef innards, pork innards
+   - VISUAL MARKERS: Greenish-brown liquid, ginger slices visible, intestines
+   - NEVER SWEET - if dish looks sweet/dark, it's likely Dinuguan
+   
+   **How to distinguish from Dinuguan:**
+   - Dinuguan = BLACK/very dark brown, THICK, SWEET from blood and vinegar
+   - Pinapaitan = OLIVE/greenish-brown, CLEAR broth, BITTER from bile
+   - If you see greenish tint or bile mentioned → Pinapaitan
+   - If thick, black, sweet → Dinuguan
 
-WRONG DISH NAMES (NEVER USE):
- "Pork Menudo with Hotdog and Raisins"
- "Seafood Boil with Crab Mussels Shrimp"
- "Kare-Kare with Vegetables"
- "Mixed_Seafood_Crab_Shrimp"
- "Cajun Seafood Boil"
- "Louisiana Crawfish Boil"
- "New England Clam Bake"
- "Ilocos Dinuguan"
+2. SINANGLAW
+   - Beef/carabao soup with SOUR and GRILLED flavor
+   - Contains grilled beef parts (face, tongue, liver, brain)
+   - DARK BROWN clear soup with visible charred/grilled meat
+   - Sour from tamarind or kamias
+   - Often has ginger and onions
+   - Similar to Sinigang but with GRILLED meat
 
-PHASE 1: DISH IDENTIFICATION
+3. DINAKDAKAN / DINUGUAN (Warek-warek in some areas)
+   - Grilled and boiled pig parts (ears, face, liver)
+   - Mixed with pig brain for CREAMY texture
+   - Has onions, chili peppers
+   - GRAYISH-WHITE creamy appearance from brain
+   - NOT blood-based (that's Dinuguan)
 
-FILIPINO DISHES (Primary Focus):
+4. IGADO
+   - Pork and liver stew
+   - RED-BROWN color from tomato sauce and liver
+   - Contains pork strips, liver, bell peppers, peas
+   - Slightly sweet and savory
+   - Similar to Menudo but more liver-forward
+
+5. BAGNET
+   - CRISPY fried pork belly
+   - Deep golden brown, CRUNCHY exterior
+   - Thick cut pork belly
+   - Served with KBL (Kamatis, Bagoong, Lasona - tomato, shrimp paste, onion)
+
+6. PINAKBET (Pakbet)
+   - Mixed vegetables with BAGOONG (shrimp paste)
+   - Contains: bitter melon (ampalaya), squash, eggplant, okra, string beans, tomatoes
+   - DISTINCT shrimp paste flavor
+   - Orange-brown sauce from bagoong
+
+7. DINENGDENG (also called Inabraw)
+   - Vegetable soup with BAGOONG ISDA (fish paste)
+   - CLEAR broth, very light
+   - Vegetables: squash, okra, bitter melon, jute leaves
+   - Often has grilled fish
+   - Lighter and simpler than Pinakbet
+
+8. KBL (Kamatis-Bagoong-Lasona)
+   - Simple salad/side dish
+   - Fresh tomatoes, shrimp paste (bagoong), onions
+   - NO cooking involved
+   - Served with Bagnet or other fried dishes
+
+9. EMPANADA (Ilocano Orange Empanada)
+   - BRIGHT ORANGE pastry shell (from achuete/annatto)
+   - Filled with: grated green papaya, egg, longganisa
+   - Half-moon shape, crispy when freshly fried
+   - Much larger than regular empanadas
+
+CORDILLERA ADMINISTRATIVE REGION (CAR):
+
+10. PINIKPIKAN
+    - Chicken soup with ETAG (native smoked pork)
+    - Chicken is beaten before slaughter (traditional method)
+    - SMOKY flavor from etag
+    - Ginger-based clear soup
+    - Traditional Igorot/Mountain Province dish
+
+11. ETAG
+    - SMOKED/CURED pork
+    - Very DARK exterior, reddish inside
+    - Hung and smoked for weeks/months
+    - Strong, intense smoky flavor
+    - Used in Pinikpikan and other dishes
+
+12. KINUDAY
+    - Smoked pork sausage
+    - Dark reddish-brown color
+    - Native Cordillera sausage
+    - Similar to chorizo but with local spices
+
+PAMPANGA & CENTRAL LUZON:
+
+13. SISIG
+    - SIZZLING dish of chopped pig face and ears
+    - CRISPY and TANGY
+    - Served on sizzling plate with egg
+    - Seasoned with calamansi and chili
+    - May include chicken liver
+    - Famous Kapampangan dish
+
+14. BRINGHE
+    - Kapampangan YELLOW rice dish (like paella but with coconut milk)
+    - Yellow from turmeric (dilau)
+    - Contains chicken, chorizo
+    - Sticky rice consistency from glutinous rice
+    - Served during fiestas
+
+15. BETUTE TUGAK
+    - STUFFED FROGS
+    - Whole frogs stuffed with seasoned pork mixture
+    - Deep-fried until crispy
+    - Unique to Pampanga
+    - Legs and body visible
+
+16. BURO (Burong Isda/Burong Hipon)
+    - FERMENTED rice with fish or shrimp
+    - Pinkish-white color
+    - Sour, pungent smell
+    - Fermenting/souring condiment
+    - Used in Kapampangan cuisine
+
+BICOL REGION:
+
+17. BICOL EXPRESS
+    - SPICY pork in COCONUT MILK and CHILIES
+    - CREAMY ORANGE-RED sauce
+    - Very spicy with labuyo chilies
+    - Chunks of pork in coconut cream
+    - Named after a train
+
+18. LAING (Pinangat na Gabi)
+    - TARO LEAVES in COCONUT MILK
+    - Very DARK GREEN
+    - Spicy with chilies
+    - Creamy texture
+    - Can have shrimp paste or small dried fish
+
+19. KINUNOT
+    - Flaked STINGRAY or SHARK in coconut milk
+    - Creamy white/yellow sauce
+    - Spicy with chilies
+    - Malunggay (moringa) leaves
+    - Unique seafood flavor
+
+20. PINANGAT (Piling)
+    - Taro leaves wrapped around fish/meat
+    - Cooked in coconut milk
+    - Individual parcels
+    - Similar to Laing but with filling
+
+21. TILMOK
+    - Ground fish/shrimp with coconut cream
+    - Wrapped in gabi (taro) leaves
+    - Steamed parcels
+    - Creamy, spicy
+
+SOUTHERN TAGALOG/CALABARZON:
+
+22. BULALO
+    - Beef BONE MARROW soup
+    - CLEAR broth with large beef bones
+    - Bone marrow very visible
+    - Vegetables: cabbage, corn, potatoes
+    - Long-simmered, flavorful broth
+
+23. TAWILIS
+    - Fresh small fish from Taal Lake
+    - Usually fried whole
+    - Sardine-sized
+    - Silvery appearance
+
+═══════════════════════════════════════════════════════════════════════════════
+VISAYAS REGIONAL DISHES (Central Philippines)
+═══════════════════════════════════════════════════════════════════════════════
+
+CEBU (Cebuano Cuisine):
+
+24. HUMBA
+    - SWEET pork belly stew
+    - DARK BROWN color from soy sauce and sugar
+    - Contains: pork belly, dried banana blossoms, black beans
+    - Similar to adobo but SWEETER and with black beans
+    - Sticky, thick sauce
+
+25. GINABOT
+    - CRISPY fried pork intestines
+    - Golden brown, crunchy
+    - Coiled intestines
+    - Served with vinegar
+
+26. PUSO (Hanging Rice)
+    - Rice wrapped in woven coconut leaves
+    - Diamond/teardrop shape
+    - "Hanging" rice
+    - Unique to Cebu/Visayas
+    - Served with lechon and other grilled meats
+
+27. UTAN BISAYA
+    - Vegetable soup (like Dinengdeng)
+    - CLEAR broth
+    - Mixed vegetables available in season
+    - Simple, healthy
+    - May have shrimp or fish
+
+ILOILO & WESTERN VISAYAS:
+
+28. LA PAZ BATCHOY
+    - Noodle soup from La Paz, Iloilo
+    - Contains: pork organs, crushed chicharon, egg
+    - RICH, savory pork broth
+    - Thin egg noodles (miki)
+    - Topped with lots of garlic
+
+29. KBL (Kadyos, Baboy, Langka)
+    - Pigeon peas, pork, and unripe jackfruit stew
+    - PURPLE-BROWN broth from kadyos (pigeon peas)
+    - Unique sweet-sour-savory taste
+    - Visayan version different from Ilocano KBL
+    - Lemongrass flavor
+
+30. KANSI
+    - Beef soup with LEMONGRASS and batwan (native souring agent)
+    - SOUR, similar to Sinigang but with lemongrass
+    - Beef shanks visible
+    - Clear yellowish broth
+    - Batwan gives unique sour taste
+
+31. BINAKOL
+    - Chicken soup cooked in COCONUT WATER
+    - Served inside young coconut (buko)
+    - CLEAR broth with coconut flavor
+    - Contains: chicken, lemongrass, ginger
+    - Very aromatic
+
+BACOLOD & NEGROS:
+
+32. CHICKEN INASAL
+    - Grilled chicken marinated in annatto (achuete)
+    - GOLDEN-ORANGE color
+    - Charred marks from grill
+    - Served with sinamak (spiced vinegar)
+    - Very distinctive from regular grilled chicken
+
+33. BATCHOY (Bacolod Version)
+    - Similar to La Paz Batchoy but Bacolod-style
+    - May have differences in noodle type and toppings
+
+LEYTE & EASTERN VISAYAS:
+
+34. BINAGOL
+    - Sweet dessert made from taro (gabi)
+    - Wrapped in banana leaves
+    - Cylindrical shape
+    - Brown, sweet, sticky
+
+35. MORON
+    - Chocolate rice cake
+    - Wrapped in banana leaves
+    - Dark brown from chocolate/cocoa
+    - Sticky rice with coconut milk
+
+═══════════════════════════════════════════════════════════════════════════════
+MINDANAO REGIONAL DISHES (Southern Philippines)
+═══════════════════════════════════════════════════════════════════════════════
+
+MUSLIM MINDANAO (Maguindanao, Maranao, Tausug):
+
+36. PIYANGGANG MANOK (also Pyanggang)
+    - Chicken in BURNT COCONUT sauce
+    - DARK BROWN to BLACK sauce
+    - Chicken pieces in thick sauce
+    - Turmeric gives slight yellow tint inside
+    - Very distinctive burnt coconut flavor
+    - Maranao/Maguindanao dish
+
+37. RENDANG
+    - Spicy BEEF or CHICKEN in coconut milk
+    - DARK BROWN, almost black
+    - Very thick, dry sauce
+    - Indonesian/Malaysian influence in Mindanao
+    - Slow-cooked until liquid evaporates
+
+38. SATTI (Satay)
+    - Grilled meat skewers with PEANUT SAUCE
+    - Yellow-orange peanut sauce
+    - Small pieces of chicken, beef, or liver
+    - Served on bamboo skewers
+    - Tausug specialty from Zamboanga
+
+39. TIYULA ITUM (Black Soup)
+    - VERY BLACK beef or chicken soup
+    - Blackened from burnt coconut (tultul)
+    - Spiced with turmeric, ginger, chili
+    - Unique Tausug dish from Sulu
+    - NOT to be confused with Dinuguan (blood-based)
+
+40. PATER (Satti with Puso)
+    - Combination of Satti and hanging rice
+    - Grilled skewers with peanut sauce
+    - Served with diamond-shaped rice wraps
+
+41. PASTIL
+    - Steamed rice with SHREDDED chicken or beef
+    - Wrapped in banana leaf
+    - Yellow rice from turmeric
+    - Wrapped like a packet
+    - Maguindanao/Maranao breakfast
+
+ZAMBOANGA:
+
+42. CURACHA
+    - Red SPANNER CRAB in alavar sauce
+    - Large red crab
+    - Rich, coconut-based sauce
+    - Expensive delicacy
+    - Unique to Zamboanga waters
+
+43. ALAVAR SAUCE
+    - Secret recipe coconut-based sauce
+    - Used for curacha and seafood
+    - Creamy, mildly spicy
+    - Coco-milk based with spices
+
+DAVAO & SOUTHEASTERN MINDANAO:
+
+44. KINILAW (Ceviche)
+    - RAW fish "cooked" in vinegar and calamansi
+    - Fresh appearance
+    - Chunks of raw tuna or tanigue
+    - With onions, ginger, chili
+    - Mindanao version often uses coconut milk (Sinuglaw if with grilled pork)
+
+45. SINUGLAW
+    - Combination of SINUgba (grilled pork) and KiniLAW (raw fish)
+    - Grilled pork belly + raw fish in vinegar
+    - Unique surf and turf combination
+
+46. DURIAN-based dishes
+    - Durian candy, durian ice cream
+    - Strong smell, creamy yellow fruit
+    - Spiky green-brown exterior
+    - Famous in Davao
+
+GENERAL MINDANAO:
+
+47. TINAGTAG
+    - Dried fish (usually herring or sardines)
+    - VERY dried, flattened
+    - Deep-fried or grilled
+    - Crunchy
+
+═══════════════════════════════════════════════════════════════════════════════
+COMMON FILIPINO DISHES (Nationwide)
+═══════════════════════════════════════════════════════════════════════════════
 
 TOMATO-BASED STEWS:
-- Pork Menudo, Beef Menudo, Chicken Menudo
-- Pork Afritada, Chicken Afritada
-- Beef Caldereta, Goat Caldereta
-- Beef Mechado
+
+48. PORK MENUDO
+    - Pork cubes in TOMATO SAUCE
+    - Red-orange sauce
+    - Contains: pork, liver, potatoes, carrots, raisins, hotdog (optional)
+    - Slightly sweet
+    - SMALLER pork cubes than Afritada
+
+49. CHICKEN/PORK AFRITADA
+    - LARGER meat pieces than Menudo
+    - Red tomato-based sauce
+    - Bell peppers, potatoes, carrots
+    - More chunks, less sauce than Menudo
+
+50. BEEF/GOAT CALDERETA
+    - Tomato-based with LIVER SPREAD or liver pâté
+    - THICK, rich red sauce
+    - Bell peppers, olives, potatoes
+    - Spicy with chili peppers
+    - Richer than Afritada/Menudo
+
+51. BEEF MECHADO
+    - Beef stew with SOY SAUCE and TOMATO sauce
+    - DARK red-brown color
+    - Beef chunks with visible fat (larded)
+    - Potatoes
+    - Soy sauce makes it darker than other tomato stews
 
 PEANUT-BASED:
-- Oxtail Kare-Kare, Pork Kare-Kare, Seafood Kare-Kare
 
-SOY-BASED:
-- Chicken Adobo, Pork Adobo, Squid Adobo
-- Adobo sa Gata (if coconut milk visible)
-
-SOUR SOUP:
-- Pork Sinigang, Shrimp Sinigang, Fish Sinigang, Beef Sinigang
-
-CREAMY/SPICY:
-- Bicol Express, Laing, Ginataang Gulay
+52. KARE-KARE
+    - THICK PEANUT SAUCE (orange-brown)
+    - Contains: oxtail, beef, or pork with vegetables
+    - Vegetables: bok choy, eggplant, string beans
+    - Served with BAGOONG (shrimp paste) on side
+    - CRITICAL: MUST have peanut/peanut butter in ingredients
 
 BLOOD-BASED:
-- Dinuguan, Dinardaraan
 
-INTERNATIONAL DISHES (Secondary Focus):
+53. DINUGUAN (Chocolate Meat)
+    - VERY DARK, almost BLACK stew
+    - Made with PORK BLOOD
+    - THICK, SWEET-SOUR from blood and vinegar
+    - Contains pork intestines, liver, meat
+    - Served with puto (rice cake)
+    - SWEET undertone from blood
+    
+    **How to distinguish from Pinapaitan:**
+    - Dinuguan = BLACK, THICK, SWEET
+    - Pinapaitan = OLIVE/GREEN-BROWN, CLEAR, BITTER
 
-SEAFOOD BOILS:
-- Seafood Boil (mixed shellfish with corn and potatoes)
-- Crawfish Boil (crawfish-focused)
-- Clam Bake (clam-focused with seafood)
+54. DINARDARAAN (Ilocano Dinuguan)
+    - Similar to Dinuguan but Ilocano version
+    - May have slightly different spicing
+    - Still blood-based, dark, thick
 
-RICE DISHES:
-- Paella (saffron rice with seafood/meat)
-- Seafood Paella (paella variation)
-- Jambalaya (rice with meat and vegetables)
-- Arroz con Mariscos (seafood rice)
+SOUR SOUPS:
 
-PASTA DISHES:
-- Seafood Pasta (generic)
-- Linguine ai Frutti di Mare (seafood linguine)
-- Pad Thai (rice noodles)
+55. SINIGANG
+    - SOUR CLEAR SOUP
+    - Tamarind-based (or other souring agents)
+    - Vegetables: radish, tomatoes, water spinach (kangkong), string beans
+    - Can be: Pork, Beef, Shrimp, Fish, Milkfish (Bangus)
+    - CLEAR broth, not creamy
 
-SOUPS & STEWS:
-- Bouillabaisse (fish stew)
-- Cioppino (seafood stew)
-- Tom Yum (sour and spicy soup)
+SOY-BASED:
 
-IDENTIFICATION STRATEGY:
+56. ADOBO (Chicken/Pork/Squid)
+    - DARK BROWN from soy sauce
+    - GLOSSY appearance from oil
+    - Soy sauce + vinegar base
+    - May have bay leaves
+    - Can be dry (fried) or with sauce
 
-1. LOOK FOR COOKING STYLE MARKERS:
-   - Red-orange spices, corn, potatoes, sausage → Seafood Boil
-   - Clams, lobster, simple seasoning → Clam Bake
-   - Saffron yellow rice, chorizo, bell peppers → Paella
-   - Tomato-based sauce, white wine, herbs → Cioppino
-   - Lemongrass, galangal, lime leaves, clear broth → Tom Yum
+57. ADOBO SA GATA
+    - Adobo with COCONUT MILK
+    - CREAMY brown sauce
+    - Lighter color than regular adobo
 
-2. PROTEIN TYPE:
-   - Identify primary protein: pork, beef, chicken, oxtail, seafood
-   - Use in dish name: "Pork Menudo", "Oxtail Kare-Kare"
+NOODLE DISHES:
 
-3. SAUCE/BROTH CHARACTERISTICS:
-   - Tomato-based red sauce → Menudo/Afritada/Caldereta
-   - Peanut sauce → Kare-Kare
-   - Dark soy sauce → Adobo
-   - Clear sour broth → Sinigang
-   - Creamy coconut → Bicol Express/Laing
-   - Dark blood-based → Dinuguan/Dinardaraan
+58. PANCIT CANTON
+    - Stir-fried FLOUR NOODLES (thick, yellow)
+    - Mixed vegetables and meat
+    - Dry or slightly saucy
+
+59. PANCIT BIHON
+    - THIN RICE NOODLES (white, translucent)
+    - Lighter than Pancit Canton
+    - Stir-fried with vegetables
+
+60. PANCIT PALABOK
+    - Rice noodles with ORANGE SHRIMP SAUCE
+    - Thick orange sauce on top
+    - Toppings: crushed chicharon, hard-boiled eggs, shrimp
+
+61. PANCIT MALABON
+    - Similar to Palabok but with more seafood
+    - THICKER noodles
+    - Richer seafood flavor
+
+OTHER POPULAR DISHES:
+
+62. LECHON
+    - Whole ROASTED PIG
+    - Golden-brown crispy skin
+    - Whole pig visible or large portions
+
+63. CRISPY PATA
+    - Deep-fried pork leg/knuckle
+    - VERY CRISPY skin
+    - Usually served whole
+    - Golden brown and crunchy
+
+64. SINIGANG NA BABOY SA MISO
+    - Pork sinigang with MISO paste
+    - Cloudy broth (not clear)
+    - Yellowish color from miso
+    - Sour and savory
+
+═══════════════════════════════════════════════════════════════════════════════
+INTERNATIONAL DISHES
+═══════════════════════════════════════════════════════════════════════════════
+
+ASIAN CUISINE:
+
+CHINESE:
+
+65. FRIED RICE
+    - Stir-fried rice with vegetables, egg, and protein
+    - Yellow-brown color from soy sauce
+    - Individual grains visible
+    - Can have: chicken, pork, shrimp, or mixed
+
+66. SWEET AND SOUR CHICKEN/PORK
+    - BRIGHT RED-ORANGE sauce
+    - Glossy, thick sauce
+    - Battered and fried meat
+    - Bell peppers, pineapple chunks
+    - Very vibrant color
+
+67. CHOW MEIN
+    - Stir-fried NOODLES (crispy or soft)
+    - Mixed vegetables and meat
+    - Brown sauce from soy sauce
+    - Distinct from Filipino pancit
+
+68. DIMSUM (Siomai, Siopao, Hakao)
+    - STEAMED dumplings
+    - White or translucent wrapper
+    - Various fillings (pork, shrimp, beef)
+    - Served in bamboo steamers
+
+69. SPRING ROLLS (Lumpia counterpart)
+    - Thin crispy wrapper
+    - Filled with vegetables and/or meat
+    - Golden fried exterior
+
+70. KUNG PAO CHICKEN
+    - Stir-fried chicken with PEANUTS
+    - Dried red chilies visible
+    - Dark brown sauce
+    - Sichuan peppercorns
+
+JAPANESE:
+
+71. SUSHI/MAKI
+    - Vinegared rice with raw fish
+    - Rolled in nori (seaweed)
+    - Distinct cylindrical pieces
+    - Various fillings visible
+
+72. RAMEN
+    - Japanese noodle soup
+    - CLEAR or CREAMY broth
+    - Thin wheat noodles
+    - Toppings: soft-boiled egg, pork belly (chashu), nori, bamboo shoots
+
+73. TEMPURA
+    - LIGHT, crispy battered seafood or vegetables
+    - Golden, airy batter
+    - Much lighter than regular fried food
+
+74. TONKATSU
+    - Breaded and fried PORK CUTLET
+    - Thick panko breading
+    - Served sliced
+    - Brown crispy exterior
+
+75. TERIYAKI CHICKEN
+    - Grilled chicken with GLOSSY brown sauce
+    - Sweet soy-based glaze
+    - Shiny, caramelized appearance
+
+KOREAN:
+
+76. KIMCHI
+    - Fermented NAPA CABBAGE
+    - Bright RED from chili powder
+    - Spicy, sour, pungent
+    - Cut cabbage leaves visible
+
+77. BULGOGI
+    - Marinated grilled BEEF
+    - Thin slices of beef
+    - Dark brown, caramelized
+    - Sweet soy marinade
+
+78. BIBIMBAP
+    - Mixed rice bowl
+    - Various vegetables arranged on top
+    - Fried egg, meat, gochujang (red chili paste)
+    - Colorful presentation
+
+79. KOREAN FRIED CHICKEN
+    - EXTRA CRISPY double-fried chicken
+    - May have sauce (soy-garlic or spicy)
+    - Crunchy, golden exterior
+    - Often served with pickled radish
+
+THAI:
+
+80. PAD THAI
+    - Stir-fried rice noodles
+    - ORANGE-RED from tamarind and chili
+    - Peanuts, bean sprouts, lime
+    - Distinct sweet-sour-savory taste
+
+81. GREEN CURRY
+    - BRIGHT GREEN coconut curry
+    - Very green from green chilies and herbs
+    - Thai basil, bamboo shoots
+    - Creamy coconut milk base
+
+82. RED CURRY
+    - RED coconut curry
+    - Red from red curry paste
+    - Similar to green curry but different color
+
+83. TOM YUM
+    - CLEAR SOUR SPICY soup
+    - Orange-red from chili oil
+    - Lemongrass, galangal, kaffir lime leaves
+    - Usually with shrimp
+
+84. PAD SEE EW
+    - Stir-fried WIDE rice noodles
+    - Dark brown from soy sauce
+    - Chinese broccoli (gai lan)
+    - Charred, smoky flavor
+
+VIETNAMESE:
+
+85. PHO
+    - Vietnamese beef noodle soup
+    - CLEAR aromatic broth
+    - Flat rice noodles
+    - Raw beef slices, herbs (basil, cilantro)
+    - Star anise flavor
+
+86. BANH MI
+    - Vietnamese sandwich
+    - French baguette
+    - Pickled vegetables, pâté, meat, cilantro
+    - Unique fusion of French and Vietnamese
+
+87. SPRING ROLLS (Fresh/Fried)
+    - Fresh: Translucent rice paper, vegetables/shrimp visible
+    - Fried: Golden crispy wrapper
+
+INDIAN:
+
+88. BUTTER CHICKEN
+    - ORANGE-RED creamy curry
+    - Tandoori chicken in tomato-cream sauce
+    - Very rich and creamy
+    - Served with naan or rice
+
+89. CHICKEN TIKKA MASALA
+    - Similar to butter chicken
+    - RED-ORANGE creamy sauce
+    - Grilled chicken chunks
+    - Thick, spiced tomato cream sauce
+
+90. BIRYANI
+    - Spiced rice with meat
+    - YELLOW-ORANGE from turmeric/saffron
+    - Layered rice and meat
+    - Aromatic with whole spices
+
+91. SAMOSA
+    - Triangular FRIED pastry
+    - Filled with spiced potatoes and peas
+    - Crispy, flaky exterior
+    - Golden brown
+
+92. NAAN/ROTI
+    - Indian flatbread
+    - Soft, slightly charred
+    - Teardrop or round shape
+
+WESTERN CUISINE:
+
+AMERICAN:
+
+93. HAMBURGER
+    - Beef patty in a BUN
+    - Lettuce, tomato, cheese, pickles
+    - Sesame seed bun typical
+    - May have bacon, other toppings
+
+94. FRIED CHICKEN
+    - Breaded and deep-fried chicken
+    - GOLDEN BROWN crispy coating
+    - Distinct from Korean or Japanese styles
+    - Southern-style seasoning
+
+95. BBQ RIBS
+    - GRILLED or smoked pork/beef ribs
+    - Dark BBQ sauce coating
+    - Charred, caramelized exterior
+    - Meat falls off bone
+
+96. MAC AND CHEESE
+    - Pasta in CHEESE SAUCE
+    - YELLOW-ORANGE from cheddar
+    - Creamy, cheesy
+    - Elbow macaroni typical
+
+97. CHICKEN WINGS (Buffalo Wings)
+    - Fried chicken wings with sauce
+    - ORANGE-RED buffalo sauce or BBQ
+    - Served with celery, ranch/blue cheese
+
+ITALIAN:
+
+98. PIZZA
+    - Flatbread with tomato sauce, cheese, toppings
+    - ROUND with slices
+    - Melted cheese visible
+    - Various toppings (pepperoni, vegetables, etc.)
+
+99. SPAGHETTI BOLOGNESE
+    - Pasta with MEAT SAUCE
+    - RED tomato-based sauce
+    - Ground beef
+    - Different from Filipino-style spaghetti (less sweet)
+
+100. LASAGNA
+     - Layered pasta with meat sauce and cheese
+     - Visible layers
+     - Baked with melted cheese on top
+     - Red sauce between layers
+
+101. CARBONARA
+     - Pasta with CREAM, bacon, and egg
+     - WHITE/CREAM colored sauce
+     - Black pepper visible
+     - Bacon or pancetta pieces
+
+102. RISOTTO
+     - Creamy Italian rice
+     - CREAMY, NOT individual grains
+     - Various flavors (mushroom, seafood, etc.)
+     - Parmesan cheese
+
+MEXICAN:
+
+103. TACOS
+     - Folded TORTILLA with fillings
+     - Soft or hard shell
+     - Meat, lettuce, cheese, salsa
+     - Handheld
+
+104. BURRITO
+     - Large flour tortilla WRAPPED around fillings
+     - Rice, beans, meat, cheese, salsa inside
+     - Cylindrical shape
+
+105. QUESADILLA
+     - Folded tortilla with MELTED CHEESE
+     - Grilled until crispy
+     - May have meat, vegetables
+     - Triangle or half-moon when cut
+
+106. NACHOS
+     - TORTILLA CHIPS with toppings
+     - Melted cheese, jalapeños, salsa, sour cream
+     - Layered presentation
+
+107. ENCHILADAS
+     - Rolled tortillas with filling
+     - Covered in CHILI SAUCE
+     - Melted cheese on top
+     - Baked
+
+FRENCH:
+
+108. FRENCH FRIES
+     - Deep-fried potato strips
+     - Golden brown
+     - Crispy outside, soft inside
+     - Various cuts (shoestring, steak, etc.)
+
+109. CROISSANT
+     - Flaky, buttery pastry
+     - CRESCENT shape
+     - Layered, golden brown
+     - French breakfast pastry
+
+110. QUICHE
+     - Savory pastry with EGG CUSTARD filling
+     - Pie-like appearance
+     - Various fillings (vegetables, bacon, cheese)
+     - Baked until golden
+
+OTHER INTERNATIONAL:
+
+111. KEBAB/SHAWARMA
+     - Grilled meat on skewer or rotisserie
+     - Middle Eastern
+     - Often served in pita bread
+     - Various meats (lamb, chicken, beef)
+
+112. FALAFEL
+     - Deep-fried chickpea balls
+     - Middle Eastern
+     - Brown, crunchy exterior
+     - Served in pita or as appetizer
+
+113. PAELLA (Spanish)
+     - Spanish rice dish with seafood/meat
+     - YELLOW from saffron
+     - Cooked in wide, shallow pan
+     - Rice at bottom may be crispy (socarrat)
+
+114. FISH AND CHIPS (British)
+     - Battered and fried fish
+     - Served with thick-cut fries
+     - Golden, crispy batter
+     - Usually cod or haddock
+
+115. SCHNITZEL (German/Austrian)
+     - Breaded and fried meat cutlet
+     - Very thin, flat
+     - Golden breading
+     - Usually veal or pork
+
+CRITICAL VISUAL DISTINCTION GUIDE
+
+FILIPINO vs INTERNATIONAL LOOK-ALIKES:
+
+PANCIT vs PAD THAI vs CHOW MEIN:
+- Pancit: Filipino stir-fried noodles, yellow or white, vegetables
+- Pad Thai: Orange-red color, peanuts, lime, bean sprouts
+- Chow Mein: Chinese style, often with crispy noodles
+
+ADOBO vs TERIYAKI:
+- Adobo: Dark brown, vinegar + soy, bay leaves, oily
+- Teriyaki: Glossy sweet glaze, more caramelized, no vinegar
+
+LUMPIA vs SPRING ROLLS:
+- Filipino Lumpia: Thinner wrapper, smaller diameter
+- Chinese Spring Rolls: Thicker, larger
+- Vietnamese: Fresh rice paper (translucent)
+
+SINIGANG vs TOM YUM:
+- Sinigang: Clear sour Filipino soup, tamarind
+- Tom Yum: Thai, orange-red, lemongrass, galangal
+
+PINAPAITAN vs DINUGUAN vs TIYULA ITUM:
+
+PINAPAITAN (Ilocos):
+- Color: GREEN-BROWN, OLIVE-TONED broth
+- Texture: CLEAR to slightly cloudy
+- Taste: BITTER (from bile/apdo)
+- Visual: Greenish tint, chunks of innards, ginger
+- Broth: Thin, soup-like
+
+DINUGUAN (National):
+- Color: VERY DARK BROWN to BLACK
+- Texture: THICK, gravy-like
+- Taste: SWEET-SOUR (from blood and vinegar)
+- Visual: Opaque black gravy, no greenish tint
+- Broth: Thick sauce consistency
+
+DINARDARAAN (Ilocos):
+- Color: DARK BROWN to BLACK (similar to Dinuguan)
+- Texture: THICK
+- Essentially Ilocano version of Dinuguan
+- Blood-based
+
+TIYULA ITUM (Tausug/Sulu):
+- Color: COMPLETELY BLACK from burnt coconut
+- Texture: Soup/broth, NOT thick like Dinuguan
+- Taste: Smoky, spicy (NOT bitter or sweet)
+- Visual: Very black but LIQUID broth, not gravy
+
+KEY DISTINCTION:
+- If GREEN/OLIVE tint + CLEAR + BITTER → PINAPAITAN
+- If BLACK + THICK + SWEET → DINUGUAN/DINARDARAAN
+- If BLACK + SOUP + SMOKY → TIYULA ITUM
+- If GREEN + CLEAR + organs visible → PINAPAITAN
 
 PHASE 2: INGREDIENT LISTING
 
 LIST ALL VISIBLE AND TRADITIONAL INGREDIENTS SEPARATELY:
 
-SEAFOOD (list each type):
-- "shrimp" (separate entry)
-- "crab" (separate entry)
-- "mussels" (separate entry)
-- "clams" (separate entry)
-- "crawfish" (separate entry)
-- "lobster" (separate entry)
+CRITICAL ALLERGEN INGREDIENTS (must list explicitly):
+- Peanut butter, peanuts (Kare-Kare, Satti, Kung Pao, Pad Thai)
+- Shrimp paste/Bagoong alamang (Pinakbet, KBL, etc.)
+- Fish paste/Bagoong isda, Patis (Dinengdeng, many dishes)
+- Soy sauce (Adobo, Mechado, Asian dishes)
+- Eggs (Sisig, Empanada, Ramen, etc.)
+- Milk/Dairy (cheese in Western dishes, cream sauces)
+- Shellfish (specify: shrimp, crab, mussels, clams, oysters separately)
+- Fish (specify type: tuna, tilapia, bangus, salmon, etc.)
+- Tree nuts (specify: cashew, almond, etc. separately)
+- Wheat (noodles, wrappers, bread, pasta)
+- Sesame (Asian dishes, buns)
+- Gluten (pasta, bread, battered items)
 
-VEGETABLES (list each type):
-- "corn" (separate entry)
-- "potatoes" (separate entry)
-- "carrots" (separate entry)
-- "bell peppers" (separate entry)
+VEGETABLES (list each separately):
+- bitter melon, squash, eggplant, okra, string beans, tomatoes, bell peppers, etc.
 
-PROCESSED MEATS (list each type):
-- "hotdog" (if visible)
-- "sausage" (specify type: andouille, chorizo, etc.)
-- "bacon"
+SEAFOOD (list each separately):
+- shrimp, crab, mussels, clams, squid, fish (specify type)
 
-ALLERGEN INGREDIENTS (must list with warnings):
-- Peanut butter (in Kare-Kare)
-- Shrimp paste (bagoong)
-- Soy sauce
-- Fish sauce
-- Eggs
-- Dairy products
+PROTEINS (list each separately):
+- pork, beef, chicken, goat, lamb, seafood (specify type)
 
-CONFIDENCE SCORING:
-
-0.90-0.95: Clear identification with cooking style markers visible
-0.75-0.89: Good identification, some details visible
-0.60-0.74: Base category identified, limited details
-0.50-0.59: Generic fallback category
-
-OUTPUT FORMAT:
+OUTPUT FORMAT
 
 {
   "options": [
     {
-      "dishName": "Seafood Boil",
-      "description": "Mixed shellfish boil with spices, featuring shrimp, crab, mussels, corn, and potatoes in seasoned broth",
+      "dishName": "Protein + Base dish name",
+      "description": "Brief description of the dish with regional/cultural context if applicable",
       "ingredients": [
-        {"name": "shrimp", "benefits": "Excellent lean protein with omega-3 fatty acids. SHELLFISH ALLERGEN."},
-        {"name": "crab", "benefits": "High-quality protein with vitamins. SHELLFISH ALLERGEN."},
-        {"name": "mussels", "benefits": "Rich in iron and protein. SHELLFISH ALLERGEN."},
-        {"name": "corn", "benefits": "Good source of fiber and vitamins."},
-        {"name": "potatoes", "benefits": "Complex carbohydrates and vitamin C."},
-        {"name": "sausage", "benefits": "Protein source. May contain MILK, WHEAT allergens."},
-        {"name": "cajun seasoning", "benefits": "Spice blend with paprika, cayenne, garlic."},
-        {"name": "butter", "benefits": "Fat-soluble vitamins. DAIRY allergen."}
+        {"name": "ingredient1", "benefits": "Nutritional benefits with allergen warning if applicable"},
+        {"name": "ingredient2", "benefits": "Nutritional benefits with allergen warning if applicable"}
       ],
-      "confidence": 0.92
+      "confidence": 0.XX
     },
     {
-      "dishName": "Crawfish Boil",
-      "description": "Crawfish-focused boil with vegetables and spices",
+      "dishName": "Alternative Interpretation",
+      "description": "Different possible dish identification",
       "ingredients": [...],
-      "confidence": 0.75
+      "confidence": 0.XX
     }
   ]
 }
 
-CRITICAL RULES:
- Base dish name + protein only
- NO region/location names in dish name
- List ALL ingredients separately
- Include allergen warnings
- 3-4 options with confidence scores
- NO optional ingredients in dish name
- NO ingredient lists as dish names
- NO underscores or concatenation
+CONFIDENCE SCORING:
+- 0.90-0.95: Very clear visual match with distinctive characteristics
+- 0.75-0.89: Good match, most features visible
+- 0.60-0.74: Moderate match, some ambiguity
+- 0.50-0.59: Generic fallback
+
+CRITICAL REQUIREMENTS:
+✅ Use PROTEIN + BASE DISH NAME  only
+✅ Generate 3-4 distinct options ordered by confidence  
+✅ List ALL ingredients separately (no grouping)
+✅ Include explicit allergen warnings
+✅ For Pinapaitan: Look for GREENISH/OLIVE broth, BITTER taste indicators
+✅ For Dinuguan: Look for BLACK/very dark, THICK texture, SWEET indicators
+✅ For regional dishes: Identify by visual characteristics, not location names
+✅ CRITICAL: Distinguish Pinapaitan (green-brown, bitter) from Dinuguan (black, sweet)
+✅ For international dishes: Note cultural origin in description
+✅ Consider both Filipino and international cuisines in identification
 
 NOW ANALYZE THE IMAGE.
 ''';
