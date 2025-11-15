@@ -4,6 +4,7 @@ import 'package:allergen/screens/feature/educational/Informational_Screen.dart';
 import 'package:allergen/screens/feature/scan_screen.dart';
 import 'package:allergen/screens/health_environment_analytics/air_quality_tab.dart';
 import 'package:allergen/screens/health_environment_analytics/allergen_analytics_tab.dart';
+import 'package:allergen/screens/health_environment_analytics/models/air_quality_models.dart';
 import 'package:allergen/screens/health_environment_analytics/models/weather_models.dart';
 import 'package:allergen/screens/health_environment_analytics/widgets/AirQualityWidget.dart';
 import 'package:allergen/screens/profile_screen_items/ProfileScreen.dart';
@@ -657,8 +658,8 @@ class _AirQualityDetailScreenState extends State<AirQualityDetailScreen>
               : TabBarView(
                 controller: _tabController,
                 children: [
-                  AirQualityTab(
-                    airQualityData: _airQualityData!,
+                 AirQualityTab(
+                    airQualityData: _airQualityData!, 
                     location: _location,
                     applicablePopulations: _applicablePopulations,
                     weatherData: WeatherData.mock(),

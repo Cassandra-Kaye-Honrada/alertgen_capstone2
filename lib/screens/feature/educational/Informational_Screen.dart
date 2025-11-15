@@ -1046,15 +1046,15 @@ class _FoodAllergyScreenState extends State<FoodAllergyScreen>
                                 ),
                               ),
                             ),
-                            Spacer(),
-                            Text(
-                              'Read more',
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: resource.color,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
+                            // Spacer(),
+                            // Text(
+                            //   'Read more',
+                            //   style: TextStyle(
+                            //     fontSize: 12,
+                            //     color: resource.color,
+                            //     fontWeight: FontWeight.w600,
+                            //   ),
+                            // ),
                           ],
                         ),
                       ],

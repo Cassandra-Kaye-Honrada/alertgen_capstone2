@@ -93,12 +93,10 @@ class ResourceDetailScreen extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // --------------------------------------------------
-            // 🔥 CAROUSEL AREA
-            // --------------------------------------------------
+            SizedBox(height: 10),
             CarouselSlider(
               options: CarouselOptions(
-                height: 240,
+                height: 200,
                 autoPlay: true,
                 enlargeCenterPage: true,
                 enableInfiniteScroll: true,

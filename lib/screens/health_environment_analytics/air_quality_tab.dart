@@ -1,5 +1,7 @@
+import 'package:allergen/screens/health_environment_analytics/models/air_quality_models.dart';
 import 'package:allergen/screens/health_environment_analytics/models/weather_models.dart';
-import 'package:allergen/screens/health_environment_analytics/widgets/AirQualityWidget.dart';
+import 'package:allergen/screens/health_environment_analytics/widgets/AirQualityDisplayWidget.dart';
+
 import 'package:flutter/material.dart';
 import 'package:weather_icons/weather_icons.dart';
 
@@ -20,11 +22,14 @@ class AirQualityTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 110),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildAQIOverview(),
+          AirQualityDisplayWidget(
+            airQualityData: airQualityData,
+            location: location,
+          ),
           const SizedBox(height: 16),
           buildEnvironmentalScore(),
           const SizedBox(height: 16),
@@ -39,125 +44,6 @@ class AirQualityTab extends StatelessWidget {
           _buildAQIReferenceGuide(),
         ],
       ),
-    );
-  }
-
-  Widget _buildAQIOverview() {
-    final naqiColor = _AQIColors.getColor(airQualityData.aqi);
-
-    return Container(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [naqiColor.withOpacity(0.15), naqiColor.withOpacity(0.05)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: naqiColor.withOpacity(0.3), width: 2),
-      ),
-      padding: const EdgeInsets.all(20),
-      child: Column(
-        children: [
-          Row(
-            children: [
-              Icon(Icons.location_on, color: naqiColor, size: 18),
-              const SizedBox(width: 6),
-              Text(
-                location,
-                style: TextStyle(
-                  fontSize: 15,
-                  color: naqiColor,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 20),
-          Row(
-            children: [
-              _buildAQIGauge(naqiColor),
-              const SizedBox(width: 24),
-              Expanded(child: _buildAQIInfo(naqiColor)),
-            ],
-          ),
-          const SizedBox(height: 16),
-          buildAQIStatusMessage(naqiColor),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildAQIGauge(Color naqiColor) {
-    return Container(
-      width: 100,
-      height: 100,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        color: Colors.white,
-        boxShadow: [
-          BoxShadow(
-            color: naqiColor.withOpacity(0.2),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: CustomPaint(
-        painter: AQIGaugePainter(
-          aqi: airQualityData.aqi.toDouble(),
-          color: naqiColor,
-        ),
-        child: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Text(
-                '${airQualityData.aqi}',
-                style: TextStyle(
-                  fontSize: 32,
-                  fontWeight: FontWeight.bold,
-                  color: naqiColor,
-                ),
-              ),
-              Text(
-                'AQI',
-                style: TextStyle(
-                  fontSize: 12,
-                  color: naqiColor.withOpacity(0.7),
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildAQIInfo(Color naqiColor) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          airQualityData.qualityLevel,
-          style: TextStyle(
-            fontSize: 24,
-            fontWeight: FontWeight.bold,
-            color: naqiColor,
-          ),
-        ),
-        const SizedBox(height: 8),
-        Text(
-          _getAQIDescription(airQualityData.aqi),
-          style: TextStyle(fontSize: 13, color: Colors.grey[700], height: 1.4),
-        ),
-        const SizedBox(height: 12),
-        _buildInfoChip(
-          Icons.eco_outlined,
-          'Main: ${_PollutantHelper.getName(airQualityData.dominantPollutant)}',
-          naqiColor,
-        ),
-      ],
     );
   }
 

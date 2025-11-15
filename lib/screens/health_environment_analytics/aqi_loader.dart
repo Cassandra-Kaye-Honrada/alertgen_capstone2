@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:allergen/screens/health_environment_analytics/AirQualityDetailScreen.dart';
+import 'package:allergen/screens/health_environment_analytics/models/air_quality_models.dart';
 import 'package:allergen/screens/health_environment_analytics/widgets/AirQualityWidget.dart';
 import 'package:allergen/styleguide.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
