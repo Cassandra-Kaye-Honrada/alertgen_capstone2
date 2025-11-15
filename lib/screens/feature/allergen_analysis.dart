@@ -325,7 +325,7 @@ class AllergenAnalysis {
         CACHED DISH NAME: $cachedDishName
 
         DETAILED COMPARISON CRITERIA:
-
+ 
         1. DISH IDENTITY (40% weight):
           - Is the BASE DISH the same? (e.g., both are Kare-Kare, Adobo, Paella, etc.)
           - Verify dish name match: Does "$currentDishName" semantically match "$cachedDishName"?

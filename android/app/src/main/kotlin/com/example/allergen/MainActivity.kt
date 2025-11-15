@@ -73,7 +73,6 @@ class MainActivity: FlutterActivity() {
                 }
             }
         }
-
         // Call Management Channel
         callMethodChannel = MethodChannel(flutterEngine.dartExecutor.binaryMessenger, CALL_CHANNEL)
         callMethodChannel?.setMethodCallHandler { call, result ->
@@ -104,7 +103,7 @@ class MainActivity: FlutterActivity() {
                     result.success(inCall)
                 }
                 else -> {
-                    Log.d(TAG, "❓ Unknown call method: ${call.method}")
+                    Log.d(TAG, " Unknown call method: ${call.method}")
                     result.notImplemented()
                 }
             }
@@ -113,18 +112,18 @@ class MainActivity: FlutterActivity() {
         // Shortcut Channel
         shortcutMethodChannel = MethodChannel(flutterEngine.dartExecutor.binaryMessenger, SHORTCUT_CHANNEL)
         shortcutMethodChannel?.setMethodCallHandler { call, result ->
-            Log.d(TAG, "🔗 Shortcut Channel - Method: ${call.method}")
+            Log.d(TAG, " Shortcut Channel - Method: ${call.method}")
             result.notImplemented()
         }
         
         // Initialize telephony managers
         try {
             telephonyManager = getSystemService(Context.TELEPHONY_SERVICE) as TelephonyManager
-            Log.d(TAG, "✅ TelephonyManager initialized")
+            Log.d(TAG, " TelephonyManager initialized")
             
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
                 telecomManager = getSystemService(Context.TELECOM_SERVICE) as TelecomManager
-                Log.d(TAG, "✅ TelecomManager initialized")
+                Log.d(TAG, " TelecomManager initialized")
             }
         } catch (e: Exception) {
             Log.e(TAG, "❌ Error initializing managers: ${e.message}")

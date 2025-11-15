@@ -2880,16 +2880,16 @@ CONFIDENCE SCORING:
 - 0.50-0.59: Generic fallback
 
 CRITICAL REQUIREMENTS:
-✅ Use PROTEIN + BASE DISH NAME  only
-✅ Generate 3-4 distinct options ordered by confidence  
-✅ List ALL ingredients separately (no grouping)
-✅ Include explicit allergen warnings
-✅ For Pinapaitan: Look for GREENISH/OLIVE broth, BITTER taste indicators
-✅ For Dinuguan: Look for BLACK/very dark, THICK texture, SWEET indicators
-✅ For regional dishes: Identify by visual characteristics, not location names
-✅ CRITICAL: Distinguish Pinapaitan (green-brown, bitter) from Dinuguan (black, sweet)
-✅ For international dishes: Note cultural origin in description
-✅ Consider both Filipino and international cuisines in identification
+ Use PROTEIN + BASE DISH NAME  only
+ Generate 3-4 distinct options ordered by confidence  
+ List ALL ingredients separately (no grouping)
+ Include explicit allergen warnings
+ For Pinapaitan: Look for GREENISH/OLIVE broth, BITTER taste indicators
+ For Dinuguan: Look for BLACK/very dark, THICK texture, SWEET indicators
+ For regional dishes: Identify by visual characteristics, not location names
+ CRITICAL: Distinguish Pinapaitan (green-brown, bitter) from Dinuguan (black, sweet)
+ For international dishes: Note cultural origin in description
+ Consider both Filipino and international cuisines in identification
 
 NOW ANALYZE THE IMAGE.
 ''';
