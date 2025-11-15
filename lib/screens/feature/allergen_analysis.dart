@@ -316,11 +316,192 @@ class AllergenAnalysis {
           final cachedImageBytes = await ref.getData();
           if (cachedImageBytes == null) continue;
 
-          final comparisonPrompt = '''
-You are an expert food image comparison AI specializing in Filipino cuisine AND international dishes. Compare these two images to determine if they show THE SAME DISH (possibly from different angles).
+      
+        final comparisonPrompt = '''
+        You are an EXPERT food image comparison AI specializing in Filipino and international cuisine. 
+        Your mission is to determine if two images show THE SAME DISH (possibly from different angles, lighting, or plating).
 
-[... keep your existing comparison prompt ...]
-''';
+        CURRENT DISH NAME: $currentDishName
+        CACHED DISH NAME: $cachedDishName
+
+        DETAILED COMPARISON CRITERIA:
+
+        1. DISH IDENTITY (40% weight):
+          - Is the BASE DISH the same? (e.g., both are Kare-Kare, Adobo, Paella, etc.)
+          - Verify dish name match: Does "$currentDishName" semantically match "$cachedDishName"?
+          - Consider regional variations (e.g., "Ilocos Bagnet" vs "Bagnet" = SAME)
+          - Consider protein variations (e.g., "Pork Adobo" vs "Chicken Adobo" = DIFFERENT)
+
+        2. VISUAL CHARACTERISTICS (30% weight):
+          
+          SAUCE/BROTH ANALYSIS:
+          - Color: Is the sauce/broth color similar? (Red, brown, yellow, black, clear, creamy white)
+          - Consistency: Same thickness? (Thick stew, thin soup, dry, creamy)
+          - Texture: Same visual texture? (Glossy, matte, oily surface, grainy)
+          
+          COOKING METHOD MARKERS:
+          - Grilled (char marks, smoky appearance)
+          - Fried (golden-brown, crispy texture)
+          - Stewed (sauce-coated, tender appearance)
+          - Boiled (clear broth, whole ingredients)
+          - Steamed (moist, delicate appearance)
+          
+          COLOR SIGNATURE:
+          - Tomato-based: Red-orange color
+          - Soy-based: Dark brown, glossy
+          - Peanut-based: Orange-brown, thick
+          - Coconut-based: Creamy white or yellow
+          - Blood-based: Very dark brown/black
+          - Turmeric-based: Bright yellow
+          - Burnt coconut: Jet black
+
+        3. MAIN PROTEIN MATCH (20% weight):
+          - Is the PRIMARY PROTEIN the same?
+          - Seafood types: shrimp, crab, fish, mixed seafood
+          - Meat types: pork, beef, chicken, oxtail, goat
+          - Vegetarian: tofu, vegetables only
+          - NOTE: Different proteins = DIFFERENT DISH (even if cooking style similar)
+
+        4. KEY INGREDIENT PATTERNS (10% weight):
+          - Are SIGNATURE INGREDIENTS visible in both?
+          - Filipino dishes: Check for regional markers
+            * Ilocos: Dark bile soup, ultra-crispy pork
+            * Bicol: Red chilies in coconut milk
+            * Mindanao: Turmeric yellow, black soup
+          - International dishes: Check for distinctive elements
+            * Paella: Saffron rice, arranged seafood
+            * Seafood Boil: Red Cajun spices, corn, potatoes
+            * Tom Yum: Lemongrass, galangal, clear broth
+
+        5. ACCEPTABLE VARIATIONS (These are OK):
+          - Different camera angles (top-down vs side view)
+          - Different lighting conditions (bright vs dim)
+          - Different plating/servingware (bowl vs plate, banana leaf)
+          - Different garnish amount (more/less onions, herbs)
+          - Different portion sizes
+          - Minor vegetable quantity differences
+          - Different cooking doneness (slightly more/less cooked)
+
+        6. REJECTION TRIGGERS (These indicate DIFFERENT dishes):
+          - Different base dish entirely (Adobo vs Menudo)
+          - Different main protein (Pork vs Chicken version)
+          - Completely different color signature (Red sauce vs Black soup)
+          - Different cooking method (Fried vs Stewed)
+          - Different cuisine category (Filipino vs Italian)
+          - One is dessert, other is main dish
+          - Significantly different ingredient composition
+
+        FILIPINO-SPECIFIC COMPARISON RULES:
+
+        Regional Variations (Accept as SAME):
+        - "Dinuguan" = "Dinardaraan" (same dish, different regions)
+        - "Sinanglaw" = "Sinanglao" (spelling variation)
+        - "Pinapaitan" = "Papaitan" (spelling variation)
+        - "Kansi" from Iloilo = "Kansi" from Negros
+        - "Sinigang" with different souring agents (tamarind vs calamansi)
+
+        Protein Variations (Different dishes):
+        - "Pork Menudo" ≠ "Chicken Menudo"
+        - "Chicken Adobo" ≠ "Pork Adobo"
+        - "Oxtail Kare-Kare" ≠ "Pork Kare-Kare"
+        - "Beef Sinigang" ≠ "Shrimp Sinigang"
+
+        Look-alike Dishes (Carefully distinguish):
+        - Menudo vs Afritada vs Caldereta (all tomato-based, but different sauce thickness and ingredients)
+        - Dinuguan vs Dinardaraan vs Tidtad (all blood-based, but regional differences)
+        - La Paz Batchoy vs Pancit Molo (both noodle soups, but different components)
+
+        CONFIDENCE SCORING GUIDELINES:
+
+        0.95-1.00: PERFECT MATCH
+        - Exact same dish, same angle, nearly identical visual characteristics
+        - All markers match: color, texture, ingredients visible, cooking method
+        - Example: "Pork Adobo" with dark glossy sauce in both images
+
+        0.85-0.94: VERY STRONG MATCH
+        - Same dish from different angle or lighting
+        - All key characteristics match, minor variation in garnish/plating
+        - Example: "Bicol Express" - both have red chilies in creamy coconut sauce
+
+        0.75-0.84: STRONG MATCH (Accept)
+        - Same base dish, same protein, same visual signature
+        - Some differences in garnish, portion size, or exact presentation
+        - Example: "Seafood Paella" - both have yellow rice, mixed seafood, similar arrangement
+
+        0.65-0.74: MODERATE MATCH (Borderline - be cautious)
+        - Similar dish type but may have protein variation
+        - Visual characteristics similar but not identical
+        - Recommend: REJECT unless you're very confident
+
+        0.50-0.64: WEAK MATCH (Reject)
+        - Different dishes that happen to look somewhat similar
+        - Example: Menudo vs Afritada (both tomato-based but different)
+
+        Below 0.50: NO MATCH
+        - Completely different dishes
+        - Different cuisine, cooking method, or category
+
+        ANALYSIS PROCESS:
+
+        Step 1: Identify both dishes independently
+        - What dish is shown in CACHED IMAGE?
+        - What dish is shown in CURRENT IMAGE?
+
+        Step 2: Compare base dish names
+        - Do the dish names semantically match?
+        - Are they regional variations of the same dish?
+
+        Step 3: Visual characteristic comparison
+        - Compare: sauce color, consistency, texture
+        - Compare: cooking method indicators
+        - Compare: overall color signature
+
+        Step 4: Protein verification
+        - Is the main protein the same in both images?
+
+        Step 5: Key ingredient check
+        - Are signature ingredients visible in both?
+        - Do they match the dish identity?
+
+        Step 6: Calculate confidence
+        - Weight each criterion appropriately
+        - Consider both strengths and discrepancies
+
+        OUTPUT REQUIREMENTS:
+
+        Return ONLY valid JSON (no markdown, no preamble):
+        {
+          "isSameDish": true/false,
+          "confidence": 0.XX,
+          "reasoning": "DETAILED MULTI-POINT EXPLANATION",
+          "cachedDishIdentified": "What dish you identified in cached image",
+          "currentDishIdentified": "What dish you identified in current image",
+          "visualCharacteristics": {
+            "sauceColorMatch": true/false,
+            "consistencyMatch": true/false,
+            "cookingMethodMatch": true/false,
+            "proteinMatch": true/false
+          },
+          "matchingFeatures": ["List 3-5 specific matching features"],
+          "differentFeatures": ["List any concerning differences"]
+        }
+
+        REASONING FORMAT:
+        Provide a detailed 3-5 sentence explanation covering:
+        1. What dishes you identified in each image
+        2. Key matching visual characteristics (color, texture, ingredients)
+        3. Whether proteins match
+        4. Why you assigned this confidence score
+        5. Any notable differences or concerns
+
+        EXAMPLE REASONING (Good):
+        "Both images show Pork Adobo with characteristic dark brown glossy sauce from soy and vinegar. The CACHED image appears to be a top-down view while CURRENT is a side angle, but both display the same sauce consistency, tender pork chunks, and shiny caramelized coating. The main protein (pork) matches in both. Minor difference in garnish amount but core dish identity is identical. High confidence this is the same dish photographed differently."
+
+        EXAMPLE REASONING (Rejection):
+        "CACHED image shows Pork Menudo with red-orange tomato sauce and diced vegetables. CURRENT image shows Chicken Adobo with dark brown soy-based sauce. Despite both being Filipino stews, they are fundamentally different dishes with different base sauces (tomato vs soy), different proteins (pork vs chicken), and different cooking methods. Cannot confirm as same dish."
+
+        Now analyze the two images provided and determine if they show the same dish.
+        ''';
 
           final response = await model.generateContent([
             Content.multi([
