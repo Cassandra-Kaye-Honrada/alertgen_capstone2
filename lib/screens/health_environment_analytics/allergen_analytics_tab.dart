@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
+import 'models/air_quality_models.dart';
+
 class AllergenAnalyticsTab extends StatefulWidget {
   final AirQualityData airQualityData;
 
@@ -146,6 +148,7 @@ class _AllergenAnalyticsTabState extends State<AllergenAnalyticsTab> {
           _buildRecentExposures(),
           const SizedBox(height: 16),
           _buildInsightsAndTips(),
+          const SizedBox(height: 100),
         ],
       ),
     );

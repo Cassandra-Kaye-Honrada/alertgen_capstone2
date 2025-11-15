@@ -1,4 +1,5 @@
 import 'package:allergen/screens/health_environment_analytics/AirQualityDetailScreen.dart';
+import 'package:allergen/screens/health_environment_analytics/models/air_quality_models.dart';
 import 'package:allergen/services/push_notification_service.dart';
 import 'package:flutter/material.dart';
 import 'dart:math' as math;
@@ -8,16 +9,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart';
-
-enum Population {
-  generalPopulation,
-  elderly,
-  lungDiseasePopulation,
-  heartDiseasePopulation,
-  athletes,
-  pregnantWomen,
-  children,
-}
+import 'package:shared_preferences/shared_preferences.dart';
 
 class AirQualityWidget extends StatefulWidget {
   final double? latitude;
@@ -45,7 +37,7 @@ class _AirQualityWidgetState extends State<AirQualityWidget> {
   bool _hasCurrentAlert = false;
   String? _alertMessage;
   bool _isAlertDismissed = false;
-
+  bool _dontShowAgain = false;
   @override
   void initState() {
     super.initState();
@@ -630,7 +622,7 @@ class _AirQualityWidgetState extends State<AirQualityWidget> {
         await PushNotificationService().showEnvironmentalAlert(
           title: '⚠️ $alertLevel Air Quality Alert',
           body:
-              'NAQI: $aqi in $_location. ${_airQualityData!.healthRecommendation ?? "Take precautions."}',
+              'AQI: $aqi in $_location. ${_airQualityData!.healthRecommendation ?? "Take precautions."}',
           alertLevel: alertLevel,
           aqi: aqi,
         );
@@ -643,7 +635,7 @@ class _AirQualityWidgetState extends State<AirQualityWidget> {
       setState(() {
         _hasCurrentAlert = true;
         _isAlertDismissed = false; // Reset dismiss state for new alert
-        _alertMessage = '$alertLevel Air Quality • NAQI $aqi';
+        _alertMessage = '$alertLevel Air Quality • AQI $aqi';
       });
     } else {
       setState(() {
@@ -670,6 +662,17 @@ class _AirQualityWidgetState extends State<AirQualityWidget> {
         ),
       );
     }
+  }
+
+  Future<void> _saveAlertPreference(bool showAlerts) async {
+    // Implement your preference saving logic here
+    // For example, using SharedPreferences:
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('show_air_quality_alerts', showAlerts);
+
+    print(
+      'Alert preference saved: ${showAlerts ? "Show alerts" : "Don\'t show alerts"}',
+    );
   }
 
   @override
@@ -734,57 +737,175 @@ class _AirQualityWidgetState extends State<AirQualityWidget> {
     return Column(
       children: [
         // Alert banner (if applicable)
+        // if (_hasCurrentAlert && _alertMessage != null && !_isAlertDismissed)
+        //   Container(
+        //     margin: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+        //     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+        //     decoration: BoxDecoration(
+        //       gradient: LinearGradient(
+        //         colors: [Colors.orange.shade50, Colors.orange.shade100],
+        //       ),
+        //       borderRadius: BorderRadius.circular(12),
+        //       border: Border.all(color: Colors.orange.shade300, width: 1),
+        //     ),
+        //     child: Row(
+        //       children: [
+        //         Container(
+        //           padding: const EdgeInsets.all(6),
+        //           decoration: BoxDecoration(
+        //             color: Colors.orange.shade200,
+        //             shape: BoxShape.circle,
+        //           ),
+        //           child: Icon(
+        //             Icons.warning_rounded,
+        //             color: Colors.orange.shade800,
+        //             size: 18,
+        //           ),
+        //         ),
+        //         const SizedBox(width: 12),
+        //         Expanded(
+        //           child: Text(
+        //             _alertMessage!,
+        //             style: TextStyle(
+        //               fontSize: 14,
+        //               fontWeight: FontWeight.w600,
+        //               color: Colors.orange.shade900,
+        //               letterSpacing: 0.2,
+        //             ),
+        //           ),
+        //         ),
+        //         const SizedBox(width: 8),
+        //         GestureDetector(
+        //           onTap: () {
+        //             setState(() {
+        //               _isAlertDismissed = true;
+        //             });
+        //           },
+        //           child: Container(
+        //             padding: const EdgeInsets.all(4),
+        //             child: Icon(
+        //               Icons.close,
+        //               size: 18,
+        //               color: Colors.orange.shade700,
+        //             ),
+        //           ),
+        //         ),
+        //       ],
+        //     ),
+        //   ),
+        // Replace the existing alert banner section in _buildAirQualityContent() with this:
+
+        // Alert banner (if applicable)
         if (_hasCurrentAlert && _alertMessage != null && !_isAlertDismissed)
           Container(
-            margin: const EdgeInsets.fromLTRB(20, 16, 20, 0),
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+            margin: const EdgeInsets.fromLTRB(15, 16, 15, 0),
+            padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [Colors.orange.shade50, Colors.orange.shade100],
-              ),
+              color: Colors.orange.shade50,
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.orange.shade300, width: 1),
+              border: Border.all(color: Colors.orange.shade200, width: 1),
             ),
             child: Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
+                // Alert icon
                 Container(
-                  padding: const EdgeInsets.all(6),
+                  padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: Colors.orange.shade200,
+                    color: Colors.orange.shade100,
                     shape: BoxShape.circle,
                   ),
                   child: Icon(
                     Icons.warning_rounded,
-                    color: Colors.orange.shade800,
-                    size: 18,
+                    size: 20,
+                    color: Colors.orange.shade700,
                   ),
                 ),
+
                 const SizedBox(width: 12),
+
+                // Content
                 Expanded(
-                  child: Text(
-                    _alertMessage!,
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.orange.shade900,
-                      letterSpacing: 0.2,
-                    ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // Title
+                      Text(
+                        'Air Quality Alert',
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.grey.shade900,
+                        ),
+                      ),
+
+                      const SizedBox(height: 2),
+
+                      // Message
+                      Text(
+                        _alertMessage ??
+                            'Poor air quality detected in your area',
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: Colors.grey.shade700,
+                          height: 1.4,
+                        ),
+                      ),
+
+                      const SizedBox(height: 4),
+
+                      // Don't show this again
+                      GestureDetector(
+                        onTap: () {
+                          setState(() {
+                            _dontShowAgain = !_dontShowAgain;
+                          });
+                        },
+                        child: Row(
+                          children: [
+                            Icon(
+                              _dontShowAgain
+                                  ? Icons.check_box_rounded
+                                  : Icons.check_box_outline_blank_rounded,
+                              size: 18,
+                              color:
+                                  _dontShowAgain
+                                      ? Colors.orange.shade700
+                                      : Colors.grey.shade400,
+                            ),
+                            const SizedBox(width: 6),
+                            Text(
+                              'Don\'t show this again',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.grey.shade600,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-                const SizedBox(width: 8),
+
+                const SizedBox(width: 12),
+
+                // Close button
                 GestureDetector(
                   onTap: () {
                     setState(() {
                       _isAlertDismissed = true;
                     });
+                    if (_dontShowAgain) {
+                      _saveAlertPreference(false);
+                    }
                   },
-                  child: Container(
-                    padding: const EdgeInsets.all(4),
-                    child: Icon(
-                      Icons.close,
-                      size: 18,
-                      color: Colors.orange.shade700,
-                    ),
+                  child: Icon(
+                    Icons.close_rounded,
+                    size: 20,
+                    color: Colors.grey.shade600,
                   ),
                 ),
               ],
@@ -1078,139 +1199,4 @@ class AQIGaugePainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) => true;
-}
-
-class AirQualityData {
-  final int aqi;
-  final String qualityLevel;
-  final Color color;
-  final String dominantPollutant;
-  final String? healthRecommendation;
-  final Map<String, double> components;
-  final Map<String, String> allHealthRecommendations;
-
-  AirQualityData({
-    required this.aqi,
-    required this.qualityLevel,
-    required this.color,
-    required this.dominantPollutant,
-    this.healthRecommendation,
-    required this.components,
-    required this.allHealthRecommendations,
-  });
-
-  factory AirQualityData.fromGoogleJson(
-    Map<String, dynamic> json,
-    Population population,
-    String populationRecommendationKey,
-    List<Population> applicablePopulations,
-  ) {
-    final indexes = json['indexes'] as List<dynamic>?;
-
-    Map<String, dynamic>? aqiIndex;
-    if (indexes != null && indexes.isNotEmpty) {
-      // Look for India's NAQI (CPCB) first
-      aqiIndex = indexes.firstWhere(
-        (index) => index['code'] == 'ind_cpcb', // India CPCB/NAQI code
-        orElse: () {
-          // Fallback to any local AQI, then universal
-          return indexes.firstWhere(
-            (index) => index['code'] != 'uaqi',
-            orElse: () => indexes[0],
-          );
-        },
-      );
-    }
-
-    int aqi = 0;
-    String qualityLevel = 'Unknown';
-    Color color = Colors.grey;
-    String dominantPollutant = 'N/A';
-
-    if (aqiIndex != null) {
-      aqi = (aqiIndex['aqi'] as num?)?.toInt() ?? 0;
-      qualityLevel = aqiIndex['category'] ?? 'Unknown';
-      color = _getColorForCategory(aqiIndex['color'] as Map<String, dynamic>?);
-
-      if (aqiIndex['dominantPollutant'] != null) {
-        final pollutantCode = aqiIndex['dominantPollutant'] as String;
-        dominantPollutant = _formatPollutantName(pollutantCode);
-      }
-    }
-
-    String? healthRecommendation;
-    Map<String, String> allHealthRecommendations = {};
-    final healthRecommendations =
-        json['healthRecommendations'] as Map<String, dynamic>?;
-
-    if (healthRecommendations != null) {
-      for (var entry in healthRecommendations.entries) {
-        if (entry.value is String && (entry.value as String).isNotEmpty) {
-          allHealthRecommendations[entry.key] = entry.value as String;
-        }
-      }
-
-      healthRecommendation =
-          healthRecommendations[populationRecommendationKey] as String?;
-
-      if (healthRecommendation == null || healthRecommendation.isEmpty) {
-        healthRecommendation =
-            healthRecommendations['generalPopulation'] as String?;
-      }
-
-      if (healthRecommendation == null || healthRecommendation.isEmpty) {
-        for (var entry in healthRecommendations.entries) {
-          if (entry.value is String && (entry.value as String).isNotEmpty) {
-            healthRecommendation = entry.value as String;
-            break;
-          }
-        }
-      }
-    }
-
-    Map<String, double> components = {};
-    final pollutants = json['pollutants'] as List<dynamic>?;
-    if (pollutants != null) {
-      for (var pollutant in pollutants) {
-        final code = pollutant['code'] as String?;
-        final concentration = pollutant['concentration']?['value'] as num?;
-        if (code != null && concentration != null) {
-          components[code] = concentration.toDouble();
-        }
-      }
-    }
-
-    return AirQualityData(
-      aqi: aqi,
-      qualityLevel: qualityLevel,
-      color: color,
-      dominantPollutant: dominantPollutant,
-      healthRecommendation: healthRecommendation,
-      components: components,
-      allHealthRecommendations: allHealthRecommendations,
-    );
-  }
-
-  static Color _getColorForCategory(Map<String, dynamic>? colorData) {
-    if (colorData == null) return Colors.grey;
-
-    final red = (colorData['red'] as num?)?.toInt() ?? 128;
-    final green = (colorData['green'] as num?)?.toInt() ?? 128;
-    final blue = (colorData['blue'] as num?)?.toInt() ?? 128;
-
-    return Color.fromARGB(255, red, green, blue);
-  }
-
-  static String _formatPollutantName(String code) {
-    final pollutantNames = {
-      'pm25': 'PM2.5',
-      'pm10': 'PM10',
-      'o3': 'Ozone',
-      'no2': 'Nitrogen Dioxide',
-      'so2': 'Sulfur Dioxide',
-      'co': 'Carbon Monoxide',
-    };
-
-    return pollutantNames[code.toLowerCase()] ?? code.toUpperCase();
-  }
 }
