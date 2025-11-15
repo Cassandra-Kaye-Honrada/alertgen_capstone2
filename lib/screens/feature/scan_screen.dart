@@ -49,6 +49,7 @@ class _CameraScannerScreenState extends State<CameraScannerScreen>
   bool loading = false;
   bool isOCRAnalysis = false;
   bool showManualInput = false;
+  bool isManualAnalysis = false;
 
   String dishName = '';
   String description = '';
@@ -1623,6 +1624,7 @@ CRITICAL REQUIREMENTS:
 8. If international dish, still analyze but note in description
 9. When you see multiple seafood or vegetables, count them and create that many separate ingredient entries
 ''';
+
   String getAllergenAnalysisPrompt(List<String> userAllergens) {
     String userAllergensText =
         userAllergens.isNotEmpty ? userAllergens.join(', ') : '';
@@ -1635,6 +1637,7 @@ CRITICAL DETECTION RULES:
 - AVOID DUPLICATE ALLERGENS - Each unique allergen should only appear ONCE in the results
 - If multiple specific allergens exist in the same FDA category, list them SEPARATELY (e.g., both "Shrimp" and "Crab" if both are present)
 - CRITICAL: When detecting tree nuts, list EACH TYPE separately (Cashew, Almond, Walnut, Hazelnut, Pecan, Pistachio, Macadamia, etc.)
+- **CRITICAL: Set isUserAllergen to true ONLY if the allergen matches the user's allergen list**
 
 FDA MAJOR ALLERGENS - DETECT SPECIFICALLY:
 
@@ -1719,11 +1722,34 @@ ENHANCED ALLERGEN DETECTION RULES WITH INTELLIGENT MATCHING:
     - Example: If dish has "tuna" and "anchovies" → list TWO allergens: "Tuna" and "Anchovies"
 
 3. USER ALLERGEN MATCHING - CATEGORY EXPANSION:
+    - **CRITICAL NEW RULE**: An allergen is ONLY marked as isUserAllergen: true if:
+      a) The allergen name EXACTLY matches a user allergen (accounting for singular/plural, synonyms), OR
+      b) The user has a CATEGORY allergen (like "nuts", "shellfish", "fish") and this allergen falls under that category
+    
     - CRITICAL: If user allergen is "shellfish" → detect ALL specific shellfish separately (Shrimp, Crab, Oysters, Clams, Mussels, etc.) and mark EACH as isUserAllergen: true
     - CRITICAL: If user allergen is "nut", "nuts", or "tree nuts" → detect ALL specific tree nuts separately (Cashew, Almonds, Walnuts, Hazelnuts, Pecans, Pistachios, Macadamia, etc.) and mark EACH as isUserAllergen: true
     - CRITICAL: If user allergen is "fish" → detect ALL specific fish separately (Tuna, Salmon, Bangus, Anchovies, etc.) and mark EACH as isUserAllergen: true
     - If user allergen is specific (e.g., "shrimp", "cashew") → only detect that specific allergen and mark it as isUserAllergen: true
-    - Example: User has "nuts" allergen, ingredients contain "cashews, almonds, walnuts" → create 3 separate entries ALL marked isUserAllergen: true
+    
+    - **CRITICAL**: If the detected allergen is NOT in the user's allergen list AND is not under a category the user is allergic to, set isUserAllergen: false
+    
+    Example 1: User has ["peanuts", "shrimp"] allergens, ingredients contain [soy sauce, peanut butter, shrimp paste]
+    - Detected "Soy" → isUserAllergen: false (soy is not in user list ["peanuts", "shrimp"])
+    - Detected "Peanuts" → isUserAllergen: true (exact match with user allergen "peanuts")
+    - Detected "Shrimp" → isUserAllergen: true (exact match with user allergen "shrimp")
+    
+    Example 2: User has ["nuts", "shellfish"] allergens, ingredients contain [cashews, almonds, shrimp, soy sauce, milk]
+    - Detected "Cashew" → isUserAllergen: true (falls under "nuts" category)
+    - Detected "Almonds" → isUserAllergen: true (falls under "nuts" category)
+    - Detected "Shrimp" → isUserAllergen: true (falls under "shellfish" category)
+    - Detected "Soy" → isUserAllergen: false (soy is not in user list and not under any user category)
+    - Detected "Milk" → isUserAllergen: false (milk is not in user list and not under any user category)
+    
+    Example 3: User has ["fish"] allergen, ingredients contain [tuna, salmon, shrimp, soy sauce]
+    - Detected "Tuna" → isUserAllergen: true (falls under "fish" category)
+    - Detected "Salmon" → isUserAllergen: true (falls under "fish" category)
+    - Detected "Shrimp" → isUserAllergen: false (shrimp is shellfish, NOT fish)
+    - Detected "Soy" → isUserAllergen: false (not in user list)
 
 4. SMART LINGUISTIC MATCHING: Use AI intelligence to match allergens with variations:
     - SINGULAR/PLURAL: "egg" matches "eggs", "shrimp" matches "shrimps", "cashew" matches "cashews"
@@ -1788,7 +1814,7 @@ Return JSON with this exact structure:
             "sources": ["ingredient1", "ingredient2", "ingredient3"],
             "category": "FDA_MAJOR|USER_CUSTOM",
             "isUserAllergen": true/false,
-            "matchingReason": "Brief explanation of detection"
+            "matchingReason": "Brief explanation: 'Detected in [sources]. isUserAllergen is [true/false] because [reason]'"
         }
     ]
 }
@@ -1800,7 +1826,9 @@ CRITICAL REQUIREMENTS:
 4. COMBINE SOURCES - if same allergen in multiple ingredients, list all sources together
 5. LIST EACH TREE NUT SEPARATELY - never group as "Tree Nuts" or "Mixed Nuts"
 6. When user has category allergen (nuts, shellfish, fish), mark ALL specific items in that category as isUserAllergen: true
-7. Provide appropriate risk levels and symptoms
+7. **CRITICAL**: Set isUserAllergen: false for allergens that are NOT in the user's list and NOT under a category the user is allergic to
+8. Provide appropriate risk levels and symptoms
+9. Include matchingReason to explain why isUserAllergen is true or false
 ''';
   }
 
@@ -2912,7 +2940,7 @@ Return only the product name.
           dishName = cachedData['dishName'] ?? possibleProductName;
           description = cachedData['description'] ?? '';
           ingredients = List<String>.from(cachedData['ingredients'] ?? []);
-          analysisStatus = 'Loading from cache...';
+          analysisStatus = 'Analyzing food...';
         });
 
         ingredientBenefitsMap = IngredientBenefitsMap();
@@ -3687,6 +3715,9 @@ Make the description:
   }
 
   void submitManualIngredients() async {
+    FocusScope.of(context).unfocus();
+    ingredientFocusNode.unfocus();
+
     final dishNameText = dishNameController.text.trim();
     final ingredientText = ingredientController.text.trim();
 
@@ -3706,6 +3737,7 @@ Make the description:
 
     setState(() {
       loading = true;
+      isManualAnalysis = true;
       dishName = dishNameText;
       isOCRAnalysis = false;
       showManualInput = false;
@@ -3713,10 +3745,12 @@ Make the description:
     });
 
     try {
-      final cachedData = await allergenAnalysis.checkFoodCache(dishNameText);
+      final cachedData = await allergenAnalysis.checkManualEntryCache(
+        dishNameText,
+      );
 
       if (cachedData != null) {
-        print(' Manual entry: Cache hit for "$dishNameText"');
+        print('Manual entry: Cache HIT for "$dishNameText"');
 
         final cachedIngredients = List<String>.from(
           cachedData['ingredients'] ?? [],
@@ -3746,6 +3780,12 @@ Make the description:
           }
         }
 
+        setState(() {
+          analysisStatus = 'Analyzing food...';
+        });
+
+        await Future.delayed(const Duration(milliseconds: 800));
+
         final ingredientColors = await allergenAnalysis.computeIngredientColors(
           cachedIngredients,
           cachedAllergens,
@@ -3762,12 +3802,18 @@ Make the description:
           ingredients = cachedIngredients;
           description = cachedDescription;
           allergens = cachedAllergens;
+          analysisStatus = 'Analyzing food';
+        });
+
+        await Future.delayed(const Duration(milliseconds: 200));
+
+        setState(() {
           loading = false;
+          isManualAnalysis = false;
           analysisStatus = '';
           image = null;
         });
 
-        showSnackBar('Loaded from cache', Colors.blue);
         navigateToResults();
         saveToFirebase(null).catchError((_) {});
         dishNameController.clear();
@@ -3778,7 +3824,7 @@ Make the description:
       print('Manual entry: No cache, analyzing "$dishNameText"');
 
       final flashModel = GenerativeModel(
-        model: 'gemini-1.5-flash',
+        model: 'gemini-2.0-flash-exp',
         apiKey: apiKey,
       );
 
@@ -3860,7 +3906,7 @@ GUIDELINES:
 
       await analyzeAllergensFromIngredients(simplifiedIngredients);
 
-      await allergenAnalysis.saveFoodCache(
+      await allergenAnalysis.saveManualEntryCache(
         dishName,
         description,
         ingredients,
@@ -3870,6 +3916,7 @@ GUIDELINES:
 
       setState(() {
         loading = false;
+        isManualAnalysis = false;
         analysisStatus = '';
       });
 
@@ -3879,6 +3926,7 @@ GUIDELINES:
       showSnackBar('Error analyzing ingredients: $e', Colors.red);
       setState(() {
         loading = false;
+        isManualAnalysis = false;
         analysisStatus = '';
       });
     }
@@ -4344,10 +4392,8 @@ GUIDELINES:
                 ),
                 const SizedBox(width: 70),
 
-                //   buildNavButton(assetPath, onTap)
                 GestureDetector(
                   onTap: () {
-                    // Navigate to food allergy screen
                     Navigator.push(
                       context,
                       MaterialPageRoute(
@@ -4363,7 +4409,6 @@ GUIDELINES:
                 ),
                 GestureDetector(
                   onTap: () {
-                    // Navigate to food allergy screen
                     Navigator.push(
                       context,
                       MaterialPageRoute(
@@ -4804,7 +4849,10 @@ GUIDELINES:
               ),
             ),
           ),
-          if (image == null && isCameraInitialized && !showManualInput)
+          if (image == null &&
+              isCameraInitialized &&
+              !showManualInput &&
+              !loading)
             Center(child: ScannerOverlay(animation: animation)),
           if (loading) buildLoadingOverlay(),
           if (!showManualInput) buildCameraControls(),

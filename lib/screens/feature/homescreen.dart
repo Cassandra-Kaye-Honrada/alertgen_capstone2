@@ -622,14 +622,8 @@ class HomescreenState extends State<Homescreen> {
               ingredientColors: ingredientColors,
               onIngredientsChanged: (updatedIngredients) {
                 if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text(
-                        'This is historical data. To update allergen analysis with your current profile, please scan again.',
-                      ),
-                      backgroundColor: Colors.orange,
-                      duration: Duration(seconds: 4),
-                    ),
+                  print(
+                    'This is historical data. To update allergen analysis with your current profile, please scan again.',
                   );
                 }
               },
@@ -1454,7 +1448,7 @@ class HomescreenState extends State<Homescreen> {
                           height: 50,
                           fit: BoxFit.cover,
                         )
-                        : Container(), 
+                        : Container(),
               ),
             ),
 
