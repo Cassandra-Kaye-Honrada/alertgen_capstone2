@@ -1,7 +1,9 @@
 package com.example.allergen
 
+import android.app.PendingIntent
 import android.appwidget.AppWidgetManager
 import android.content.Context
+import android.content.Intent
 import android.content.SharedPreferences
 import android.graphics.*
 import android.widget.RemoteViews
@@ -32,9 +34,50 @@ class HomeWidgetProvider : HomeWidgetProvider() {
                 // Generate and set gauge bitmap
                 val gaugeBitmap = createGaugeBitmap(context, aqi)
                 setImageViewBitmap(R.id.gauge_image, gaugeBitmap)
+
+                // Set up refresh button click intent
+                val refreshIntent = Intent(context, HomeWidgetProvider::class.java).apply {
+                    action = "com.example.allergen.REFRESH_WIDGET"
+                    putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, widgetId)
+                }
+                val refreshPendingIntent = PendingIntent.getBroadcast(
+                    context,
+                    widgetId,
+                    refreshIntent,
+                    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+                )
+                setOnClickPendingIntent(R.id.refresh_button, refreshPendingIntent)
+
+                // Set up widget click to open app
+                val launchIntent = context.packageManager.getLaunchIntentForPackage(context.packageName)
+                val launchPendingIntent = PendingIntent.getActivity(
+                    context,
+                    widgetId,
+                    launchIntent,
+                    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+                )
+                setOnClickPendingIntent(R.id.widget_root, launchPendingIntent)
             }
 
             appWidgetManager.updateAppWidget(widgetId, views)
+        }
+    }
+
+    override fun onReceive(context: Context?, intent: Intent?) {
+        super.onReceive(context, intent)
+        
+        if (intent?.action == "com.example.allergen.REFRESH_WIDGET") {
+            // Notify Flutter app to refresh data
+            context?.let { ctx ->
+                // Send broadcast to Flutter app
+                val refreshIntent = Intent("com.example.allergen.WIDGET_REFRESH")
+                ctx.sendBroadcast(refreshIntent)
+                
+                // Use HomeWidget's click URI mechanism
+                val clickIntent = Intent("es.antonborri.home_widget.HomeWidgetProvider.WIDGET_CLICK")
+                clickIntent.putExtra("uri", "widget://refresh")
+                ctx.sendBroadcast(clickIntent)
+            }
         }
     }
 
@@ -171,5 +214,13 @@ class HomeWidgetProvider : HomeWidgetProvider() {
         val b = (startB + clampedFraction * (endB - startB)).toInt()
 
         return Color.argb(a, r, g, b)
+    }
+
+    companion object {
+        fun sendClickEvent(context: Context, uri: String) {
+            val intent = Intent("es.antonborri.home_widget.HomeWidgetProvider.WIDGET_CLICK")
+            intent.putExtra("uri", uri)
+            context.sendBroadcast(intent)
+        }
     }
 }
