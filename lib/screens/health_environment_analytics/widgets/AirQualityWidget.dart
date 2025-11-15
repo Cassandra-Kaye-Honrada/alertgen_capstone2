@@ -86,8 +86,10 @@ class _AirQualityWidgetState extends State<AirQualityWidget> {
       final user = FirebaseAuth.instance.currentUser;
       if (user == null) return;
 
-      final startDate = DateTime(2025, 10, 1);
-      final endDate = DateTime(2025, 10, 31, 23, 59, 59);
+      // Calculate date range for the last 7 days
+      final now = DateTime.now();
+      final startDate = now.subtract(const Duration(days: 7));
+      final endDate = now;
 
       final foodSnapshot =
           await FirebaseFirestore.instance
