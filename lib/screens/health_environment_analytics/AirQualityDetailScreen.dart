@@ -67,6 +67,7 @@ class _AirQualityDetailScreenState extends State<AirQualityDetailScreen>
     _setupWidgetRefreshListener();
 
     // Register widget click URL scheme
+    _checkInitialUri();
     HomeWidget.registerBackgroundCallback(_backgroundCallback);
 
     if (widget.airQualityData != null) {
@@ -86,14 +87,37 @@ class _AirQualityDetailScreenState extends State<AirQualityDetailScreen>
     // You can perform background updates here if needed
   }
 
+  Future<void> _checkInitialUri() async {
+    try {
+      final Uri? initialUri =
+          await HomeWidget.initiallyLaunchedFromHomeWidget();
+      if (initialUri != null) {
+        print('App opened from widget with URI: $initialUri');
+        if (initialUri.toString().contains('refresh')) {
+          // Delay to allow initialization to complete
+          Future.delayed(const Duration(milliseconds: 500), () {
+            _refreshFromWidget();
+          });
+        }
+      }
+    } catch (e) {
+      print('Error checking initial URI: $e');
+    }
+  }
+
   void _setupWidgetRefreshListener() {
     _widgetRefreshSubscription = HomeWidget.widgetClicked.listen((Uri? uri) {
-      // Widget refresh button was clicked
       print('Widget clicked with URI: $uri');
 
-      if (uri != null && uri.toString().contains('refresh')) {
-        print('Refresh triggered from widget');
-        _refreshFromWidget();
+      // Check if this is a refresh request
+      if (uri != null) {
+        final uriString = uri.toString();
+        print('URI string: $uriString');
+
+        if (uriString.contains('refresh')) {
+          print('Refresh triggered from widget');
+          _refreshFromWidget();
+        }
       }
     });
   }

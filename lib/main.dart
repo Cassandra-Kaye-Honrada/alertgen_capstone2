@@ -11,6 +11,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:home_widget/home_widget.dart';
+import 'dart:async';
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
@@ -37,8 +39,82 @@ void main() async {
   runApp(const AlertGen());
 }
 
-class AlertGen extends StatelessWidget {
+class AlertGen extends StatefulWidget {
   const AlertGen({super.key});
+
+  @override
+  State<AlertGen> createState() => _AlertGenState();
+}
+
+class _AlertGenState extends State<AlertGen> {
+  StreamSubscription<Uri?>? _widgetUriSubscription;
+
+  @override
+  void initState() {
+    super.initState();
+    _setupWidgetListener();
+  }
+
+  void _setupWidgetListener() {
+    // Listen for widget clicks while app is running
+    _widgetUriSubscription = HomeWidget.widgetClicked.listen((Uri? uri) {
+      if (uri != null) {
+        print('Widget clicked in main app: $uri');
+        _handleWidgetUri(uri);
+      }
+    });
+
+    // Check if app was opened from widget
+    HomeWidget.initiallyLaunchedFromHomeWidget().then((Uri? uri) {
+      if (uri != null) {
+        print('App opened from widget: $uri');
+        // Delay to allow app to fully initialize
+        Future.delayed(const Duration(milliseconds: 800), () {
+          _handleWidgetUri(uri);
+        });
+      }
+    });
+  }
+
+  void _handleWidgetUri(Uri uri) {
+    final uriString = uri.toString();
+    print('Processing widget URI: $uriString');
+
+    final context = navigatorKey.currentContext;
+    if (context == null || !context.mounted) {
+      print('Context not available or not mounted');
+      return;
+    }
+
+    // Handle both 'airquality' and 'refresh' URIs
+    if (uriString.contains('airquality') || uriString.contains('refresh')) {
+      print('Navigating to Air Quality screen from widget');
+
+      // Remove any existing air quality screen first, then push new one
+      Navigator.of(context).popUntil((route) => route.isFirst);
+
+      // Small delay to ensure clean state
+      Future.delayed(const Duration(milliseconds: 100), () {
+        if (context.mounted) {
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (context) => AirQualityLoader(),
+              settings: RouteSettings(
+                name: '/air_quality',
+                arguments: {'timestamp': DateTime.now().millisecondsSinceEpoch},
+              ),
+            ),
+          );
+        }
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _widgetUriSubscription?.cancel();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -46,7 +122,10 @@ class AlertGen extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       navigatorKey: navigatorKey,
       home: ShortcutHandler(child: AuthWrapper()),
-      routes: {'/scan': (context) => CameraScannerScreen()},
+      routes: {
+        '/scan': (context) => CameraScannerScreen(),
+        '/air_quality': (context) => AirQualityLoader(),
+      },
     );
   }
 }
@@ -92,7 +171,7 @@ class _ShortcutHandlerState extends State<ShortcutHandler> {
         final args = call.arguments as Map;
         final String route = args['route'] ?? '';
         final bool needsPermission = args['needs_permission'] ?? false;
-        
+
         print('Navigating to route: $route, needsPermission: $needsPermission');
 
         WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -122,7 +201,9 @@ class _ShortcutHandlerState extends State<ShortcutHandler> {
   }
 
   Future<void> triggerAirQuality({bool needsPermission = false}) async {
-    print('Triggering air quality from widget, needsPermission: $needsPermission');
+    print(
+      'Triggering air quality from widget, needsPermission: $needsPermission',
+    );
     final context = navigatorKey.currentContext;
 
     if (context == null) {
@@ -132,7 +213,7 @@ class _ShortcutHandlerState extends State<ShortcutHandler> {
 
     if (needsPermission) {
       await _handleLocationPermission(context);
-      
+
       try {
         await platform.invokeMethod('updateWidget');
       } catch (e) {
@@ -142,41 +223,58 @@ class _ShortcutHandlerState extends State<ShortcutHandler> {
 
     if (context.mounted) {
       print('Context mounted, navigating to AirQualityLoader');
-      await Navigator.push(
-        context,
-        MaterialPageRoute(builder: (context) => AirQualityLoader()),
-      );
+      // Clear navigation stack and push fresh screen
+      Navigator.of(context).popUntil((route) => route.isFirst);
+
+      // Small delay to ensure clean state
+      Future.delayed(const Duration(milliseconds: 100), () async {
+        if (context.mounted) {
+          await Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => AirQualityLoader(),
+              settings: RouteSettings(
+                name: '/air_quality',
+                arguments: {'timestamp': DateTime.now().millisecondsSinceEpoch},
+              ),
+            ),
+          );
+        }
+      });
     }
   }
 
   Future<void> _handleLocationPermission(BuildContext context) async {
     var status = await Permission.location.status;
-    
+
     if (status.isGranted) {
       print('Location permission already granted');
       return;
     }
 
     if (status.isDenied) {
-      bool shouldRequest = await showDialog<bool>(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: Text('Location Permission'),
-          content: Text(
-            'This app needs location access to show accurate air quality data for your area.',
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: Text('Cancel'),
-            ),
-            TextButton(
-              onPressed: () => Navigator.pop(context, true),
-              child: Text('Grant Permission'),
-            ),
-          ],
-        ),
-      ) ?? false;
+      bool shouldRequest =
+          await showDialog<bool>(
+            context: context,
+            builder:
+                (context) => AlertDialog(
+                  title: Text('Location Permission'),
+                  content: Text(
+                    'This app needs location access to show accurate air quality data for your area.',
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(context, false),
+                      child: Text('Cancel'),
+                    ),
+                    TextButton(
+                      onPressed: () => Navigator.pop(context, true),
+                      child: Text('Grant Permission'),
+                    ),
+                  ],
+                ),
+          ) ??
+          false;
 
       if (!shouldRequest) {
         print('User declined to grant location permission');
@@ -184,7 +282,7 @@ class _ShortcutHandlerState extends State<ShortcutHandler> {
       }
 
       status = await Permission.location.request();
-      
+
       if (status.isGranted) {
         print('Location permission granted');
         if (context.mounted) {
@@ -208,26 +306,29 @@ class _ShortcutHandlerState extends State<ShortcutHandler> {
   }
 
   Future<void> showOpenSettingsDialog(BuildContext context) async {
-    bool shouldOpenSettings = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Permission Required'),
-        content: Text(
-          'Location permission is required to show accurate air quality data. '
-          'Please enable it in app settings.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: Text('Open Settings'),
-          ),
-        ],
-      ),
-    ) ?? false;
+    bool shouldOpenSettings =
+        await showDialog<bool>(
+          context: context,
+          builder:
+              (context) => AlertDialog(
+                title: Text('Permission Required'),
+                content: Text(
+                  'Location permission is required to show accurate air quality data. '
+                  'Please enable it in app settings.',
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(context, false),
+                    child: Text('Cancel'),
+                  ),
+                  TextButton(
+                    onPressed: () => Navigator.pop(context, true),
+                    child: Text('Open Settings'),
+                  ),
+                ],
+              ),
+        ) ??
+        false;
 
     if (shouldOpenSettings) {
       await openAppSettings();
@@ -275,10 +376,11 @@ class _ShortcutHandlerState extends State<ShortcutHandler> {
       await Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (context) => EmergencyScreen(
-            emergencyContacts: emergencyService.emergencyContacts,
-            emergencySettings: emergencyService.emergencySettings,
-          ),
+          builder:
+              (context) => EmergencyScreen(
+                emergencyContacts: emergencyService.emergencyContacts,
+                emergencySettings: emergencyService.emergencySettings,
+              ),
         ),
       );
     }
