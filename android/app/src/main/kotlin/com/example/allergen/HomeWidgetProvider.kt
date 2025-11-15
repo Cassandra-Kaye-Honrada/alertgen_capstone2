@@ -28,7 +28,10 @@ class HomeWidgetProvider : HomeWidgetProvider() {
                 // Update text views
                 setTextViewText(R.id.aqi_value, if (aqi > 0) aqi.toString() else "--")
                 setTextViewText(R.id.quality_level, qualityLevel)
-                setTextViewText(R.id.dominant_pollutant, "Dominant: $dominantPollutant")
+                setTextViewText(
+                    R.id.dominant_pollutant, 
+                    if (dominantPollutant != "N/A") "Dominant: $dominantPollutant" else "Dominant: --"
+                )
                 setTextViewText(R.id.location, location)
 
                 // Generate and set gauge bitmap
@@ -214,13 +217,5 @@ class HomeWidgetProvider : HomeWidgetProvider() {
         val b = (startB + clampedFraction * (endB - startB)).toInt()
 
         return Color.argb(a, r, g, b)
-    }
-
-    companion object {
-        fun sendClickEvent(context: Context, uri: String) {
-            val intent = Intent("es.antonborri.home_widget.HomeWidgetProvider.WIDGET_CLICK")
-            intent.putExtra("uri", uri)
-            context.sendBroadcast(intent)
-        }
     }
 }
