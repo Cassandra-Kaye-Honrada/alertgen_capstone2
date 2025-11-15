@@ -64,8 +64,11 @@ class _AirQualityDetailScreenState extends State<AirQualityDetailScreen>
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
 
-    // Setup widget refresh listener
     _setupWidgetRefreshListener();
+
+    // Register widget click URL scheme
+    _checkInitialUri();
+    HomeWidget.registerBackgroundCallback(_backgroundCallback);
 
     if (widget.airQualityData != null) {
       _airQualityData = widget.airQualityData;
@@ -77,37 +80,99 @@ class _AirQualityDetailScreenState extends State<AirQualityDetailScreen>
     }
   }
 
+  // Add this static callback for background updates (optional but recommended)
+  @pragma('vm:entry-point')
+  static Future<void> _backgroundCallback(Uri? uri) async {
+    print('Background callback triggered: $uri');
+    // You can perform background updates here if needed
+  }
+
+  Future<void> _checkInitialUri() async {
+    try {
+      final Uri? initialUri =
+          await HomeWidget.initiallyLaunchedFromHomeWidget();
+      if (initialUri != null) {
+        print('App opened from widget with URI: $initialUri');
+        if (initialUri.toString().contains('refresh')) {
+          // Delay to allow initialization to complete
+          Future.delayed(const Duration(milliseconds: 500), () {
+            _refreshFromWidget();
+          });
+        }
+      }
+    } catch (e) {
+      print('Error checking initial URI: $e');
+    }
+  }
+
   void _setupWidgetRefreshListener() {
     _widgetRefreshSubscription = HomeWidget.widgetClicked.listen((Uri? uri) {
-      // Widget refresh button was clicked
-      print('Widget refresh triggered');
-      _refreshFromWidget();
+      print('Widget clicked with URI: $uri');
+
+      // Check if this is a refresh request
+      if (uri != null) {
+        final uriString = uri.toString();
+        print('URI string: $uriString');
+
+        if (uriString.contains('refresh')) {
+          print('Refresh triggered from widget');
+          _refreshFromWidget();
+        }
+      }
     });
   }
 
   Future<void> _refreshFromWidget() async {
+    print('Starting widget refresh...');
+
+    // Show loading indicator
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Row(
+            children: [
+              SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                ),
+              ),
+              SizedBox(width: 12),
+              Text('Refreshing air quality data...'),
+            ],
+          ),
+          duration: Duration(seconds: 2),
+          backgroundColor: Color(0xFF0B8FAC),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+
     // Refresh the air quality data when widget refresh button is clicked
     if (_latitude != null && _longitude != null) {
       await _fetchAirQuality();
 
-      // Show a snackbar to indicate refresh
+      // Show success snackbar
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Row(
               children: [
-                Icon(Icons.refresh, color: Colors.white, size: 20),
+                Icon(Icons.check_circle, color: Colors.white, size: 20),
                 SizedBox(width: 8),
                 Text('Air quality data updated'),
               ],
             ),
             duration: Duration(seconds: 2),
-            backgroundColor: Color(0xFF0B8FAC),
+            backgroundColor: Color(0xFF4CAF50),
             behavior: SnackBarBehavior.floating,
           ),
         );
       }
     } else {
+      print('Location not available, reinitializing...');
       // If location not available, reinitialize
       await _initialize();
     }
@@ -377,7 +442,7 @@ class _AirQualityDetailScreenState extends State<AirQualityDetailScreen>
             _isLoadingData = false;
           });
 
-          // Update the home screen widget
+          // THIS CODE IS ALREADY IN YOUR FILE - It updates the Android widget!
           if (_airQualityData != null) {
             AirQualityWidgetManager.updateFromAirQualityData(
               airQualityData: _airQualityData!,

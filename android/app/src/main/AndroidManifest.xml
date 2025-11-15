@@ -121,15 +121,17 @@
                 android:resource="@xml/air_quality_widget_info" />
         </receiver>
 
-        <receiver android:name="HomeWidgetProvider" android:exported="true">
+        <receiver
+            android:name="com.example.allergen.HomeWidgetProvider"
+            android:exported="true">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <action android:name="com.example.allergen.REFRESH_WIDGET" />
             </intent-filter>
             <meta-data
                 android:name="android.appwidget.provider"
-                android:resource="@xml/home_widget" />
+                android:resource="@xml/home_widget_info" />
         </receiver>
-
         
         <!-- <receiver
                 android:name=".BootReceiver"
@@ -167,38 +169,50 @@
             </intent-filter>
         </receiver>
 
-        <!-- Main Activity -->
-        <activity
-            android:name=".MainActivity"
-            android:exported="true"
-            android:launchMode="singleTop"
-            android:taskAffinity=""
-            android:theme="@style/LaunchTheme"
-            android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode"
-            android:hardwareAccelerated="true"
-            android:windowSoftInputMode="adjustResize">
-            <meta-data
-                android:name="android.app.shortcuts"
-                android:resource="@xml/shortcuts" />
-            <meta-data
-                android:name="io.flutter.embedding.android.NormalTheme"
-                android:resource="@style/NormalTheme" />
+        <!-- Replace your existing MainActivity section with this -->
+    <activity
+        android:name=".MainActivity"
+        android:exported="true"
+        android:launchMode="singleTop"
+        android:taskAffinity=""
+        android:theme="@style/LaunchTheme"
+        android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode"
+        android:hardwareAccelerated="true"
+        android:windowSoftInputMode="adjustResize">
+        
+        <meta-data
+            android:name="android.app.shortcuts"
+            android:resource="@xml/shortcuts" />
+        <meta-data
+            android:name="io.flutter.embedding.android.NormalTheme"
+            android:resource="@style/NormalTheme" />
 
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
+        <!-- Default launcher intent -->
+        <intent-filter>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.LAUNCHER" />
+        </intent-filter>
 
-            <intent-filter>
-                <action android:name="android.intent.action.SENDTO" />
-                <data android:scheme="sms" />
-            </intent-filter>
+        <!-- ADD THIS NEW INTENT FILTER FOR WIDGET NAVIGATION -->
+        <intent-filter>
+            <action android:name="android.intent.action.VIEW" />
+            <category android:name="android.intent.category.DEFAULT" />
+            <category android:name="android.intent.category.BROWSABLE" />
+            <data android:scheme="alertgen" />
+        </intent-filter>
 
-            <intent-filter>
-                <action android:name="android.intent.action.CALL" />
-                <data android:scheme="tel" />
-            </intent-filter>
-        </activity>
+        <!-- SMS intent -->
+        <intent-filter>
+            <action android:name="android.intent.action.SENDTO" />
+            <data android:scheme="sms" />
+        </intent-filter>
+
+        <!-- Call intent -->
+        <intent-filter>
+            <action android:name="android.intent.action.CALL" />
+            <data android:scheme="tel" />
+        </intent-filter>
+    </activity>
 
         <meta-data
             android:name="flutterEmbedding"

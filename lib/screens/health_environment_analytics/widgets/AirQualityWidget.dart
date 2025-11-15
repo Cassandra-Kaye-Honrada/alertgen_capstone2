@@ -38,6 +38,7 @@ class _AirQualityWidgetState extends State<AirQualityWidget> {
   String? _alertMessage;
   bool _isAlertDismissed = false;
   bool _dontShowAgain = false;
+  
   @override
   void initState() {
     super.initState();

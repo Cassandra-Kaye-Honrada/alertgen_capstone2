@@ -47,7 +47,7 @@ class MainActivity: FlutterActivity() {
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, SHORTCUT_CHANNEL).setMethodCallHandler { call, result ->
             when (call.method) {
                 "updateWidget" -> {
-                    updateAirQualityWidget()
+                    updateHomeWidget()
                     result.success(true)
                 }
                 else -> result.notImplemented()
@@ -133,17 +133,29 @@ class MainActivity: FlutterActivity() {
         handleIntent(intent)
     }
 
-    private fun updateAirQualityWidget() {
-        val intent = Intent(this, AirQualityWidgetProvider::class.java).apply {
-            action = AppWidgetManager.ACTION_APPWIDGET_UPDATE
+    private fun updateHomeWidget() {
+        try {
+            Log.d(TAG, "🔄 Updating HomeWidget...")
+            val intent = Intent(this, HomeWidgetProvider::class.java).apply {
+                action = AppWidgetManager.ACTION_APPWIDGET_UPDATE
+            }
+            
+            val appWidgetManager = AppWidgetManager.getInstance(this)
+            val ids = appWidgetManager.getAppWidgetIds(
+                ComponentName(this, HomeWidgetProvider::class.java)
+            )
+            
+            if (ids.isNotEmpty()) {
+                intent.putExtra(AppWidgetManager.EXTRA_APPWIDGET_IDS, ids)
+                sendBroadcast(intent)
+                Log.d(TAG, "✅ HomeWidget update broadcast sent for ${ids.size} widgets")
+            } else {
+                Log.d(TAG, "⚠️ No HomeWidget instances found")
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "❌ Error updating HomeWidget: ${e.message}")
+            e.printStackTrace()
         }
-        
-        val appWidgetManager = AppWidgetManager.getInstance(this)
-        val ids = appWidgetManager.getAppWidgetIds(
-            ComponentName(this, AirQualityWidgetProvider::class.java)
-        )
-        intent.putExtra(AppWidgetManager.EXTRA_APPWIDGET_IDS, ids)
-        sendBroadcast(intent)
     }
 
     override fun onNewIntent(intent: Intent) {
@@ -151,17 +163,6 @@ class MainActivity: FlutterActivity() {
         Log.d(TAG, "🔗 onNewIntent called")
         setIntent(intent)
         handleIntent(intent)
-
-        if (intent.action == "AIR_QUALITY_ACTION") {
-            val needsPermission = intent.getBooleanExtra("needs_permission", false)
-            
-            // Pass to Flutter
-            MethodChannel(flutterEngine?.dartExecutor?.binaryMessenger!!, SHORTCUT_CHANNEL)
-                .invokeMethod("navigate", mapOf(
-                    "route" to "/air_quality",
-                    "needs_permission" to needsPermission
-                ))
-        }
     }
 
     override fun onResume() {
@@ -174,8 +175,40 @@ class MainActivity: FlutterActivity() {
         intent?.let {
             Log.d(TAG, "🔗 Handling intent - Action: ${it.action}, Data: ${it.data}, Extras: ${it.extras?.keySet()}")
             
-            // Handle widget actions
+            // Handle URI scheme navigation (from HomeWidgetProvider)
+            it.data?.let { uri ->
+                Log.d(TAG, "🔗 URI received: $uri")
+                when {
+                    uri.toString().contains("airquality") -> {
+                        Log.d(TAG, "🌤️ Air Quality navigation from HomeWidget")
+                        notifyFlutterRoute("/air_quality")
+                        it.data = null // Clear to prevent re-triggering
+                        return
+                    }
+                    uri.toString().contains("scan") -> {
+                        Log.d(TAG, "📷 Scan navigation")
+                        notifyFlutterRoute("/scan")
+                        it.data = null
+                        return
+                    }
+                    uri.toString().contains("emergency") -> {
+                        Log.d(TAG, "🚨 Emergency navigation")
+                        notifyFlutterRoute("/emergency")
+                        it.data = null
+                        return
+                    }
+                }
+            }
+            
+            // Handle widget actions (from old AirQualityWidgetProvider if still used)
             when (it.action) {
+                "AIR_QUALITY_ACTION" -> {
+                    Log.d(TAG, "🌤️ Air Quality widget tapped")
+                    val needsPermission = it.getBooleanExtra("needs_permission", false)
+                    notifyFlutterRoute("/air_quality", needsPermission)
+                    it.action = null
+                    return
+                }
                 "EMERGENCY_ACTION" -> {
                     Log.d(TAG, "🚨 Emergency widget tapped")
                     notifyFlutterRoute("/emergency")
@@ -188,13 +221,6 @@ class MainActivity: FlutterActivity() {
                     it.action = null
                     return
                 }
-                "AIR_QUALITY_ACTION" -> {
-                    Log.d(TAG, "🌤️ Air Quality widget tapped")
-                    val needsPermission = it.getBooleanExtra("needs_permission", false)
-                    notifyFlutterRoute("/air_quality", needsPermission)
-                    it.action = null
-                    return
-                }
             }
             
             // Handle route extra
@@ -202,26 +228,16 @@ class MainActivity: FlutterActivity() {
             if (route != null) {
                 Log.d(TAG, "🔗 Route from extra: $route")
                 notifyFlutterRoute(route)
+                it.removeExtra("route") // Clear to prevent re-triggering
                 return
             }
             
-            // Handle deep link data
-            it.data?.let { uri ->
-                Log.d(TAG, "🔗 URI received: $uri")
-                when (uri.toString()) {
-                    "allergen://scan" -> {
-                        Log.d(TAG, "🔗 Navigating to scan")
-                        notifyFlutterRoute("/scan")
-                    }
-                    "allergen://emergency" -> {
-                        Log.d(TAG, "🔗 Navigating to emergency")
-                        notifyFlutterRoute("/emergency")
-                    }
-                    "allergen://air_quality" -> {
-                        Log.d(TAG, "🔗 Navigating to air quality")
-                        notifyFlutterRoute("/air_quality")
-                    }
-                }
+            // Handle navigate_to_air_quality extra (for backward compatibility)
+            if (it.getBooleanExtra("navigate_to_air_quality", false)) {
+                Log.d(TAG, "🌤️ Navigate to air quality from intent extra")
+                notifyFlutterRoute("/air_quality")
+                it.removeExtra("navigate_to_air_quality")
+                return
             }
         }
     }
