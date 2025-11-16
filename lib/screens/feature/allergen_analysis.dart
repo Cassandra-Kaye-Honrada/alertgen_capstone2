@@ -316,8 +316,7 @@ class AllergenAnalysis {
           final cachedImageBytes = await ref.getData();
           if (cachedImageBytes == null) continue;
 
-      
-        final comparisonPrompt = '''
+          final comparisonPrompt = '''
         You are an EXPERT food image comparison AI specializing in Filipino and international cuisine. 
         Your mission is to determine if two images show THE SAME DISH (possibly from different angles, lighting, or plating).
 
@@ -778,100 +777,96 @@ class AllergenAnalysis {
   }
 
   Future<Map<String, dynamic>?> checkManualEntryCache(String dishName) async {
-  try {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) return null;
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) return null;
 
-    final cacheKey = generateCacheKey(dishName);
-    print(' Checking manual entry cache for: $dishName (key: $cacheKey)');
+      final cacheKey = generateCacheKey(dishName);
+      print(' Checking manual entry cache for: $dishName (key: $cacheKey)');
 
-    final doc = await firestore
-        .collection('users')
-        .doc(user.uid)
-        .collection('manual_entry_cache')
-        .doc(cacheKey)
-        .get();
+      final doc =
+          await firestore
+              .collection('users')
+              .doc(user.uid)
+              .collection('manual_entry_cache')
+              .doc(cacheKey)
+              .get();
 
-    if (doc.exists) {
-      print(' Manual entry cache HIT for: $cacheKey');
-      print('   Original entry: ${doc.data()?['dishName']}');
-      
-      firestore
+      if (doc.exists) {
+        print(' Manual entry cache HIT for: $cacheKey');
+        print('   Original entry: ${doc.data()?['dishName']}');
+
+        firestore
+            .collection('users')
+            .doc(user.uid)
+            .collection('manual_entry_cache')
+            .doc(cacheKey)
+            .update({
+              'lastAccessed': FieldValue.serverTimestamp(),
+              'accessCount': FieldValue.increment(1),
+            })
+            .catchError((e) => print('Error updating cache stats: $e'));
+
+        return {...doc.data()!, 'fromCache': true, 'cacheType': 'manual_entry'};
+      }
+
+      print(' Manual entry cache MISS for: $cacheKey');
+      return null;
+    } catch (e) {
+      print('Error checking manual entry cache: $e');
+      return null;
+    }
+  }
+
+  Future<void> saveManualEntryCache(
+    String dishName,
+    String description,
+    List<String> ingredients,
+    List<dynamic> allergens, {
+    IngredientBenefitsMap? ingredientBenefitsMap,
+  }) async {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) return;
+
+      final cacheKey = generateCacheKey(dishName);
+      print('Saving to manual entry cache with key: $cacheKey');
+
+      Map<String, dynamic> cacheData = {
+        'dishName': dishName,
+        'description': description,
+        'ingredients': ingredients,
+        'allergens': allergens.map((a) => a is Map ? a : a.toJson()).toList(),
+        'timestamp': FieldValue.serverTimestamp(),
+        'lastAccessed': FieldValue.serverTimestamp(),
+        'cacheKey': cacheKey,
+        'accessCount': 1,
+        'entryType': 'manual',
+      };
+
+      if (ingredientBenefitsMap != null) {
+        Map<String, String> benefitsToSave = {};
+        for (String ingredient in ingredients) {
+          String? benefit = ingredientBenefitsMap.getBenefit(ingredient);
+          if (benefit != null && benefit.isNotEmpty) {
+            benefitsToSave[ingredient] = benefit;
+          }
+        }
+        cacheData['ingredientBenefits'] = benefitsToSave;
+      }
+
+      await firestore
           .collection('users')
           .doc(user.uid)
           .collection('manual_entry_cache')
           .doc(cacheKey)
-          .update({
-            'lastAccessed': FieldValue.serverTimestamp(),
-            'accessCount': FieldValue.increment(1),
-          })
-          .catchError((e) => print('Error updating cache stats: $e'));
+          .set(cacheData, SetOptions(merge: true));
 
-      return {
-        ...doc.data()!,
-        'fromCache': true,
-        'cacheType': 'manual_entry',
-      };
+      print(' Manual entry cached successfully: $cacheKey');
+    } catch (e) {
+      print(' Error saving manual entry cache: $e');
     }
-
-    print(' Manual entry cache MISS for: $cacheKey');
-    return null;
-  } catch (e) {
-    print('Error checking manual entry cache: $e');
-    return null;
   }
-}
-
-Future<void> saveManualEntryCache(
-  String dishName,
-  String description,
-  List<String> ingredients,
-  List<dynamic> allergens, {
-  IngredientBenefitsMap? ingredientBenefitsMap,
-}) async {
-  try {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) return;
-
-    final cacheKey = generateCacheKey(dishName);
-    print('Saving to manual entry cache with key: $cacheKey');
-
-    Map<String, dynamic> cacheData = {
-      'dishName': dishName,
-      'description': description,
-      'ingredients': ingredients,
-      'allergens': allergens.map((a) => a is Map ? a : a.toJson()).toList(),
-      'timestamp': FieldValue.serverTimestamp(),
-      'lastAccessed': FieldValue.serverTimestamp(),
-      'cacheKey': cacheKey,
-      'accessCount': 1,
-      'entryType': 'manual',
-    };
-
-    if (ingredientBenefitsMap != null) {
-      Map<String, String> benefitsToSave = {};
-      for (String ingredient in ingredients) {
-        String? benefit = ingredientBenefitsMap.getBenefit(ingredient);
-        if (benefit != null && benefit.isNotEmpty) {
-          benefitsToSave[ingredient] = benefit;
-        }
-      }
-      cacheData['ingredientBenefits'] = benefitsToSave;
-    }
-
-    await firestore
-        .collection('users')
-        .doc(user.uid)
-        .collection('manual_entry_cache')
-        .doc(cacheKey)
-        .set(cacheData, SetOptions(merge: true));
-
-    print(' Manual entry cached successfully: $cacheKey');
-  } catch (e) {
-    print(' Error saving manual entry cache: $e');
-  }
-}
-
 
   Future<List<IngredientColorInfo>> computeIngredientColors(
     List<String> ingredients,
@@ -1032,38 +1027,142 @@ Future<void> saveManualEntryCache(
 
     Map<String, Set<String>> allergenCategories = {
       'nuts': {
-        'cashew', 'cashews', 'almond', 'almonds', 'walnut', 'walnuts',
-        'pistachio', 'pistachios', 'hazelnut', 'hazelnuts', 'pecan', 'pecans',
-        'macadamia', 'macadamias', 'brazil nut', 'brazil nuts',
-        'pine nut', 'pine nuts', 'chestnut', 'chestnuts',
+        'cashew',
+        'cashews',
+        'almond',
+        'almonds',
+        'walnut',
+        'walnuts',
+        'pistachio',
+        'pistachios',
+        'hazelnut',
+        'hazelnuts',
+        'pecan',
+        'pecans',
+        'macadamia',
+        'macadamias',
+        'brazil nut',
+        'brazil nuts',
+        'pine nut',
+        'pine nuts',
+        'chestnut',
+        'chestnuts',
       },
       'tree nuts': {
-        'cashew', 'cashews', 'almond', 'almonds', 'walnut', 'walnuts',
-        'pistachio', 'pistachios', 'hazelnut', 'hazelnuts', 'pecan', 'pecans',
-        'macadamia', 'macadamias', 'brazil nut', 'brazil nuts',
-        'pine nut', 'pine nuts', 'chestnut', 'chestnuts',
+        'cashew',
+        'cashews',
+        'almond',
+        'almonds',
+        'walnut',
+        'walnuts',
+        'pistachio',
+        'pistachios',
+        'hazelnut',
+        'hazelnuts',
+        'pecan',
+        'pecans',
+        'macadamia',
+        'macadamias',
+        'brazil nut',
+        'brazil nuts',
+        'pine nut',
+        'pine nuts',
+        'chestnut',
+        'chestnuts',
       },
       'shellfish': {
-        'shrimp', 'shrimps', 'prawn', 'prawns', 'crab', 'crabs',
-        'lobster', 'lobsters', 'crayfish', 'mussel', 'mussels',
-        'clam', 'clams', 'oyster', 'oysters', 'scallop', 'scallops',
-        'squid', 'squids', 'octopus',
+        'shrimp',
+        'shrimps',
+        'prawn',
+        'prawns',
+        'crab',
+        'crabs',
+        'lobster',
+        'lobsters',
+        'crayfish',
+        'mussel',
+        'mussels',
+        'clam',
+        'clams',
+        'oyster',
+        'oysters',
+        'scallop',
+        'scallops',
+        'squid',
+        'squids',
+        'octopus',
       },
       'crustacean': {
-        'shrimp', 'shrimps', 'prawn', 'prawns', 'crab', 'crabs',
-        'lobster', 'lobsters', 'crayfish',
+        'shrimp',
+        'shrimps',
+        'prawn',
+        'prawns',
+        'crab',
+        'crabs',
+        'lobster',
+        'lobsters',
+        'crayfish',
       },
       'fish': {
-        'tuna', 'salmon', 'tilapia', 'bangus', 'milkfish', 'cod',
-        'mackerel', 'sardines', 'sardine', 'anchovies', 'anchovy',
-        'galunggong', 'fish sauce', 'patis', 'fish paste', 'bagoong isda',
+        'tuna',
+        'salmon',
+        'tilapia',
+        'bangus',
+        'milkfish',
+        'cod',
+        'mackerel',
+        'sardines',
+        'sardine',
+        'anchovies',
+        'anchovy',
+        'galunggong',
+        'fish sauce',
+        'patis',
+        'fish paste',
+        'bagoong isda',
       },
     };
 
     Map<String, Set<String>> directAllergens = {
-      'milk': {'milk', 'dairy', 'cheese', 'butter', 'cream', 'yogurt', 'yoghurt', 'whey', 'casein', 'lactose', 'gatas'},
-      'dairy': {'milk', 'dairy', 'cheese', 'butter', 'cream', 'yogurt', 'yoghurt', 'whey', 'casein', 'lactose', 'gatas'},
-      'soy': {'soy', 'soya', 'soybean', 'soybeans', 'soy sauce', 'toyo', 'tofu', 'tokwa', 'edamame', 'soy protein', 'soy milk'},
+      'milk': {
+        'milk',
+        'dairy',
+        'cheese',
+        'butter',
+        'cream',
+        'yogurt',
+        'yoghurt',
+        'whey',
+        'casein',
+        'lactose',
+        'gatas',
+      },
+      'dairy': {
+        'milk',
+        'dairy',
+        'cheese',
+        'butter',
+        'cream',
+        'yogurt',
+        'yoghurt',
+        'whey',
+        'casein',
+        'lactose',
+        'gatas',
+      },
+      'soy': {
+        'soy',
+        'soya',
+        'soybean',
+        'soybeans',
+        'soy sauce',
+        'toyo',
+        'tofu',
+        'tokwa',
+        'edamame',
+        'soy protein',
+        'soy milk',
+      },
       'egg': {'egg', 'eggs', 'itlog', 'albumin'},
       'eggs': {'egg', 'eggs', 'itlog', 'albumin'},
       'wheat': {'wheat', 'gluten', 'flour', 'harina'},
@@ -1073,9 +1172,10 @@ Future<void> saveManualEntryCache(
       'peanuts': {'peanut', 'peanuts', 'groundnut', 'groundnuts', 'mani'},
     };
 
-    Map<String, Set<String>> allAllergenMaps = {}
-      ..addAll(allergenCategories)
-      ..addAll(directAllergens);
+    Map<String, Set<String>> allAllergenMaps =
+        {}
+          ..addAll(allergenCategories)
+          ..addAll(directAllergens);
 
     debugPrint("findMatchingUserAllergen called:");
     debugPrint("  Detected allergen: '$cleanAllergenName'");
@@ -1102,13 +1202,18 @@ Future<void> saveManualEntryCache(
         Set<String> categoryItems = allergenCategories[cleanUserAllergen]!;
 
         if (categoryItems.contains(cleanAllergenName)) {
-          debugPrint("  ✓ MATCH: '$cleanAllergenName' is in user category '$cleanUserAllergen'");
+          debugPrint(
+            "  ✓ MATCH: '$cleanAllergenName' is in user category '$cleanUserAllergen'",
+          );
           return userAllergen;
         }
 
         for (String categoryItem in categoryItems) {
-          if (cleanAllergenName.contains(categoryItem) && categoryItem.length > 3) {
-            debugPrint("  ✓ MATCH: '$cleanAllergenName' contains category item '$categoryItem' from user category '$cleanUserAllergen'");
+          if (cleanAllergenName.contains(categoryItem) &&
+              categoryItem.length > 3) {
+            debugPrint(
+              "  ✓ MATCH: '$cleanAllergenName' contains category item '$categoryItem' from user category '$cleanUserAllergen'",
+            );
             return userAllergen;
           }
         }
@@ -1122,7 +1227,9 @@ Future<void> saveManualEntryCache(
         String cleanUserAllergen = userAllergen.toLowerCase().trim();
 
         if (categoryItems.contains(cleanUserAllergen)) {
-          debugPrint("  ✓ MATCH: User allergen '$cleanUserAllergen' is in detected category '$cleanAllergenName'");
+          debugPrint(
+            "  ✓ MATCH: User allergen '$cleanUserAllergen' is in detected category '$cleanAllergenName'",
+          );
           return userAllergen;
         }
       }
@@ -1135,9 +1242,11 @@ Future<void> saveManualEntryCache(
         String allergenKey = entry.key;
         Set<String> allergenItems = entry.value;
 
-        if (allergenItems.contains(cleanAllergenName) && 
+        if (allergenItems.contains(cleanAllergenName) &&
             allergenItems.contains(cleanUserAllergen)) {
-          debugPrint("  ✓ MATCH: Both '$cleanAllergenName' and '$cleanUserAllergen' are in allergen group '$allergenKey'");
+          debugPrint(
+            "  ✓ MATCH: Both '$cleanAllergenName' and '$cleanUserAllergen' are in allergen group '$allergenKey'",
+          );
           return userAllergen;
         }
       }
@@ -1165,7 +1274,9 @@ Future<void> saveManualEntryCache(
       }
     }
 
-    debugPrint("  ✗ NO MATCH: '$cleanAllergenName' does not match any user allergen");
+    debugPrint(
+      "  ✗ NO MATCH: '$cleanAllergenName' does not match any user allergen",
+    );
     return null;
   }
 

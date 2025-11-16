@@ -3063,7 +3063,7 @@ Generate 3-4 possible dish interpretations with confidence scores.
         final topDish = dishOptions.first;
 
         setState(() {
-          analysisStatus = 'Checking cache...';
+          analysisStatus = '';
         });
 
         var cachedData = await allergenAnalysis.checkFoodCache(
@@ -3388,16 +3388,15 @@ Generate 3-4 possible dish interpretations with confidence scores.
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             ScannerOverlay(animation: animation, status: analysisStatus),
-
             const SizedBox(height: 40),
             AnalysisTrivia(
+              key: ValueKey(isSkinAnalysis ? 'skin' : 'food'),
               analysisType: isSkinAnalysis ? 'skin' : 'food',
               delaySeconds: 1,
               onTriviaLoaded: () {
                 print('Trivia loaded successfully');
               },
             ),
-
             const SizedBox(height: 24),
           ],
         ),

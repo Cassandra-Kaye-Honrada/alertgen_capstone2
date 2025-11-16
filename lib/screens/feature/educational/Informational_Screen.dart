@@ -483,7 +483,7 @@ class _FoodAllergyScreenState extends State<FoodAllergyScreen>
             offset: Offset(0, 20 * (1 - _statsController.value)),
             child: Container(
               margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              height: 240,
+              height: 270,
               child: Column(
                 children: [
                   Expanded(

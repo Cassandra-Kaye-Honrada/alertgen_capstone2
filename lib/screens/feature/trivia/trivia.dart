@@ -5,20 +5,20 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 class AnalysisTrivia extends StatefulWidget {
   final String analysisType;
   final VoidCallback? onTriviaLoaded;
-  final int delaySeconds; // New parameter to control delay
+  final int delaySeconds;
 
   const AnalysisTrivia({
     Key? key,
     required this.analysisType,
     this.onTriviaLoaded,
-    this.delaySeconds = 3, // Default to 3 seconds delay
+    this.delaySeconds = 3,
   }) : super(key: key);
 
   @override
-  State<AnalysisTrivia> createState() => _AnalysisTriviaState();
+  State<AnalysisTrivia> createState() => AnalysisTriviaState();
 }
 
-class _AnalysisTriviaState extends State<AnalysisTrivia>
+class AnalysisTriviaState extends State<AnalysisTrivia>
     with SingleTickerProviderStateMixin {
   String currentTrivia = '';
   bool isLoading = true;
@@ -32,7 +32,6 @@ class _AnalysisTriviaState extends State<AnalysisTrivia>
 
   static const Color primaryTeal = Color(0xFF00A99D);
   static const Color darkTeal = Color(0xFF008B8B);
-  // static const Color lightTeal = Color(0xFF4DD0E1);
 
   final List<String> fallbackFoodTrivia = [
     "🥘 Kare-Kare's peanut sauce makes it unsafe for people with peanut allergies!",
@@ -118,7 +117,6 @@ class _AnalysisTriviaState extends State<AnalysisTrivia>
         });
       }
       await skinBatch.commit();
-      print('Skin trivia populated: ${fallbackSkinTrivia.length} items');
 
       print('All trivia successfully added to Firebase!');
     } catch (e) {
@@ -164,7 +162,6 @@ class _AnalysisTriviaState extends State<AnalysisTrivia>
       }
     } catch (e) {
       print('Error loading Firebase trivia: $e');
-      print('ℹ Using fallback trivia instead');
       useFallbackTrivia();
     }
 

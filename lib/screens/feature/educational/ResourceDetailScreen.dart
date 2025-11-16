@@ -139,9 +139,7 @@ class ResourceDetailScreen extends StatelessWidget {
 
             const SizedBox(height: 20),
 
-            // --------------------------------------------------
             // DESCRIPTION SECTION
-            // --------------------------------------------------
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20),
               child: Card(
@@ -196,9 +194,7 @@ class ResourceDetailScreen extends StatelessWidget {
 
             const SizedBox(height: 24),
 
-            // --------------------------------------------------
             // EXTERNAL RESOURCE CARD
-            // --------------------------------------------------
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20),
               child: Card(

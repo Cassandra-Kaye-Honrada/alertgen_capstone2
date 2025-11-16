@@ -5,12 +5,10 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
 
-// Image Cache Service for Dishes
 class DishImageCacheService {
   static final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   static const String _collectionName = 'dish_image_cache';
 
-  /// Fetch images for a dish - first checks Firebase cache, then Google API
   static Future<List<String>> fetchDishImages(
     String dishName, {
     int maxResults = 3,

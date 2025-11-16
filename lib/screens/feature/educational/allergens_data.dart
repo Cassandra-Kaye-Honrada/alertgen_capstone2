@@ -74,10 +74,7 @@ class AllergensData {
             'Blood tests that measure these antibodies can help your allergist determine whether or not a child is likely to outgrow a milk allergy.\n\n'
             'Ingestion of baked forms of cow milk may help lead to tolerance or resolution of the allergy with time. Be sure to speak to your practitioner about a formal baked milk challenge before trialing at home.',
       ),
-      // Replace this line:
-      // Allergen(name: name, description: description, prevalence: prevalence, icon: icon, color: color, symptoms: symptoms, hiddenSources: hiddenSources)
-
-      // With this complete Egg allergen:
+ 
       Allergen(
         name: 'Egg',
         description:

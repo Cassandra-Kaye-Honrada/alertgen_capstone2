@@ -109,7 +109,7 @@
                 android:name="android.appwidget.provider"
                 android:resource="@xml/scan_widget_info" />
         </receiver>
-
+<!-- 
         <receiver
             android:name=".AirQualityWidgetProvider"
             android:exported="true">
@@ -119,7 +119,7 @@
             <meta-data
                 android:name="android.appwidget.provider"
                 android:resource="@xml/air_quality_widget_info" />
-        </receiver>
+        </receiver> -->
 
         <receiver
             android:name="com.example.allergen.HomeWidgetProvider"
