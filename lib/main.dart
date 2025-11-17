@@ -7,6 +7,7 @@ import 'package:allergen/services/emergency/emergency_service.dart';
 import 'package:allergen/services/push_notification_service.dart';
 import 'package:allergen/widgets/air_quality_widget_manager.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
@@ -15,6 +16,13 @@ import 'package:home_widget/home_widget.dart';
 import 'dart:async';
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
+
+// Background message handler - must be top-level function
+@pragma('vm:entry-point')
+Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  print('Handling background message: ${message.messageId}');
+}
 
 Future<void> requestLocationPermissions() async {
   final status = await Permission.location.request();
@@ -25,18 +33,39 @@ Future<void> requestLocationPermissions() async {
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await AirQualityWidgetManager.initialize();
+
+  // CRITICAL: Initialize Firebase first
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+
+  // Set background message handler immediately after Firebase init
+  FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
+
+  // Load environment variables (lightweight, needed for config)
   await dotenv.load(fileName: ".env");
-  await requestLocationPermissions();
 
-  try {
-    await PushNotificationService().initialize();
-  } catch (e) {
-    print('Push notification initialization failed: $e');
-  }
-
+  // Start the app IMMEDIATELY - don't wait for heavy initialization
   runApp(const AlertGen());
+
+  // Defer heavy initialization to after first frame renders
+  WidgetsBinding.instance.addPostFrameCallback((_) {
+    _initializeServicesInBackground();
+  });
+}
+
+// Initialize heavy services in background after UI is rendered
+Future<void> _initializeServicesInBackground() async {
+  try {
+    // Initialize services in parallel where possible
+    await Future.wait([
+      AirQualityWidgetManager.initialize(),
+      requestLocationPermissions(),
+      PushNotificationService().initialize(),
+    ], eagerError: true);
+
+    print('All services initialized successfully');
+  } catch (e) {
+    print('Service initialization error: $e');
+  }
 }
 
 class AlertGen extends StatefulWidget {
@@ -148,10 +177,12 @@ class _ShortcutHandlerState extends State<ShortcutHandler> {
   Future<void> initializeEmergencyService() async {
     try {
       await emergencyService.initialize();
-      setState(() {
-        isInitialized = true;
-      });
-      print('Emergency service initialized in ShortcutHandler');
+      if (mounted) {
+        setState(() {
+          isInitialized = true;
+        });
+        print('Emergency service initialized in ShortcutHandler');
+      }
     } catch (e) {
       print('Error initializing emergency service: $e');
     }
@@ -217,10 +248,8 @@ class _ShortcutHandlerState extends State<ShortcutHandler> {
 
     if (context.mounted) {
       print('Context mounted, navigating to AirQualityLoader');
-      // Clear navigation stack and push fresh screen
       Navigator.of(context).popUntil((route) => route.isFirst);
 
-      // Small delay to ensure clean state
       Future.delayed(const Duration(milliseconds: 100), () async {
         if (context.mounted) {
           await Navigator.push(
@@ -341,6 +370,7 @@ class _ShortcutHandlerState extends State<ShortcutHandler> {
     if (!isInitialized) {
       print('Emergency service not initialized, initializing now...');
       await initializeEmergencyService();
+      if (!mounted) return;
     }
 
     await emergencyService.forceReload();
@@ -388,6 +418,7 @@ class _ShortcutHandlerState extends State<ShortcutHandler> {
   @override
   void dispose() {
     platform.setMethodCallHandler(null);
+    emergencyService.dispose(); // Clean up emergency service
     super.dispose();
   }
 }

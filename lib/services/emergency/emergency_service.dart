@@ -1147,22 +1147,91 @@ class EmergencyService {
   //   );
   // }
 
-  void dispose() {
-    print('Disposing EmergencyService');
+  // void dispose() {
+  //   print('Disposing EmergencyService');
 
+  //   _shouldContinueEmergencySequence = false;
+  //   _isSequenceActive = false;
+
+  //   cleanupCurrentSequence();
+  //   stopCallStateMonitoring();
+  //   _authSubscription?.cancel();
+  //   _stateManager.dispose();
+  //   _locationService.dispose();
+  //   _communicationService.dispose();
+
+  //   _isInitialized = false;
+
+  //   print('EmergencyService disposed');
+  // }
+  void dispose() {
+    print('🧹 Disposing EmergencyService (Sequence #$_currentSequenceId)');
+
+    // Stop all active sequences immediately
     _shouldContinueEmergencySequence = false;
     _isSequenceActive = false;
+    _isCurrentlyInCall = false;
+    _isWaitingForCallTimeout = false;
 
-    cleanupCurrentSequence();
-    stopCallStateMonitoring();
+    // Complete any pending completers to prevent hanging futures
+    if (_callCompletionCompleter != null &&
+        !_callCompletionCompleter!.isCompleted) {
+      try {
+        _callCompletionCompleter!.complete();
+      } catch (e) {
+        print('Error completing call completer during dispose: $e');
+      }
+    }
+    _callCompletionCompleter = null;
+
+    // Cancel all timers
+    _callTimeoutTimer?.cancel();
+    _postCallDelayTimer?.cancel();
+    _callTimeoutTimer = null;
+    _postCallDelayTimer = null;
+
+    // Stop phone state monitoring
+    _callStateMonitoringEnabled = false;
+    _phoneStateSubscription?.cancel();
+    _phoneStateSubscription = null;
+
+    // Clean up current call state
+    _currentCallNumber = null;
+    _callStartTime = null;
+    _currentContactIndex = 0;
+
+    // Cancel auth subscription
     _authSubscription?.cancel();
-    _stateManager.dispose();
-    _locationService.dispose();
-    _communicationService.dispose();
+    _authSubscription = null;
 
+    // Dispose all service managers
+    try {
+      _stateManager.dispose();
+    } catch (e) {
+      print('Error disposing state manager: $e');
+    }
+
+    try {
+      _locationService.dispose();
+    } catch (e) {
+      print('Error disposing location service: $e');
+    }
+
+    try {
+      _communicationService.dispose();
+    } catch (e) {
+      print('Error disposing communication service: $e');
+    }
+
+    // Stop any playing sounds
+    _communicationService.stopEmergencySound();
+    _communicationService.stopEmergencyServiceSound();
+
+    // Clear data
+    _emergencyContacts.clear();
     _isInitialized = false;
 
-    print('EmergencyService disposed');
+    print('✅ EmergencyService disposed successfully');
   }
 
   Future<Map<String, dynamic>> getHealthStatus() async {

@@ -695,7 +695,7 @@ class _AirQualityDetailScreenState extends State<AirQualityDetailScreen>
       backgroundColor: const Color(0xFFF5F9FA),
       appBar: AppBar(
         title: const Text(
-          'Health & Environment',
+          'Your Analytics',
           style: TextStyle(
             fontSize: 20,
             fontWeight: FontWeight.w600,
@@ -745,7 +745,7 @@ class _AirQualityDetailScreenState extends State<AirQualityDetailScreen>
                     children: [
                       Icon(Icons.air, size: 18),
                       SizedBox(width: 8),
-                      Text('Air Quality'),
+                      Text('Environment'),
                     ],
                   ),
                 ),
@@ -755,7 +755,7 @@ class _AirQualityDetailScreenState extends State<AirQualityDetailScreen>
                     children: [
                       Icon(Icons.analytics, size: 18),
                       SizedBox(width: 8),
-                      Text('Analytics'),
+                      Text('Allergen'),
                     ],
                   ),
                 ),
