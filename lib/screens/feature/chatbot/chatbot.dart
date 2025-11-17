@@ -269,7 +269,7 @@ class _ChatbotModalState extends State<ChatbotModal>
       welcomeMessage += " $userFirstName";
     }
     welcomeMessage +=
-        "! I'm your Allergen Assistant. I can help you with information about allergens, allergic reactions, cross-reactivity, and allergy management. What would you like to know?";
+        "! I'm Allei, your allergen assistant. I can help you with information about allergens, allergic reactions, cross-reactivity, and allergy management. What would you like to know?";
 
     setState(() {
       messages.add(
@@ -636,7 +636,7 @@ Each question should be:
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  'Allergen Assistant',
+                                  'Allei — Your AI Assistant ',
                                   style: TextStyle(
                                     color: Color(0xFF2D3748),
                                     fontSize: 18,
