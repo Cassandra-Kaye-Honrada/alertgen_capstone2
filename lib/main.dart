@@ -56,7 +56,6 @@ class _AlertGenState extends State<AlertGen> {
   }
 
   void _setupWidgetListener() {
-    // Listen for widget clicks while app is running
     _widgetUriSubscription = HomeWidget.widgetClicked.listen((Uri? uri) {
       if (uri != null) {
         print('Widget clicked in main app: $uri');

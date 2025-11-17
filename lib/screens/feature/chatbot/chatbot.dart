@@ -196,12 +196,16 @@ class _ChatbotModalState extends State<ChatbotModal>
               .where('type', isEqualTo: 'allergen')
               .get();
 
+      List<String> loadedAllergens = [];
+      for (var doc in allergenSnapshot.docs) {
+        final name = doc.data()['name'] as String? ?? '';
+        if (name.isNotEmpty) {
+          loadedAllergens.add(name);
+        }
+      }
+
       setState(() {
-        allergens =
-            allergenSnapshot.docs
-                .map((doc) => doc.data()['name'] as String? ?? '')
-                .where((name) => name.isNotEmpty)
-                .toList();
+        allergens = loadedAllergens;
       });
 
       final chatDoc =
@@ -214,18 +218,32 @@ class _ChatbotModalState extends State<ChatbotModal>
 
       if (chatDoc.exists && chatDoc.data()?['messages'] != null) {
         List<dynamic> savedMessages = chatDoc.data()!['messages'];
+
+        bool savedShowChips = chatDoc.data()?['showChips'] ?? false;
+        List<String> savedSuggestions = [];
+        if (chatDoc.data()?['suggestionChips'] != null) {
+          for (var e in (chatDoc.data()?['suggestionChips'] as List<dynamic>)) {
+            savedSuggestions.add(e.toString());
+          }
+        }
+
         if (savedMessages.isNotEmpty) {
           setState(() {
-            messages =
-                savedMessages.map((msg) {
-                  return ChatMessage(
-                    text: msg['text'],
-                    isUser: msg['isUser'],
-                    timestamp: (msg['timestamp'] as Timestamp).toDate(),
-                  );
-                }).toList();
+            messages = [];
+            for (var msg in savedMessages) {
+              messages.add(
+                ChatMessage(
+                  text: msg['text'],
+                  isUser: msg['isUser'],
+                  timestamp: (msg['timestamp'] as Timestamp).toDate(),
+                ),
+              );
+            }
             isLoading = false;
-            showChips = false;
+            showChips = savedShowChips;
+            if (savedSuggestions.isNotEmpty) {
+              suggestionChips = savedSuggestions;
+            }
           });
 
           restoreChatSession();
@@ -411,6 +429,8 @@ Each question should be:
           .doc('history')
           .set({
             'messages': messagesToSave,
+            'showChips': showChips,
+            'suggestionChips': suggestionChips,
             'updatedAt': FieldValue.serverTimestamp(),
           }, SetOptions(merge: true));
     } catch (e) {
@@ -435,6 +455,8 @@ Each question should be:
     WidgetsBinding.instance.addPostFrameCallback((_) {
       scrollToBottom();
     });
+
+    await saveChatHistory();
 
     if (!typingAnimationController.isAnimating) {
       typingAnimationController.repeat(reverse: true);
