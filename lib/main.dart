@@ -64,11 +64,9 @@ class _AlertGenState extends State<AlertGen> {
       }
     });
 
-    // Check if app was opened from widget
     HomeWidget.initiallyLaunchedFromHomeWidget().then((Uri? uri) {
       if (uri != null) {
         print('App opened from widget: $uri');
-        // Delay to allow app to fully initialize
         Future.delayed(const Duration(milliseconds: 800), () {
           _handleWidgetUri(uri);
         });
@@ -86,14 +84,11 @@ class _AlertGenState extends State<AlertGen> {
       return;
     }
 
-    // Handle both 'airquality' and 'refresh' URIs
     if (uriString.contains('airquality') || uriString.contains('refresh')) {
       print('Navigating to Air Quality screen from widget');
 
-      // Remove any existing air quality screen first, then push new one
       Navigator.of(context).popUntil((route) => route.isFirst);
 
-      // Small delay to ensure clean state
       Future.delayed(const Duration(milliseconds: 100), () {
         if (context.mounted) {
           Navigator.of(context).push(

@@ -165,9 +165,9 @@ class _SkinResultScreenState
                           height: 72,
                           padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
-                            color: likelihoodColor.withOpacity(0.1),
+                            color: Colors.white,
                             border: Border.all(
-                              color: likelihoodColor.withOpacity(0.3),
+                              color: Colors.transparent,
                               width: 1.5,
                             ),
                             borderRadius: BorderRadius.circular(20),
@@ -182,9 +182,9 @@ class _SkinResultScreenState
                           ),
                           child: Center(
                             child: Icon(
-                              Icons.warning_amber_rounded,
+                              _getAllergenIcon(allergen),
                               color: AppColors.primaryColor3,
-                              size: 22,
+                              size: 28,
                             ),
                           ),
                         ),
@@ -195,7 +195,7 @@ class _SkinResultScreenState
                             allergen,
                             textAlign: TextAlign.center,
                             style: TextStyle(
-                              color: likelihoodColor,
+                              color: Colors.grey.shade700,
                               fontWeight: FontWeight.w500,
                               fontSize: 12,
                             ),
@@ -280,6 +280,45 @@ class _SkinResultScreenState
         ],
       ),
     );
+  }
+
+  IconData _getAllergenIcon(String allergen) {
+    final String name = allergen.toLowerCase().trim();
+    switch (name) {
+      case 'milk':
+      case 'dairy':
+        return FontAwesomeIcons.glassWater;
+      case 'cashew':
+      case 'nuts':
+      case 'nut':
+      case 'tree nuts':
+        return FontAwesomeIcons.seedling;
+      case 'egg':
+      case 'eggs':
+        return FontAwesomeIcons.egg;
+      case 'fish':
+        return FontAwesomeIcons.fish;
+      case 'wheat':
+      case 'gluten':
+        return FontAwesomeIcons.wheatAwn;
+      case 'soy':
+      case 'soybean':
+      case 'soya':
+        return FontAwesomeIcons.leaf;
+      case 'shellfish':
+      case 'seafood':
+      case 'crustacean':
+        return FontAwesomeIcons.shrimp;
+      case 'peanut':
+      case 'peanuts':
+        return FontAwesomeIcons.circleNodes;
+      case 'sesame':
+        return FontAwesomeIcons.pepperHot;
+      case 'lupin':
+        return FontAwesomeIcons.spa;
+      default:
+        return FontAwesomeIcons.triangleExclamation;
+    }
   }
 
   @override

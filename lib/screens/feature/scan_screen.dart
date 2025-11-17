@@ -1957,9 +1957,7 @@ CRITICAL DISH NAMING RULES:
 - Use generic dish names, not regional variations
 - For regional dishes, use the most common/recognized name
 
-═══════════════════════════════════════════════════════════════════════════════
 LUZON REGIONAL DISHES (Northern Philippines)
-═══════════════════════════════════════════════════════════════════════════════
 
 ILOCOS REGION SPECIALTIES:
 
@@ -2135,9 +2133,8 @@ SOUTHERN TAGALOG/CALABARZON:
     - Sardine-sized
     - Silvery appearance
 
-═══════════════════════════════════════════════════════════════════════════════
 VISAYAS REGIONAL DISHES (Central Philippines)
-═══════════════════════════════════════════════════════════════════════════════
+
 
 CEBU (Cebuano Cuisine):
 
@@ -2225,9 +2222,7 @@ LEYTE & EASTERN VISAYAS:
     - Dark brown from chocolate/cocoa
     - Sticky rice with coconut milk
 
-═══════════════════════════════════════════════════════════════════════════════
 MINDANAO REGIONAL DISHES (Southern Philippines)
-═══════════════════════════════════════════════════════════════════════════════
 
 MUSLIM MINDANAO (Maguindanao, Maranao, Tausug):
 
@@ -2315,9 +2310,7 @@ GENERAL MINDANAO:
     - Deep-fried or grilled
     - Crunchy
 
-═══════════════════════════════════════════════════════════════════════════════
 COMMON FILIPINO DISHES (Nationwide)
-═══════════════════════════════════════════════════════════════════════════════
 
 TOMATO-BASED STEWS:
 
@@ -2440,9 +2433,7 @@ OTHER POPULAR DISHES:
     - Yellowish color from miso
     - Sour and savory
 
-═══════════════════════════════════════════════════════════════════════════════
 INTERNATIONAL DISHES
-═══════════════════════════════════════════════════════════════════════════════
 
 ASIAN CUISINE:
 
