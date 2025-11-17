@@ -4,12 +4,9 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
-
-// This handler must be a top-level function
-@pragma('vm:entry-point')
-Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
-  print('Handling background message: ${message.messageId}');
-}
+// REMOVED: Background handler moved to main.dart
+// The background handler must be a top-level function in main.dart
+// and registered ONCE using FirebaseMessaging.onBackgroundMessage() in main()
 
 class PushNotificationService {
   final FirebaseMessaging _fcm = FirebaseMessaging.instance;
@@ -87,8 +84,8 @@ class PushNotificationService {
     // Handle foreground messages
     FirebaseMessaging.onMessage.listen(_handleForegroundMessage);
 
-    // Handle background messages
-    FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
+    // REMOVED: FirebaseMessaging.onBackgroundMessage()
+    // This is now called in main.dart to prevent duplicate isolate error
 
     // Handle notification opened app
     FirebaseMessaging.onMessageOpenedApp.listen(_handleNotificationOpen);

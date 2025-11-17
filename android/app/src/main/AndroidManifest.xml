@@ -37,7 +37,8 @@
     <application
         android:label="AlertGen"
         android:name="${applicationName}"
-        android:icon="@mipmap/ic_launcher">
+        android:icon="@mipmap/ic_launcher"
+        android:enableOnBackInvokedCallback="true">
 
         <!-- ✅ Facebook SDK Meta-Data -->
         <meta-data

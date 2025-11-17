@@ -31,8 +31,7 @@ class AirQualityTab extends StatelessWidget {
             location: location,
           ),
           const SizedBox(height: 16),
-          buildEnvironmentalScore(),
-          const SizedBox(height: 16),
+          // buildEnvironmentalScore(),
           if (weatherData != null) buildWeatherCard(),
           if (weatherData != null) const SizedBox(height: 16),
           buildPollutantChart(),
@@ -788,31 +787,6 @@ class AirQualityTab extends StatelessWidget {
     );
   }
 
-  Widget _buildInfoChip(IconData icon, String text, Color color) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 14, color: color),
-          const SizedBox(width: 6),
-          Text(
-            text,
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-              color: color,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _buildEmptyState(String message) {
     return Center(
       child: Padding(
@@ -930,21 +904,6 @@ class AirQualityTab extends StatelessWidget {
       '50n': WeatherIcons.night_fog,
     };
     return iconMap[iconCode.toLowerCase()] ?? WeatherIcons.day_sunny;
-  }
-}
-
-// ============================================================================
-// HELPER CLASSES
-// ============================================================================
-
-class _AQIColors {
-  static Color getColor(int aqi) {
-    if (aqi <= 50) return const Color(0xFF00E400);
-    if (aqi <= 100) return const Color(0xFF92D050);
-    if (aqi <= 200) return const Color(0xFFFFFF00);
-    if (aqi <= 300) return const Color(0xFFFF7E00);
-    if (aqi <= 400) return const Color(0xFFFF0000);
-    return const Color(0xFF990000);
   }
 }
 
