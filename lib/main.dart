@@ -68,19 +68,19 @@ class AlertGen extends StatefulWidget {
 }
 
 class _AlertGenState extends State<AlertGen> {
-  StreamSubscription<Uri?>? _widgetUriSubscription;
+  StreamSubscription<Uri?>? widgetUriSubscription;
 
   @override
   void initState() {
     super.initState();
-    _setupWidgetListener();
+    setupWidgetListener();
   }
 
-  void _setupWidgetListener() {
-    _widgetUriSubscription = HomeWidget.widgetClicked.listen((Uri? uri) {
+  void setupWidgetListener() {
+    widgetUriSubscription = HomeWidget.widgetClicked.listen((Uri? uri) {
       if (uri != null) {
         print('Widget clicked in main app: $uri');
-        _handleWidgetUri(uri);
+        handleWidgetUri(uri);
       }
     });
 
@@ -88,13 +88,13 @@ class _AlertGenState extends State<AlertGen> {
       if (uri != null) {
         print('App opened from widget: $uri');
         Future.delayed(const Duration(milliseconds: 800), () {
-          _handleWidgetUri(uri);
+          handleWidgetUri(uri);
         });
       }
     });
   }
 
-  void _handleWidgetUri(Uri uri) {
+  void handleWidgetUri(Uri uri) {
     final uriString = uri.toString();
     print('Processing widget URI: $uriString');
 
@@ -127,7 +127,7 @@ class _AlertGenState extends State<AlertGen> {
 
   @override
   void dispose() {
-    _widgetUriSubscription?.cancel();
+    widgetUriSubscription?.cancel();
     super.dispose();
   }
 
@@ -410,7 +410,9 @@ class _ShortcutHandlerState extends State<ShortcutHandler> {
   @override
   void dispose() {
     platform.setMethodCallHandler(null);
-    emergencyService.dispose(); // Clean up emergency service
+    if (emergencyService.isEmergencyActive) {
+      emergencyService.cancelEmergencyCall();
+    }
     super.dispose();
   }
 }

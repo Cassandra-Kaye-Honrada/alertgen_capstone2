@@ -41,56 +41,56 @@ class _AuthWrapperState extends State<AuthWrapper> {
         bool isFirstLaunch = await AppPreferences.isFirstLaunch();
 
         if (isFirstLaunch) {
-          if (mounted) {
-            setState(() {
-              showSplash = true;
-              targetScreen = WelcomeScreen();
-            });
-          }
+          if (!mounted) return;
+          setState(() {
+            showSplash = true;
+            targetScreen = WelcomeScreen();
+          });
+
           await Future.delayed(Duration(seconds: 3));
-          if (mounted) {
-            setState(() {
-              isInitializing = false;
-            });
-          }
+
+          if (!mounted) return;
+          setState(() {
+            isInitializing = false;
+          });
           return;
         }
 
-        if (mounted) {
-          setState(() {
-            showSplash = false;
-            targetScreen = LoginScreen();
-            isInitializing = false;
-          });
-        }
+        if (!mounted) return;
+        setState(() {
+          showSplash = false;
+          targetScreen = LoginScreen();
+          isInitializing = false;
+        });
+
         authState = FirebaseAuth.instance.authStateChanges().listen(
           handleAuthStateChange,
         );
         return;
       }
 
-      if (mounted) {
-        setState(() {
-          showSplash = true;
-        });
-      }
+      if (!mounted) return;
+      setState(() {
+        showSplash = true;
+      });
+
       await Future.delayed(Duration(seconds: 3));
+
+      if (!mounted) return;
       await handleLoggedInUser(currentUser);
 
-      if (mounted) {
-        setState(() {
-          isInitializing = false;
-        });
-      }
+      if (!mounted) return;
+      setState(() {
+        isInitializing = false;
+      });
     } catch (e) {
       print('Error initializing app: $e');
-      if (mounted) {
-        setState(() {
-          showSplash = false;
-          targetScreen = LoginScreen();
-          isInitializing = false;
-        });
-      }
+      if (!mounted) return;
+      setState(() {
+        showSplash = false;
+        targetScreen = LoginScreen();
+        isInitializing = false;
+      });
     }
   }
 
@@ -99,37 +99,44 @@ class _AuthWrapperState extends State<AuthWrapper> {
 
     if (user != null) {
       await handleLoggedInUser(user);
-      if (mounted) {
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (_) => targetScreen ?? LoginScreen()),
-        );
-      }
+      if (!mounted) return;
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (_) => targetScreen ?? LoginScreen()),
+      );
     } else {
-      if (mounted) {
-        Navigator.of(
-          context,
-        ).pushReplacement(MaterialPageRoute(builder: (_) => LoginScreen()));
-      }
+      if (!mounted) return;
+      Navigator.of(
+        context,
+      ).pushReplacement(MaterialPageRoute(builder: (_) => LoginScreen()));
     }
   }
 
   Future<void> handleLoggedInUser(User user) async {
     try {
       if (!user.emailVerified) {
-        targetScreen = VerifyEmailScreen(email: user.email ?? 'your email');
+        if (!mounted) return;
+        setState(() {
+          targetScreen = VerifyEmailScreen(email: user.email ?? 'your email');
+        });
         return;
       }
 
       bool hasCompletedOnboarding = await checkIfCompletedOnboarding();
 
-      if (hasCompletedOnboarding) {
-        targetScreen = Homescreen();
-      } else {
-        targetScreen = OnboardingScreen();
-      }
+      if (!mounted) return;
+      setState(() {
+        if (hasCompletedOnboarding) {
+          targetScreen = Homescreen();
+        } else {
+          targetScreen = OnboardingScreen();
+        }
+      });
     } catch (e) {
       print('Error handling logged in user: $e');
-      targetScreen = LoginScreen();
+      if (!mounted) return;
+      setState(() {
+        targetScreen = LoginScreen();
+      });
     }
   }
 
