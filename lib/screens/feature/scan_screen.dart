@@ -264,22 +264,6 @@ class _CameraScannerScreenState extends State<CameraScannerScreen>
     }
   }
 
-  bool isNetworkError(dynamic error) {
-    return error is SocketException ||
-        error is HttpException ||
-        error.toString().toLowerCase().contains('connection') ||
-        error.toString().toLowerCase().contains('network') ||
-        error.toString().toLowerCase().contains('socket') ||
-        error.toString().toLowerCase().contains('timed out');
-  }
-
-  void showNetworkErrorSnackBar(String operation) {
-    showSnackBar(
-      'No internet connection or slow network. Please check your connection and try again.',
-      Colors.red.shade700,
-    );
-  }
-
   Future<String> determineImageType(File imageFile) async {
     if (apiKey == 'YOUR_API_KEY_HERE') {
       setState(() {
@@ -328,14 +312,9 @@ Return JSON:
 }
 ''';
 
-      final response = await model
-          .generateContent([
-            Content.multi([
-              TextPart(prompt),
-              DataPart('image/jpeg', imageBytes),
-            ]),
-          ])
-          .timeout(const Duration(seconds: 10));
+      final response = await model.generateContent([
+        Content.multi([TextPart(prompt), DataPart('image/jpeg', imageBytes)]),
+      ]);
 
       String responseText = response.text ?? '';
       String cleanResponse = responseText;
@@ -388,12 +367,7 @@ Return JSON:
         image = null;
         analysisStatus = '';
       });
-
-      if (isNetworkError(e)) {
-        showNetworkErrorSnackBar('image type detection');
-      } else {
-        showSnackBar('Failed to analyze image type', Colors.red);
-      }
+      showSnackBar('Failed to analyze image type', Colors.red);
       return 'other';
     }
   }
@@ -764,8 +738,8 @@ ENVIRONMENTAL & MIXED CONDITIONS:
 
 
 CRITICAL ALLERGEN FORMATTING RULES:
- WRONG: "allergen": "eggs, milk, peanuts"
- CORRECT: Create SEPARATE trigger objects for EACH allergen
+❌ WRONG: "allergen": "eggs, milk, peanuts"
+✅ CORRECT: Create SEPARATE trigger objects for EACH allergen
 
 
 Example of CORRECT format:
@@ -863,6 +837,7 @@ CRITICAL REQUIREMENTS:
 
       final imageHash = skinCache.generateImageHash(imageFile);
 
+      print('Starting cache check - Level 1: Exact image hash');
       final exactMatch = await skinCache.checkExactImageMatch(imageHash);
 
       if (exactMatch != null) {
@@ -891,14 +866,12 @@ CRITICAL REQUIREMENTS:
       final model = GenerativeModel(model: 'gemini-2.5-pro', apiKey: apiKey);
       final imageBytes = await imageFile.readAsBytes();
 
-      final response = await model
-          .generateContent([
-            Content.multi([
-              TextPart(skinAnalysisPrompt),
-              DataPart('image/jpeg', imageBytes),
-            ]),
-          ])
-          .timeout(const Duration(seconds: 10));
+      final response = await model.generateContent([
+        Content.multi([
+          TextPart(skinAnalysisPrompt),
+          DataPart('image/jpeg', imageBytes),
+        ]),
+      ]);
 
       final skinOptions = await parseMultiOptionSkinResponse(
         response.text ?? '',
@@ -916,6 +889,11 @@ CRITICAL REQUIREMENTS:
       skinOptions.sort((a, b) => b.confidence.compareTo(a.confidence));
       final topCondition = skinOptions.first;
 
+      print(
+        'Top condition identified: ${topCondition.conditionName} (${topCondition.confidence})',
+      );
+
+      print('Level 2: Checking cache by condition name...');
       final conditionMatch = await skinCache.checkConditionNameMatch(
         topCondition.conditionName,
       );
@@ -980,12 +958,7 @@ CRITICAL REQUIREMENTS:
         loading = false;
         analysisStatus = '';
       });
-
-      if (isNetworkError(e)) {
-        showNetworkErrorSnackBar('skin condition analysis');
-      } else {
-        showSnackBar('Error analyzing skin condition: $e', Colors.red);
-      }
+      showSnackBar('Error analyzing skin condition: $e', Colors.red);
     }
   }
 
@@ -1984,7 +1957,9 @@ CRITICAL DISH NAMING RULES:
 - Use generic dish names, not regional variations
 - For regional dishes, use the most common/recognized name
 
+═══════════════════════════════════════════════════════════════════════════════
 LUZON REGIONAL DISHES (Northern Philippines)
+═══════════════════════════════════════════════════════════════════════════════
 
 ILOCOS REGION SPECIALTIES:
 
@@ -2160,8 +2135,9 @@ SOUTHERN TAGALOG/CALABARZON:
     - Sardine-sized
     - Silvery appearance
 
+═══════════════════════════════════════════════════════════════════════════════
 VISAYAS REGIONAL DISHES (Central Philippines)
-
+═══════════════════════════════════════════════════════════════════════════════
 
 CEBU (Cebuano Cuisine):
 
@@ -2249,7 +2225,9 @@ LEYTE & EASTERN VISAYAS:
     - Dark brown from chocolate/cocoa
     - Sticky rice with coconut milk
 
+═══════════════════════════════════════════════════════════════════════════════
 MINDANAO REGIONAL DISHES (Southern Philippines)
+═══════════════════════════════════════════════════════════════════════════════
 
 MUSLIM MINDANAO (Maguindanao, Maranao, Tausug):
 
@@ -2337,7 +2315,9 @@ GENERAL MINDANAO:
     - Deep-fried or grilled
     - Crunchy
 
+═══════════════════════════════════════════════════════════════════════════════
 COMMON FILIPINO DISHES (Nationwide)
+═══════════════════════════════════════════════════════════════════════════════
 
 TOMATO-BASED STEWS:
 
@@ -2460,7 +2440,9 @@ OTHER POPULAR DISHES:
     - Yellowish color from miso
     - Sour and savory
 
+═══════════════════════════════════════════════════════════════════════════════
 INTERNATIONAL DISHES
+═══════════════════════════════════════════════════════════════════════════════
 
 ASIAN CUISINE:
 
@@ -2935,9 +2917,9 @@ OCR TEXT:
 Return only the product name.
 ''';
 
-      final quickResponse = await model
-          .generateContent([Content.text(quickExtractPrompt)])
-          .timeout(const Duration(seconds: 10));
+      final quickResponse = await model.generateContent([
+        Content.text(quickExtractPrompt),
+      ]);
 
       String possibleProductName = (quickResponse.text ?? '').trim();
 
@@ -3038,12 +3020,7 @@ Generate 3-4 possible product interpretations with confidence scores.
         loading = false;
         analysisStatus = 'Generating dish options';
       });
-
-      if (isNetworkError(e)) {
-        showNetworkErrorSnackBar('product label analysis');
-      } else {
-        showSnackBar('Error analyzing product label: $e', Colors.red);
-      }
+      showSnackBar('Error analyzing product label: $e', Colors.red);
     }
   }
 
@@ -3069,14 +3046,12 @@ Carefully examine this food image. PRIMARY FOCUS should be on Filipino dishes an
 Generate 3-4 possible dish interpretations with confidence scores.
 ''';
 
-      final ingredientResponse = await model
-          .generateContent([
-            Content.multi([
-              TextPart(ingredientPrompt),
-              DataPart('image/jpeg', imageBytes),
-            ]),
-          ])
-          .timeout(const Duration(seconds: 10));
+      final ingredientResponse = await model.generateContent([
+        Content.multi([
+          TextPart(ingredientPrompt),
+          DataPart('image/jpeg', imageBytes),
+        ]),
+      ]);
 
       final dishOptions = await parseMultiOptionResponse(
         ingredientResponse.text ?? '',
@@ -3180,11 +3155,7 @@ Generate 3-4 possible dish interpretations with confidence scores.
         loading = false;
         analysisStatus = '';
       });
-      if (isNetworkError(e)) {
-        showNetworkErrorSnackBar('food image analysis');
-      } else {
-        showSnackBar('Error analyzing image: $e', Colors.red);
-      }
+      showSnackBar('Error analyzing image: $e', Colors.red);
     }
   }
 
@@ -3473,9 +3444,9 @@ GUIDELINES:
 - Focus on facts, no promotional language
 ''';
 
-      final benefitsResponse = await model
-          .generateContent([Content.text(benefitsPrompt)])
-          .timeout(const Duration(seconds: 10));
+      final benefitsResponse = await model.generateContent([
+        Content.text(benefitsPrompt),
+      ]);
 
       String responseText = benefitsResponse.text ?? '';
       String cleanResponse = responseText;
@@ -3500,10 +3471,6 @@ GUIDELINES:
       }
     } catch (e) {
       print('Error fetching missing benefits: $e');
-
-      if (isNetworkError(e)) {
-        showNetworkErrorSnackBar('ingredient benefits lookup');
-      }
     }
   }
 
@@ -3518,9 +3485,9 @@ INGREDIENTS TO SIMPLIFY:
 ${originalIngredients.join(', ')}
 ''';
 
-      final simplificationResponse = await model
-          .generateContent([Content.text(simplificationPrompt)])
-          .timeout(const Duration(seconds: 10));
+      final simplificationResponse = await model.generateContent([
+        Content.text(simplificationPrompt),
+      ]);
 
       final simplificationData = await parseSimplificationResponse(
         simplificationResponse.text ?? '',
@@ -3557,9 +3524,6 @@ ${originalIngredients.join(', ')}
       return simplifiedIngredients;
     } catch (e) {
       print('Error simplifying ingredient names: $e');
-      if (isNetworkError(e)) {
-        showNetworkErrorSnackBar('ingredient simplification');
-      }
       return originalIngredients;
     }
   }
@@ -3646,9 +3610,9 @@ ${ingredientList.join(', ')}
 Analyze each ingredient carefully and identify allergens.
 ''';
 
-      final allergenResponse = await model
-          .generateContent([Content.text(allergenPrompt)])
-          .timeout(const Duration(seconds: 10));
+      final allergenResponse = await model.generateContent([
+        Content.text(allergenPrompt),
+      ]);
 
       final parsedAllergenData = await allergenAnalysis.parseAllergenResponse(
         allergenResponse.text ?? '',
@@ -3675,10 +3639,6 @@ Analyze each ingredient carefully and identify allergens.
       setState(() {
         allergens = [];
       });
-
-      if (isNetworkError(e)) {
-        showNetworkErrorSnackBar('allergen analysis');
-      }
     }
   }
 
@@ -3745,16 +3705,10 @@ Make the description:
 3. Enticing and informative
 ''';
 
-      final response = await model
-          .generateContent([Content.text(prompt)])
-          .timeout(const Duration(seconds: 10));
+      final response = await model.generateContent([Content.text(prompt)]);
       return response.text ?? 'No description available';
     } catch (e) {
       print('Error generating description: $e');
-
-      if (isNetworkError(e)) {
-        showNetworkErrorSnackBar('description generation');
-      }
       return 'Description not available due to error';
     }
   }
@@ -3968,11 +3922,7 @@ GUIDELINES:
       navigateToResults();
       saveToFirebase(null).catchError((_) {});
     } catch (e) {
-      if (isNetworkError(e)) {
-        showNetworkErrorSnackBar('manual ingredient analysis');
-      } else {
-        showSnackBar('Error analyzing ingredients: $e', Colors.red);
-      }
+      showSnackBar('Error analyzing ingredients: $e', Colors.red);
       setState(() {
         loading = false;
         isManualAnalysis = false;
