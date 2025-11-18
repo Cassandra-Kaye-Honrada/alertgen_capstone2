@@ -6,10 +6,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'models/air_quality_models.dart';
 
 class AllergenAnalyticsTab extends StatefulWidget {
-  final AirQualityData airQualityData;
-
-  const AllergenAnalyticsTab({Key? key, required this.airQualityData})
-    : super(key: key);
+  const AllergenAnalyticsTab({Key? key}) : super(key: key);
 
   @override
   State<AllergenAnalyticsTab> createState() => _AllergenAnalyticsTabState();
@@ -19,6 +16,7 @@ class _AllergenAnalyticsTabState extends State<AllergenAnalyticsTab> {
   List<Map<String, dynamic>> _allergenHistory = [];
   bool _isLoadingHistory = true;
   String _selectedTimeRange = '7';
+  bool _mounted = true; // ADD THIS
 
   @override
   void initState() {
@@ -26,19 +24,31 @@ class _AllergenAnalyticsTabState extends State<AllergenAnalyticsTab> {
     _loadAllergenHistory();
   }
 
+  @override
+  void dispose() {
+    _mounted = false; // ADD THIS
+    super.dispose();
+  }
+
+  // ADD THIS HELPER METHOD
+  void _safeSetState(VoidCallback fn) {
+    if (_mounted && mounted) {
+      setState(fn);
+    }
+  }
+
   Future<void> _loadAllergenHistory() async {
     try {
       final user = FirebaseAuth.instance.currentUser;
       if (user == null) return;
 
-      final foodSnapshot =
-          await FirebaseFirestore.instance
-              .collection('users')
-              .doc(user.uid)
-              .collection('history')
-              .orderBy('timestamp', descending: true)
-              .limit(100)
-              .get();
+      final foodSnapshot = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .collection('history')
+          .orderBy('timestamp', descending: true)
+          .limit(100)
+          .get();
 
       List<Map<String, dynamic>> history = [];
 
@@ -63,12 +73,14 @@ class _AllergenAnalyticsTabState extends State<AllergenAnalyticsTab> {
         }
       }
 
-      setState(() {
+      // CHANGED: Use _safeSetState instead of setState
+      _safeSetState(() {
         _allergenHistory = history;
         _isLoadingHistory = false;
       });
     } catch (e) {
-      setState(() => _isLoadingHistory = false);
+      // CHANGED: Use _safeSetState instead of setState
+      _safeSetState(() => _isLoadingHistory = false);
     }
   }
 
@@ -227,7 +239,7 @@ class _AllergenAnalyticsTabState extends State<AllergenAnalyticsTab> {
   Widget _buildTimeRangeButton(String days, String label) {
     final isSelected = _selectedTimeRange == days;
     return GestureDetector(
-      onTap: () => setState(() => _selectedTimeRange = days),
+      onTap: () => _safeSetState(() => _selectedTimeRange = days), // CHANGED
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 12),
         decoration: BoxDecoration(
@@ -293,69 +305,68 @@ class _AllergenAnalyticsTabState extends State<AllergenAnalyticsTab> {
       title: 'Allergen Frequency',
       iconColor: Colors.purple[600]!,
       child: Column(
-        children:
-            allergenData.entries.take(8).map((entry) {
-              final percentage = entry.value['percentage'] as double;
-              final count = entry.value['count'] as int;
-              final color = entry.value['color'] as Color;
+        children: allergenData.entries.take(8).map((entry) {
+          final percentage = entry.value['percentage'] as double;
+          final count = entry.value['count'] as int;
+          final color = entry.value['color'] as Color;
 
-              return Padding(
-                padding: const EdgeInsets.only(bottom: 14),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 14),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Expanded(
-                          child: Row(
-                            children: [
-                              Container(
-                                width: 8,
-                                height: 8,
-                                decoration: BoxDecoration(
-                                  color: color,
-                                  shape: BoxShape.circle,
-                                ),
-                              ),
-                              const SizedBox(width: 10),
-                              Expanded(
-                                child: Text(
-                                  entry.key,
-                                  style: const TextStyle(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w600,
-                                    color: Colors.black87,
-                                  ),
-                                ),
-                              ),
-                            ],
+                    Expanded(
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 8,
+                            height: 8,
+                            decoration: BoxDecoration(
+                              color: color,
+                              shape: BoxShape.circle,
+                            ),
                           ),
-                        ),
-                        Text(
-                          '$count× (${percentage.toStringAsFixed(0)}%)',
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.grey[700],
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              entry.key,
+                              style: const TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.black87,
+                              ),
+                            ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
-                    const SizedBox(height: 8),
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(4),
-                      child: LinearProgressIndicator(
-                        value: percentage / 100,
-                        backgroundColor: Colors.grey[200],
-                        valueColor: AlwaysStoppedAnimation<Color>(color),
-                        minHeight: 6,
+                    Text(
+                      '$count× (${percentage.toStringAsFixed(0)}%)',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.grey[700],
                       ),
                     ),
                   ],
                 ),
-              );
-            }).toList(),
+                const SizedBox(height: 8),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(4),
+                  child: LinearProgressIndicator(
+                    value: percentage / 100,
+                    backgroundColor: Colors.grey[200],
+                    valueColor: AlwaysStoppedAnimation<Color>(color),
+                    minHeight: 6,
+                  ),
+                ),
+              ],
+            ),
+          );
+        }).toList(),
       ),
     );
   }
@@ -408,52 +419,51 @@ class _AllergenAnalyticsTabState extends State<AllergenAnalyticsTab> {
       child: Wrap(
         spacing: 8,
         runSpacing: 8,
-        children:
-            symptomData.entries.take(10).map((entry) {
-              return Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 8,
+        children: symptomData.entries.take(10).map((entry) {
+          return Container(
+            padding: const EdgeInsets.symmetric(
+              horizontal: 12,
+              vertical: 8,
+            ),
+            decoration: BoxDecoration(
+              color: Colors.red[50],
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: Colors.red[200]!, width: 1),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  entry.key,
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.red[700],
+                  ),
                 ),
-                decoration: BoxDecoration(
-                  color: Colors.red[50],
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: Colors.red[200]!, width: 1),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      entry.key,
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.red[700],
-                      ),
+                const SizedBox(width: 6),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 6,
+                    vertical: 2,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.red[100],
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    '${entry.value}',
+                    style: TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.red[900],
                     ),
-                    const SizedBox(width: 6),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 6,
-                        vertical: 2,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.red[100],
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Text(
-                        '${entry.value}',
-                        style: TextStyle(
-                          fontSize: 10,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.red[900],
-                        ),
-                      ),
-                    ),
-                  ],
+                  ),
                 ),
-              );
-            }).toList(),
+              ],
+            ),
+          );
+        }).toList(),
       ),
     );
   }
@@ -466,52 +476,50 @@ class _AllergenAnalyticsTabState extends State<AllergenAnalyticsTab> {
       title: 'Common Food Sources',
       iconColor: Colors.orange[600]!,
       child: Column(
-        children:
-            sourcesData.entries.take(3).map((entry) {
-              return Padding(
-                padding: const EdgeInsets.only(bottom: 16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      entry.key,
-                      style: const TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.black87,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Wrap(
-                      spacing: 6,
-                      runSpacing: 6,
-                      children:
-                          (entry.value as List<String>).take(5).map((source) {
-                            return Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 10,
-                                vertical: 6,
-                              ),
-                              decoration: BoxDecoration(
-                                color: Colors.orange[50],
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(color: Colors.orange[200]!),
-                              ),
-                              child: Text(
-                                source,
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w500,
-                                  color: Colors.orange[900],
-                                ),
-                              ),
-                            );
-                          }).toList(),
-                    ),
-                  ],
+        children: sourcesData.entries.take(3).map((entry) {
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  entry.key,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black87,
+                  ),
                 ),
-              );
-            }).toList(),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 6,
+                  runSpacing: 6,
+                  children: (entry.value as List<String>).take(5).map((source) {
+                    return Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 6,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.orange[50],
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.orange[200]!),
+                      ),
+                      child: Text(
+                        source,
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w500,
+                          color: Colors.orange[900],
+                        ),
+                      ),
+                    );
+                  }).toList(),
+                ),
+              ],
+            ),
+          );
+        }).toList(),
       ),
     );
   }
@@ -524,76 +532,75 @@ class _AllergenAnalyticsTabState extends State<AllergenAnalyticsTab> {
       title: 'Recent Exposures',
       iconColor: Colors.indigo[600]!,
       child: Column(
-        children:
-            recentExposures.map((exposure) {
-              final timestamp = exposure['timestamp'] as DateTime;
-              final timeAgo = _getTimeAgo(timestamp);
-              final riskColor = _getRiskColor(exposure['riskLevel'] as String);
+        children: recentExposures.map((exposure) {
+          final timestamp = exposure['timestamp'] as DateTime;
+          final timeAgo = _getTimeAgo(timestamp);
+          final riskColor = _getRiskColor(exposure['riskLevel'] as String);
 
-              return Container(
-                margin: const EdgeInsets.only(bottom: 10),
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.grey[50],
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: Colors.grey[200]!),
+          return Container(
+            margin: const EdgeInsets.only(bottom: 10),
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.grey[50],
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: Colors.grey[200]!),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 4,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: riskColor,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
                 ),
-                child: Row(
-                  children: [
-                    Container(
-                      width: 4,
-                      height: 44,
-                      decoration: BoxDecoration(
-                        color: riskColor,
-                        borderRadius: BorderRadius.circular(2),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            exposure['allergenName'] as String,
-                            style: const TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.black87,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            exposure['dishName'] as String,
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: Colors.grey[600],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 4,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.grey[200],
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Text(
-                        timeAgo,
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.grey[700],
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        exposure['allergenName'] as String,
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black87,
                         ),
                       ),
-                    ),
-                  ],
+                      const SizedBox(height: 4),
+                      Text(
+                        exposure['dishName'] as String,
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey[600],
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-              );
-            }).toList(),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.grey[200],
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    timeAgo,
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.grey[700],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          );
+        }).toList(),
       ),
     );
   }
@@ -734,19 +741,17 @@ class _AllergenAnalyticsTabState extends State<AllergenAnalyticsTab> {
   Map<String, dynamic> _calculateStats() {
     final days = int.parse(_selectedTimeRange);
     final cutoffDate = DateTime.now().subtract(Duration(days: days));
-    final filtered =
-        _allergenHistory
-            .where((e) => (e['timestamp'] as DateTime).isAfter(cutoffDate))
-            .toList();
+    final filtered = _allergenHistory
+        .where((e) => (e['timestamp'] as DateTime).isAfter(cutoffDate))
+        .toList();
 
     final total = filtered.length;
     final unique =
         filtered.map((e) => e['allergenName'] as String).toSet().length;
     final average = days > 0 ? (total / days).toStringAsFixed(1) : '0';
-    final severe =
-        filtered
-            .where((e) => (e['riskLevel'] as String).toLowerCase() == 'severe')
-            .length;
+    final severe = filtered
+        .where((e) => (e['riskLevel'] as String).toLowerCase() == 'severe')
+        .length;
 
     return {
       'total': total,
@@ -830,10 +835,9 @@ class _AllergenAnalyticsTabState extends State<AllergenAnalyticsTab> {
   Map<String, Map<String, dynamic>> _calculateAllergenFrequency() {
     final days = int.parse(_selectedTimeRange);
     final cutoffDate = DateTime.now().subtract(Duration(days: days));
-    final filtered =
-        _allergenHistory
-            .where((e) => (e['timestamp'] as DateTime).isAfter(cutoffDate))
-            .toList();
+    final filtered = _allergenHistory
+        .where((e) => (e['timestamp'] as DateTime).isAfter(cutoffDate))
+        .toList();
 
     final Map<String, int> counts = {};
     final Map<String, String> risks = {};
@@ -862,10 +866,9 @@ class _AllergenAnalyticsTabState extends State<AllergenAnalyticsTab> {
   Map<String, Map<String, dynamic>> _calculateRiskDistribution() {
     final days = int.parse(_selectedTimeRange);
     final cutoffDate = DateTime.now().subtract(Duration(days: days));
-    final filtered =
-        _allergenHistory
-            .where((e) => (e['timestamp'] as DateTime).isAfter(cutoffDate))
-            .toList();
+    final filtered = _allergenHistory
+        .where((e) => (e['timestamp'] as DateTime).isAfter(cutoffDate))
+        .toList();
 
     final Map<String, int> counts = {'severe': 0, 'moderate': 0, 'mild': 0};
 
@@ -895,10 +898,9 @@ class _AllergenAnalyticsTabState extends State<AllergenAnalyticsTab> {
   Map<String, int> _calculateSymptomFrequency() {
     final days = int.parse(_selectedTimeRange);
     final cutoffDate = DateTime.now().subtract(Duration(days: days));
-    final filtered =
-        _allergenHistory
-            .where((e) => (e['timestamp'] as DateTime).isAfter(cutoffDate))
-            .toList();
+    final filtered = _allergenHistory
+        .where((e) => (e['timestamp'] as DateTime).isAfter(cutoffDate))
+        .toList();
 
     final Map<String, int> symptoms = {};
 
@@ -918,10 +920,9 @@ class _AllergenAnalyticsTabState extends State<AllergenAnalyticsTab> {
   Map<String, List<String>> _calculateCommonSources() {
     final days = int.parse(_selectedTimeRange);
     final cutoffDate = DateTime.now().subtract(Duration(days: days));
-    final filtered =
-        _allergenHistory
-            .where((e) => (e['timestamp'] as DateTime).isAfter(cutoffDate))
-            .toList();
+    final filtered = _allergenHistory
+        .where((e) => (e['timestamp'] as DateTime).isAfter(cutoffDate))
+        .toList();
 
     final Map<String, Set<String>> sources = {};
     final Map<String, int> counts = {};
@@ -946,10 +947,9 @@ class _AllergenAnalyticsTabState extends State<AllergenAnalyticsTab> {
   List<Map<String, dynamic>> _generateInsights() {
     final days = int.parse(_selectedTimeRange);
     final cutoffDate = DateTime.now().subtract(Duration(days: days));
-    final filtered =
-        _allergenHistory
-            .where((e) => (e['timestamp'] as DateTime).isAfter(cutoffDate))
-            .toList();
+    final filtered = _allergenHistory
+        .where((e) => (e['timestamp'] as DateTime).isAfter(cutoffDate))
+        .toList();
 
     final insights = <Map<String, dynamic>>[];
 
@@ -972,10 +972,9 @@ class _AllergenAnalyticsTabState extends State<AllergenAnalyticsTab> {
     }
 
     // Severe risk warning
-    final severe =
-        filtered
-            .where((e) => (e['riskLevel'] as String).toLowerCase() == 'severe')
-            .length;
+    final severe = filtered
+        .where((e) => (e['riskLevel'] as String).toLowerCase() == 'severe')
+        .length;
 
     if (severe > 0) {
       insights.add({
@@ -1339,10 +1338,9 @@ class EnhancedTrendChartPainter extends CustomPainter {
   }
 
   void _drawGrid(Canvas canvas, Size size) {
-    final gridPaint =
-        Paint()
-          ..color = Colors.grey[300]!
-          ..strokeWidth = 0.5;
+    final gridPaint = Paint()
+      ..color = Colors.grey[300]!
+      ..strokeWidth = 0.5;
 
     // Horizontal lines
     for (int i = 0; i <= 5; i++) {
@@ -1359,13 +1357,12 @@ class EnhancedTrendChartPainter extends CustomPainter {
     int maxValue,
     double segmentWidth,
   ) {
-    final linePaint =
-        Paint()
-          ..color = color
-          ..strokeWidth = 2.5
-          ..style = PaintingStyle.stroke
-          ..strokeCap = StrokeCap.round
-          ..strokeJoin = StrokeJoin.round;
+    final linePaint = Paint()
+      ..color = color
+      ..strokeWidth = 2.5
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round;
 
     final path = Path();
     final fillPath = Path();

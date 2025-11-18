@@ -2,7 +2,8 @@
 
 import 'package:allergen/screens/feature/educational/Informational_Screen.dart';
 import 'package:allergen/screens/feature/scan_screen.dart';
-import 'package:allergen/screens/health_environment_analytics/air_quality_tab.dart';
+import 'package:allergen/screens/health_environment_analytics/air_quality_tab.dart'
+    hide AppColors;
 import 'package:allergen/screens/health_environment_analytics/allergen_analytics_tab.dart';
 import 'package:allergen/screens/health_environment_analytics/models/air_quality_models.dart';
 import 'package:allergen/screens/health_environment_analytics/models/weather_models.dart';
@@ -45,12 +46,10 @@ class _AirQualityDetailScreenState extends State<AirQualityDetailScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
 
-  // Data variables
+  // Data variables - REMOVED: loading and error states
   AirQualityData? _airQualityData;
   String _location = "Loading...";
   List<Population> _applicablePopulations = [];
-  bool _isLoadingData = false;
-  String? _error;
 
   Population _currentPopulation = Population.generalPopulation;
   double? _latitude;
@@ -150,11 +149,9 @@ class _AirQualityDetailScreenState extends State<AirQualityDetailScreen>
       );
     }
 
-    // Refresh the air quality data when widget refresh button is clicked
-    if (_latitude != null && _longitude != null) {
-      await _fetchAirQuality();
-
-      // Show success snackbar
+    // REMOVED: The refresh logic since AirQualityWidget will handle its own refresh
+    // Just show success message after a delay to simulate refresh
+    Future.delayed(const Duration(seconds: 2), () {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -171,11 +168,7 @@ class _AirQualityDetailScreenState extends State<AirQualityDetailScreen>
           ),
         );
       }
-    } else {
-      print('Location not available, reinitializing...');
-      // If location not available, reinitialize
-      await _initialize();
-    }
+    });
   }
 
   Future<void> _initialize() async {
@@ -189,7 +182,7 @@ class _AirQualityDetailScreenState extends State<AirQualityDetailScreen>
       if (!serviceEnabled) {
         if (mounted) {
           setState(() {
-            _error = 'Location services are disabled';
+            _location = 'Location services disabled';
           });
         }
         return;
@@ -201,7 +194,7 @@ class _AirQualityDetailScreenState extends State<AirQualityDetailScreen>
         if (permission == LocationPermission.denied) {
           if (mounted) {
             setState(() {
-              _error = 'Location permission denied';
+              _location = 'Location permission denied';
             });
           }
           return;
@@ -211,7 +204,7 @@ class _AirQualityDetailScreenState extends State<AirQualityDetailScreen>
       if (permission == LocationPermission.deniedForever) {
         if (mounted) {
           setState(() {
-            _error = 'Location permission permanently denied';
+            _location = 'Location permission permanently denied';
           });
         }
         return;
@@ -231,7 +224,7 @@ class _AirQualityDetailScreenState extends State<AirQualityDetailScreen>
     } catch (e) {
       if (mounted) {
         setState(() {
-          _error = 'Error getting location: ${e.toString()}';
+          _location = 'Error getting location';
         });
       }
     }
@@ -264,7 +257,6 @@ class _AirQualityDetailScreenState extends State<AirQualityDetailScreen>
       if (user == null) {
         _applicablePopulations = [Population.generalPopulation];
         _currentPopulation = Population.generalPopulation;
-        await _fetchAirQuality();
         return;
       }
 
@@ -282,12 +274,9 @@ class _AirQualityDetailScreenState extends State<AirQualityDetailScreen>
         _applicablePopulations = [Population.generalPopulation];
         _currentPopulation = Population.generalPopulation;
       }
-
-      await _fetchAirQuality();
     } catch (e) {
       _applicablePopulations = [Population.generalPopulation];
       _currentPopulation = Population.generalPopulation;
-      await _fetchAirQuality();
     }
   }
 
@@ -354,257 +343,11 @@ class _AirQualityDetailScreenState extends State<AirQualityDetailScreen>
     return Population.generalPopulation;
   }
 
-  String _getPopulationRecommendationKey(Population population) {
-    switch (population) {
-      case Population.generalPopulation:
-        return 'generalPopulation';
-      case Population.elderly:
-        return 'elderly';
-      case Population.lungDiseasePopulation:
-        return 'lungDiseasePopulation';
-      case Population.heartDiseasePopulation:
-        return 'heartDiseasePopulation';
-      case Population.athletes:
-        return 'athletes';
-      case Population.pregnantWomen:
-        return 'pregnantWomen';
-      case Population.children:
-        return 'children';
-    }
-  }
-
-  Future<void> _fetchAirQuality() async {
-    if (_latitude == null || _longitude == null) {
-      if (mounted) {
-        setState(() {
-          _error = 'Location not available';
-        });
-      }
-      return;
-    }
-
-    if (mounted) {
-      setState(() {
-        _isLoadingData = true;
-      });
-    }
-
-    try {
-      final apiKey =
-          widget.apiKey ??
-          const String.fromEnvironment('GOOGLE_AIR_QUALITY_API_KEY');
-
-      if (apiKey.isEmpty) {
-        if (mounted) {
-          setState(() {
-            _error = 'API key not configured';
-            _isLoadingData = false;
-          });
-        }
-        return;
-      }
-
-      final url = Uri.parse(
-        'https://airquality.googleapis.com/v1/currentConditions:lookup?key=$apiKey',
-      );
-
-      final requestBody = {
-        'location': {'latitude': _latitude, 'longitude': _longitude},
-        'extraComputations': [
-          'HEALTH_RECOMMENDATIONS',
-          'DOMINANT_POLLUTANT_CONCENTRATION',
-          'POLLUTANT_CONCENTRATION',
-          'LOCAL_AQI',
-          'POLLUTANT_ADDITIONAL_INFO',
-        ],
-        'languageCode': 'en',
-        'universalAqi': false,
-      };
-
-      final response = await http
-          .post(
-            url,
-            headers: {'Content-Type': 'application/json'},
-            body: json.encode(requestBody),
-          )
-          .timeout(const Duration(seconds: 15));
-
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        if (mounted) {
-          setState(() {
-            _airQualityData = AirQualityData.fromGoogleJson(
-              data,
-              _currentPopulation,
-              _getPopulationRecommendationKey(_currentPopulation),
-              _applicablePopulations,
-            );
-            _isLoadingData = false;
-          });
-
-          // THIS CODE IS ALREADY IN YOUR FILE - It updates the Android widget!
-          if (_airQualityData != null) {
-            AirQualityWidgetManager.updateFromAirQualityData(
-              airQualityData: _airQualityData!,
-              location: _location,
-            );
-          }
-        }
-      } else {
-        if (mounted) {
-          setState(() {
-            _error = 'Failed to load air quality data';
-            _isLoadingData = false;
-          });
-        }
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() {
-          _error = 'Error: ${e.toString()}';
-          _isLoadingData = false;
-        });
-      }
-    }
-  }
-
   @override
   void dispose() {
     _tabController.dispose();
     _widgetRefreshSubscription?.cancel(); // Cancel the subscription
     super.dispose();
-  }
-
-  Widget _buildLoadingOverlay() {
-    return Container(
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [Color(0xFFE8F4F8), Color(0xFFFFFFFF)],
-        ),
-      ),
-      child: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(20),
-                boxShadow: [
-                  BoxShadow(
-                    color: const Color(0xFF0B8FAC).withOpacity(0.1),
-                    blurRadius: 20,
-                    spreadRadius: 5,
-                  ),
-                ],
-              ),
-              child: const CircularProgressIndicator(
-                color: Color(0xFF0B8FAC),
-                strokeWidth: 3,
-              ),
-            ),
-            const SizedBox(height: 24),
-            const Text(
-              'Loading air quality data...',
-              style: TextStyle(
-                color: Color(0xFF0B8FAC),
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildErrorState() {
-    return Container(
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [Color(0xFFE8F4F8), Color(0xFFFFFFFF)],
-        ),
-      ),
-      padding: const EdgeInsets.all(24),
-      child: Center(
-        child: Container(
-          padding: const EdgeInsets.all(32),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(24),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.08),
-                blurRadius: 20,
-                spreadRadius: 2,
-              ),
-            ],
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFFFEBEE),
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(
-                  Icons.cloud_off,
-                  size: 48,
-                  color: Color(0xFFE53935),
-                ),
-              ),
-              const SizedBox(height: 24),
-              Text(
-                _error!,
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  fontSize: 16,
-                  color: Color(0xFF333333),
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-              const SizedBox(height: 32),
-              ElevatedButton(
-                onPressed: _initialize,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF0B8FAC),
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 48,
-                    vertical: 16,
-                  ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(30),
-                  ),
-                  elevation: 0,
-                ),
-                child: const Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.refresh, size: 20),
-                    SizedBox(width: 8),
-                    Text(
-                      'Try Again',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
   }
 
   Widget _buildBottomNavigation() {
@@ -766,20 +509,25 @@ class _AirQualityDetailScreenState extends State<AirQualityDetailScreen>
       ),
       body: Stack(
         children: [
-          _airQualityData == null
-              ? (_error != null ? _buildErrorState() : _buildLoadingOverlay())
-              : TabBarView(
-                controller: _tabController,
-                children: [
-                  AirQualityTab(
-                    airQualityData: _airQualityData!,
-                    location: _location,
-                    applicablePopulations: _applicablePopulations,
-                    weatherData: WeatherData.mock(),
-                  ),
-                  AllergenAnalyticsTab(airQualityData: _airQualityData!),
-                ],
+          // REMOVED: Loading and error states - AirQualityWidget handles its own state
+          TabBarView(
+            controller: _tabController,
+            children: [
+              AirQualityTab(
+                // Pass the API key and let AirQualityWidget handle data fetching
+                apiKey: widget.apiKey,
+                location: _location,
+                applicablePopulations: _applicablePopulations,
+                weatherData: WeatherData.mock(),
               ),
+              // For AllergenAnalyticsTab, we need to pass air quality data if available
+              // or let it fetch its own data
+              if (_airQualityData != null)
+                AllergenAnalyticsTab()
+              else
+                const Center(child: Text('No air quality data available')),
+            ],
+          ),
           Positioned(
             left: 0,
             right: 0,
