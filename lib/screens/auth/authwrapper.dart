@@ -17,6 +17,7 @@ class AuthWrapper extends StatefulWidget {
 
 class _AuthWrapperState extends State<AuthWrapper> {
   bool isInitializing = true;
+  bool showSplash = false;
   Widget? targetScreen;
   StreamSubscription<User?>? authState;
 
@@ -34,10 +35,47 @@ class _AuthWrapperState extends State<AuthWrapper> {
 
   Future<void> initializeApp() async {
     try {
-      await Future.wait([
-        Future.delayed(Duration(seconds: 3)),
-        determineInitialScreen(),
-      ]);
+      User? currentUser = FirebaseAuth.instance.currentUser;
+
+      if (currentUser == null) {
+        bool isFirstLaunch = await AppPreferences.isFirstLaunch();
+
+        if (isFirstLaunch) {
+          if (mounted) {
+            setState(() {
+              showSplash = true;
+              targetScreen = WelcomeScreen();
+            });
+          }
+          await Future.delayed(Duration(seconds: 3));
+          if (mounted) {
+            setState(() {
+              isInitializing = false;
+            });
+          }
+          return;
+        }
+
+        if (mounted) {
+          setState(() {
+            showSplash = false;
+            targetScreen = LoginScreen();
+            isInitializing = false;
+          });
+        }
+        authState = FirebaseAuth.instance.authStateChanges().listen(
+          handleAuthStateChange,
+        );
+        return;
+      }
+
+      if (mounted) {
+        setState(() {
+          showSplash = true;
+        });
+      }
+      await Future.delayed(Duration(seconds: 3));
+      await handleLoggedInUser(currentUser);
 
       if (mounted) {
         setState(() {
@@ -48,37 +86,11 @@ class _AuthWrapperState extends State<AuthWrapper> {
       print('Error initializing app: $e');
       if (mounted) {
         setState(() {
+          showSplash = false;
           targetScreen = LoginScreen();
           isInitializing = false;
         });
       }
-    }
-  }
-
-  Future<void> determineInitialScreen() async {
-    try {
-      bool isFirstLaunch = await AppPreferences.isFirstLaunch();
-
-      if (isFirstLaunch) {
-        targetScreen = WelcomeScreen();
-        return;
-      }
-
-      User? currentUser = FirebaseAuth.instance.currentUser;
-
-      if (currentUser == null) {
-        targetScreen = LoginScreen();
-
-        authState = FirebaseAuth.instance.authStateChanges().listen(
-          handleAuthStateChange,
-        );
-        return;
-      }
-
-      await handleLoggedInUser(currentUser);
-    } catch (e) {
-      print('Error determining initial screen: $e');
-      targetScreen = LoginScreen();
     }
   }
 
@@ -146,7 +158,11 @@ class _AuthWrapperState extends State<AuthWrapper> {
   @override
   Widget build(BuildContext context) {
     if (isInitializing) {
-      return SplashScreen();
+      if (showSplash) {
+        return SplashScreen();
+      } else {
+        return LoginScreen();
+      }
     }
 
     return targetScreen ?? LoginScreen();

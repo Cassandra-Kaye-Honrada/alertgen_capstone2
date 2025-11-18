@@ -52,7 +52,7 @@ class HomeWidgetProvider : AppWidgetProvider() {
         
         if (intent.action == ACTION_REFRESH) {
             Log.d(TAG, "========================================")
-            Log.d(TAG, "✓✓✓ REFRESH BUTTON CLICKED!")
+            Log.d(TAG, "✓ REFRESH BUTTON CLICKED!")
             Log.d(TAG, "Time: ${getCurrentTime()}")
             Log.d(TAG, "========================================")
             
@@ -74,7 +74,7 @@ class HomeWidgetProvider : AppWidgetProvider() {
             
             val views = RemoteViews(context.packageName, R.layout.air_quality_widget)
             
-            // Set up refresh button click intent - CRITICAL: Set this first
+            // Set up refresh button click intent
             val refreshIntent = Intent(context, HomeWidgetProvider::class.java)
             refreshIntent.action = ACTION_REFRESH
             val refreshPendingIntent = PendingIntent.getBroadcast(

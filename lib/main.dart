@@ -17,7 +17,6 @@ import 'dart:async';
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
-// Background message handler - must be top-level function
 @pragma('vm:entry-point')
 Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
@@ -34,28 +33,21 @@ Future<void> requestLocationPermissions() async {
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // CRITICAL: Initialize Firebase first
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
-  // Set background message handler immediately after Firebase init
   FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
 
-  // Load environment variables (lightweight, needed for config)
   await dotenv.load(fileName: ".env");
 
-  // Start the app IMMEDIATELY - don't wait for heavy initialization
   runApp(const AlertGen());
 
-  // Defer heavy initialization to after first frame renders
   WidgetsBinding.instance.addPostFrameCallback((_) {
     _initializeServicesInBackground();
   });
 }
 
-// Initialize heavy services in background after UI is rendered
 Future<void> _initializeServicesInBackground() async {
   try {
-    // Initialize services in parallel where possible
     await Future.wait([
       AirQualityWidgetManager.initialize(),
       requestLocationPermissions(),

@@ -738,8 +738,8 @@ ENVIRONMENTAL & MIXED CONDITIONS:
 
 
 CRITICAL ALLERGEN FORMATTING RULES:
-❌ WRONG: "allergen": "eggs, milk, peanuts"
-✅ CORRECT: Create SEPARATE trigger objects for EACH allergen
+ WRONG: "allergen": "eggs, milk, peanuts"
+ CORRECT: Create SEPARATE trigger objects for EACH allergen
 
 
 Example of CORRECT format:

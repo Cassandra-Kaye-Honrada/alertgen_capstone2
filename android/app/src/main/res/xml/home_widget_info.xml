@@ -10,4 +10,4 @@
     android:resizeMode="horizontal|vertical"
     android:widgetCategory="home_screen"
     android:previewImage="@mipmap/ic_launcher"
-    android:previewLayout="@layout/air_quality_widget" />
+    android:previewLayout="@layout/emergency_widget_preview"/>
