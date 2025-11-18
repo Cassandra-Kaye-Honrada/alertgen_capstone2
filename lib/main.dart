@@ -410,7 +410,7 @@ class _ShortcutHandlerState extends State<ShortcutHandler> {
   @override
   void dispose() {
     platform.setMethodCallHandler(null);
-    emergencyService.dispose(); // Clean up emergency service
+    emergencyService.dispose();
     super.dispose();
   }
 }

@@ -43,7 +43,8 @@ class HomescreenState extends State<Homescreen> {
   late Stream<List<Map<String, dynamic>>> allergenProfile;
   Map<String, File?> imageCache = {};
   final AllergenAnalysis allergenAnalysis = AllergenAnalysis();
-
+  int _weeklyAllergenCount = 0;
+  int _environmentalAlerts = 0;
   @override
   void initState() {
     super.initState();
@@ -51,6 +52,125 @@ class HomescreenState extends State<Homescreen> {
     setupHistory();
     setupAllergenProfile();
     fetchUserProfile();
+    _fetchWeeklyAllergenCount();
+    _fetchEnvironmentalAlerts();
+  }
+
+  Future<void> _fetchEnvironmentalAlerts() async {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) return;
+
+      final now = DateTime.now();
+      final startDate = now.subtract(const Duration(days: 7));
+
+      final snapshot =
+          await FirebaseFirestore.instance
+              .collection('users')
+              .doc(user.uid)
+              .collection('environmental_alerts')
+              .where(
+                'timestamp',
+                isGreaterThanOrEqualTo: Timestamp.fromDate(startDate),
+              )
+              .get();
+
+      setState(() {
+        _environmentalAlerts = snapshot.docs.length;
+      });
+    } catch (e) {
+      print('Error fetching environmental alerts: $e');
+      setState(() {
+        _environmentalAlerts = 0;
+      });
+    }
+  }
+
+  Future<void> _fetchWeeklyAllergenCount() async {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) return;
+
+      // Calculate date range for the last 7 days
+      final now = DateTime.now();
+      final startDate = now.subtract(const Duration(days: 7));
+      final endDate = now;
+
+      final foodSnapshot =
+          await FirebaseFirestore.instance
+              .collection('users')
+              .doc(user.uid)
+              .collection('history')
+              .where(
+                'timestamp',
+                isGreaterThanOrEqualTo: Timestamp.fromDate(startDate),
+              )
+              .where(
+                'timestamp',
+                isLessThanOrEqualTo: Timestamp.fromDate(endDate),
+              )
+              .get();
+
+      final skinSnapshot =
+          await FirebaseFirestore.instance
+              .collection('users')
+              .doc(user.uid)
+              .collection('skin_history')
+              .where(
+                'timestamp',
+                isGreaterThanOrEqualTo: Timestamp.fromDate(startDate),
+              )
+              .where(
+                'timestamp',
+                isLessThanOrEqualTo: Timestamp.fromDate(endDate),
+              )
+              .get();
+
+      Set<String> uniqueAllergens = {};
+
+      for (var doc in foodSnapshot.docs) {
+        final data = doc.data();
+        final allergens = data['allergens'] as List<dynamic>?;
+        if (allergens != null) {
+          for (var allergen in allergens) {
+            if (allergen is Map<String, dynamic>) {
+              final isUserAllergen =
+                  allergen['isUserAllergen'] as bool? ?? false;
+              if (isUserAllergen) {
+                final name = allergen['name']?.toString().toLowerCase().trim();
+                if (name != null && name.isNotEmpty) {
+                  uniqueAllergens.add(name);
+                }
+              }
+            }
+          }
+        }
+      }
+
+      for (var doc in skinSnapshot.docs) {
+        final data = doc.data();
+        final isFoodAllergyRelated =
+            data['isFoodAllergyRelated'] as bool? ?? false;
+        final likelyFoodTriggers = data['likelyFoodTriggers'] as List<dynamic>?;
+        if (isFoodAllergyRelated && likelyFoodTriggers != null) {
+          for (var trigger in likelyFoodTriggers) {
+            final triggerName = trigger.toString().toLowerCase().trim();
+            if (triggerName.isNotEmpty) {
+              uniqueAllergens.add(triggerName);
+            }
+          }
+        }
+      }
+
+      setState(() {
+        _weeklyAllergenCount = uniqueAllergens.length;
+      });
+    } catch (e) {
+      print('Error fetching weekly allergen count: $e');
+      setState(() {
+        _weeklyAllergenCount = 0;
+      });
+    }
   }
 
   Future<void> initializeEmergencyService() async {
@@ -730,7 +850,65 @@ class HomescreenState extends State<Homescreen> {
                     padding: EdgeInsets.only(left: 20, right: 20, top: 0),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
+                      children: [ Container(
+          padding: const EdgeInsets.fromLTRB(10, 24, 20, 10),
+          child: Row(
+            children: [
+              Expanded(
+                child: Column(
+                  children: [
+                    Text(
+                      '$_weeklyAllergenCount',
+                      style: const TextStyle(
+                        fontSize: 48,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                        height: 1,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    const Text(
+                      'potential allergens\ndetected this week',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.white70,
+                        height: 1.3,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Container(width: 1, height: 60, color: Colors.white30),
+              Expanded(
+                child: Column(
+                  children: [
+                    Text(
+                      '$_environmentalAlerts',
+                      style: const TextStyle(
+                        fontSize: 48,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                        height: 1,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    const Text(
+                      'environmental\nalerts this week',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.white70,
+                        height: 1.3,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+
                         // ElevatedButton(
                         //   onPressed: () async {
                         //     await PushNotificationService()
