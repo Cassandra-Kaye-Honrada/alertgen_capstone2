@@ -16,9 +16,28 @@ class AirQualityWidget extends StatefulWidget {
   final double? latitude;
   final double? longitude;
   final String? apiKey;
+  final bool overflow;
+  final bool showSearch;
+  final bool showRefresh;
+  final bool showLocation;
+  final EdgeInsetsGeometry? margin;
+  final EdgeInsetsGeometry? padding;
+  final double gaugeSize;
+    final bool healthRecoOverflow;
 
-  const AirQualityWidget({Key? key, this.latitude, this.longitude, this.apiKey})
-    : super(key: key);
+  const AirQualityWidget({
+    Key? key,
+    this.latitude,
+    this.longitude,
+    this.apiKey,
+    this.overflow = true,
+    this.showSearch = true,
+    this.showRefresh = true,
+    this.showLocation = true,
+    this.margin,
+    this.padding,
+    this.gaugeSize = 100,   this.healthRecoOverflow = true,
+  }) : super(key: key);
 
   @override
   State<AirQualityWidget> createState() => _AirQualityWidgetState();
@@ -46,6 +65,10 @@ class _AirQualityWidgetState extends State<AirQualityWidget> {
   Timer? _refreshTimer;
   DateTime? _lastFetchTime;
   static const Duration _cacheDuration = Duration(minutes: 5);
+
+  // Cached data for placeholder
+  AirQualityData? _cachedAirQualityData;
+  bool _isUsingCachedData = false;
 
   @override
   void initState() {
@@ -77,9 +100,38 @@ class _AirQualityWidgetState extends State<AirQualityWidget> {
   }
 
   Future<void> _initialize() async {
+    // First try to load cached data immediately for instant display
+    await _loadCachedDataForPlaceholder();
+
+    // Then proceed with normal initialization
     await _loadCachedData();
     await _getLocation();
     await _determinePopulationFromFirebase();
+  }
+
+  Future<void> _loadCachedDataForPlaceholder() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final cachedData = prefs.getString('cached_aqi_data');
+
+      if (cachedData != null) {
+        final data = json.decode(cachedData);
+        final airQualityData = data['airQualityData'];
+
+        // Create AirQualityData from cached data for placeholder
+        setState(() {
+          _cachedAirQualityData = AirQualityData.fromGoogleJson(
+            airQualityData,
+            _currentPopulation,
+            _getPopulationRecommendationKey(_currentPopulation),
+            _applicablePopulations,
+          );
+          _location = data['location'] ?? 'Current Location';
+        });
+      }
+    } catch (e) {
+      print('Error loading cached data for placeholder: $e');
+    }
   }
 
   Future<void> _loadCachedData() async {
@@ -112,11 +164,9 @@ class _AirQualityWidgetState extends State<AirQualityWidget> {
     }
   }
 
-  // FIXED: Only save to cache if not using searched location
   Future<void> _saveCachedData(Map<String, dynamic> airQualityResponse) async {
-    // Don't cache searched locations
     if (_isUsingSearchedLocation) return;
-    
+
     try {
       final prefs = await SharedPreferences.getInstance();
       final cacheData = {
@@ -534,10 +584,9 @@ class _AirQualityWidgetState extends State<AirQualityWidget> {
       return;
     }
 
-    // FIXED: Don't use cache for searched locations
-    if (!forceRefresh && 
-        !_isUsingSearchedLocation && 
-        _lastFetchTime != null && 
+    if (!forceRefresh &&
+        !_isUsingSearchedLocation &&
+        _lastFetchTime != null &&
         _airQualityData != null) {
       final timeSinceLastFetch = DateTime.now().difference(_lastFetchTime!);
       if (timeSinceLastFetch < _cacheDuration) {
@@ -550,6 +599,7 @@ class _AirQualityWidgetState extends State<AirQualityWidget> {
 
     setState(() {
       _isLoading = true;
+      _isUsingCachedData = _cachedAirQualityData != null;
       _error = null;
     });
 
@@ -571,6 +621,7 @@ class _AirQualityWidgetState extends State<AirQualityWidget> {
               '3. Create an API key\n'
               '4. Add API key restrictions for security';
           _isLoading = false;
+          _isUsingCachedData = false;
         });
         return;
       }
@@ -618,6 +669,7 @@ class _AirQualityWidgetState extends State<AirQualityWidget> {
             _applicablePopulations,
           );
           _isLoading = false;
+          _isUsingCachedData = false;
         });
 
         await _checkAndSaveAlert();
@@ -637,12 +689,14 @@ class _AirQualityWidgetState extends State<AirQualityWidget> {
               '• API key restrictions blocking the request\n'
               '• Quota exceeded';
           _isLoading = false;
+          _isUsingCachedData = false;
         });
       }
     } catch (e) {
       setState(() {
         _error = 'Error fetching air quality data: ${e.toString()}';
         _isLoading = false;
+        _isUsingCachedData = false;
       });
     }
   }
@@ -775,13 +829,14 @@ class _AirQualityWidgetState extends State<AirQualityWidget> {
   }
 
   void _navigateToDetailScreen() {
-    if (_airQualityData != null) {
+    final dataToPass = _airQualityData ?? _cachedAirQualityData;
+    if (dataToPass != null) {
       Navigator.push(
         context,
         MaterialPageRoute(
           builder:
               (context) => AirQualityDetailScreen(
-                airQualityData: _airQualityData!,
+                airQualityData: dataToPass,
                 location: _location,
                 applicablePopulations: _applicablePopulations,
                 showBackButton: true,
@@ -793,48 +848,66 @@ class _AirQualityWidgetState extends State<AirQualityWidget> {
 
   @override
   Widget build(BuildContext context) {
-    if (_isLoading || _error != null || _airQualityData == null) {
-      return Container(
-        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.08),
-              spreadRadius: 0,
-              blurRadius: 10,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-        child:
-            _isLoading
-                ? _buildLoadingWidget()
-                : _error != null
-                ? _buildErrorWidget()
-                : const Center(
-                  child: Text(
-                    'No data available',
-                    style: TextStyle(color: Color(0xFF666666)),
-                  ),
-                ),
+    // If we have real data, show the main content
+    if (_airQualityData != null && !_isLoading) {
+      return GestureDetector(
+        onTap: _navigateToDetailScreen,
+        child: _buildAirQualityContent(),
       );
     }
 
-    return GestureDetector(
-      onTap: _navigateToDetailScreen,
-      child: _buildAirQualityContent(),
+    // If we're loading but have cached data, show cached data in the main content style
+    if (_isLoading && _cachedAirQualityData != null) {
+      return GestureDetector(
+        onTap: _navigateToDetailScreen,
+        child: _buildAirQualityContentWithCachedData(),
+      );
+    }
+
+    // Otherwise show loading/error states
+    return Container(
+      margin:
+          widget.margin ??
+          const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: widget.padding ?? const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.08),
+            spreadRadius: 0,
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child:
+          _isLoading
+              ? _buildLoadingWidget()
+              : _error != null
+              ? _buildErrorWidget()
+              : const Center(
+                child: Text(
+                  'No data available',
+                  style: TextStyle(color: Color(0xFF666666)),
+                ),
+              ),
     );
   }
 
   Widget _buildLoadingWidget() {
+    // If we have cached data, show a simplified version with cached data
+    if (_cachedAirQualityData != null) {
+      return _buildCachedDataPlaceholder();
+    }
+
+    // Otherwise show the original loading widget
     return Row(
       children: [
         SizedBox(
-          width: 100,
-          height: 100,
+          width: widget.gaugeSize,
+          height: widget.gaugeSize,
           child: CustomPaint(
             painter: LoadingGaugePainter(),
             child: const Center(
@@ -842,7 +915,7 @@ class _AirQualityWidgetState extends State<AirQualityWidget> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Text(
-                    '- -',
+                    '--',
                     style: TextStyle(
                       fontSize: 24,
                       fontWeight: FontWeight.bold,
@@ -864,24 +937,33 @@ class _AirQualityWidgetState extends State<AirQualityWidget> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Row(
-                children: [
-                  const Icon(
-                    Icons.location_on,
-                    size: 16,
-                    color: Color(0xFF666666),
-                  ),
-                  const SizedBox(width: 4),
-                  Text(
-                    _location,
-                    style: const TextStyle(
-                      fontSize: 13,
+              if (widget.showLocation) ...[
+                Row(
+                  children: [
+                    const Icon(
+                      Icons.location_on,
+                      size: 16,
                       color: Color(0xFF666666),
                     ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
+                    const SizedBox(width: 4),
+                    Expanded(
+                      child: Text(
+                        _location,
+                        style: const TextStyle(
+                          fontSize: 13,
+                          color: Color(0xFF666666),
+                        ),
+                        overflow:
+                            widget.overflow
+                                ? TextOverflow.ellipsis
+                                : TextOverflow.visible,
+                        maxLines: 1,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+              ],
               const Text(
                 'Air Quality Index',
                 style: TextStyle(fontSize: 12, color: Color(0xFF999999)),
@@ -907,27 +989,469 @@ class _AirQualityWidgetState extends State<AirQualityWidget> {
     );
   }
 
-  Widget _buildErrorWidget() {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
+  Widget _buildCachedDataPlaceholder() {
+    final cachedData = _cachedAirQualityData!;
+    final aqi = cachedData.aqi;
+    final quality = cachedData.qualityLevel;
+
+    return Row(
       children: [
-        const Icon(Icons.error_outline, size: 48, color: Colors.red),
-        const SizedBox(height: 12),
-        Text(
-          _error!,
-          style: const TextStyle(color: Color(0xFF666666)),
-          textAlign: TextAlign.center,
-        ),
-        const SizedBox(height: 12),
-        ElevatedButton(
-          onPressed: _initialize,
-          style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xFF2B9EB3),
-            foregroundColor: Colors.white,
+        SizedBox(
+          width: widget.gaugeSize,
+          height: widget.gaugeSize,
+          child: CustomPaint(
+            painter: AQIGaugePainter(
+              aqi: aqi.toDouble(),
+              color: cachedData.color,
+            ),
+            child: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    '$aqi',
+                    style: TextStyle(
+                      fontSize: widget.gaugeSize * 0.24,
+                      fontWeight: FontWeight.bold,
+                      color: const Color(0xFF333333),
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  const Text(
+                    'AQI',
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: Color(0xFF999999),
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ),
-          child: const Text('Retry'),
+        ),
+        const SizedBox(width: 20),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (widget.showLocation) ...[
+                Row(
+                  children: [
+                    const Icon(
+                      Icons.location_on,
+                      size: 16,
+                      color: Color(0xFF666666),
+                    ),
+                    const SizedBox(width: 4),
+                    Expanded(
+                      child: Text(
+                        _location,
+                        style: const TextStyle(
+                          fontSize: 13,
+                          color: Color(0xFF666666),
+                        ),
+                        overflow:
+                            widget.overflow
+                                ? TextOverflow.ellipsis
+                                : TextOverflow.visible,
+                        maxLines: 1,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+              ],
+              const Text(
+                'Air Quality Index',
+                style: TextStyle(fontSize: 12, color: Color(0xFF999999)),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                quality,
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF333333),
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Dominant pollutant: ${cachedData.dominantPollutant}',
+                style: const TextStyle(fontSize: 12, color: Color(0xFF999999)),
+              ),
+              const SizedBox(height: 8),
+              // Show loading indicator
+              Row(
+                children: [
+                  SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: const Color(0xFF2B9EB3),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Updating...',
+                    style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
       ],
+    );
+  }
+
+  Widget _buildAirQualityContentWithCachedData() {
+    final cachedData = _cachedAirQualityData!;
+    final aqi = cachedData.aqi;
+    final quality = cachedData.qualityLevel;
+    final dominantPollutant = cachedData.dominantPollutant;
+
+    return Container(
+      margin:
+          widget.margin ??
+          const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: widget.padding ?? const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.08),
+            spreadRadius: 0,
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Show "Using Cached Data" indicator
+          // Container(
+          //   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          //   decoration: BoxDecoration(
+          //     color: Colors.orange[50],
+          //     borderRadius: BorderRadius.circular(8),
+          //     border: Border.all(color: Colors.orange[200]!),
+          //   ),
+          //   child: Row(
+          //     mainAxisSize: MainAxisSize.min,
+          //     children: [
+          //       Icon(Icons.cached, size: 16, color: Colors.orange[700]),
+          //       const SizedBox(width: 8),
+          //       Text(
+          //         'Using cached data • Updating...',
+          //         style: TextStyle(
+          //           fontSize: 12,
+          //           color: Colors.orange[700],
+          //           fontWeight: FontWeight.w500,
+          //         ),
+          //       ),
+          //     ],
+          //   ),
+          // ),
+          // const SizedBox(height: 12),
+
+          // Search bar with location - only show if enabled
+          if (widget.showSearch) ...[
+            Row(
+              children: [
+                Expanded(
+                  child: GestureDetector(
+                    onTap: () {
+                      setState(() {
+                        _isSearching = true;
+                      });
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 8,
+                      ),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF5F5F5),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Row(
+                        children: [
+                          if (widget.showLocation) ...[
+                            const Icon(
+                              Icons.location_on,
+                              size: 18,
+                              color: Color(0xFF666666),
+                            ),
+                            const SizedBox(width: 8),
+                          ],
+                          Expanded(
+                            child:
+                                _isSearching
+                                    ? TextField(
+                                      controller: _searchController,
+                                      autofocus: true,
+                                      style: const TextStyle(
+                                        fontSize: 15,
+                                        color: Color(0xFF333333),
+                                      ),
+                                      decoration: const InputDecoration(
+                                        hintText: 'Search location...',
+                                        border: InputBorder.none,
+                                        isDense: true,
+                                        contentPadding: EdgeInsets.zero,
+                                      ),
+                                      onChanged: _onSearchChanged,
+                                    )
+                                    : Text(
+                                      _location,
+                                      style: const TextStyle(
+                                        fontSize: 15,
+                                        color: Color(0xFF666666),
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                      overflow:
+                                          widget.overflow
+                                              ? TextOverflow.ellipsis
+                                              : TextOverflow.visible,
+                                      maxLines: 1,
+                                    ),
+                          ),
+                          if (_isUsingSearchedLocation)
+                            GestureDetector(
+                              onTap: _clearSearch,
+                              child: const Icon(
+                                Icons.close,
+                                size: 18,
+                                color: Color(0xFF666666),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                GestureDetector(
+                  onTap: () {
+                    setState(() {
+                      _isSearching = !_isSearching;
+                      if (!_isSearching) {
+                        _searchController.clear();
+                        _searchSuggestions = [];
+                      }
+                    });
+                  },
+                  child: Icon(
+                    _isSearching ? Icons.close : Icons.search,
+                    size: 24,
+                    color: const Color(0xFF333333),
+                  ),
+                ),
+              ],
+            ),
+
+            // Search suggestions
+            if (_searchSuggestions.isNotEmpty || _isLoadingSuggestions) ...[
+              const SizedBox(height: 8),
+              Container(
+                height: 150,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: const Color(0xFFE0E0E0)),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.1),
+                      blurRadius: 4,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child:
+                    _isLoadingSuggestions
+                        ? const Center(
+                          child: Padding(
+                            padding: EdgeInsets.all(16.0),
+                            child: CircularProgressIndicator(),
+                          ),
+                        )
+                        : Scrollbar(
+                          child: ListView.separated(
+                            padding: EdgeInsets.zero,
+                            shrinkWrap: true,
+                            itemCount: _searchSuggestions.length,
+                            separatorBuilder:
+                                (context, index) => const Divider(height: 1),
+                            itemBuilder: (context, index) {
+                              final suggestion = _searchSuggestions[index];
+                              return ListTile(
+                                dense: true,
+                                leading: const Icon(
+                                  Icons.location_on,
+                                  size: 20,
+                                ),
+                                title: Text(
+                                  suggestion['description'] ??
+                                      'Unknown location',
+                                  style: const TextStyle(fontSize: 14),
+                                  overflow: TextOverflow.ellipsis,
+                                  maxLines: 1,
+                                ),
+                                onTap: () => _selectLocation(suggestion),
+                              );
+                            },
+                          ),
+                        ),
+              ),
+            ],
+            const SizedBox(height: 16),
+          ],
+
+          // AQI gauge and info row (using cached data)
+          Row(
+            children: [
+              // Circular gauge with cached data
+              SizedBox(
+                width: widget.gaugeSize,
+                height: widget.gaugeSize,
+                child: CustomPaint(
+                  painter: AQIGaugePainter(
+                    aqi: aqi.toDouble(),
+                    color: cachedData.color,
+                  ),
+                  child: Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          '$aqi',
+                          style: TextStyle(
+                            fontSize: widget.gaugeSize * 0.24,
+                            fontWeight: FontWeight.bold,
+                            color: const Color(0xFF333333),
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        const Text(
+                          'AQI',
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: Color(0xFF999999),
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+
+              const SizedBox(width: 10),
+
+              // Air quality info with cached data
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Air Quality Index',
+                      style: TextStyle(fontSize: 13, color: Color(0xFF999999)),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      quality,
+                      style: const TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xFF333333),
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      'Dominant pollutant: $dominantPollutant',
+                      style: const TextStyle(
+                        fontSize: 13,
+                        color: Color(0xFF999999),
+                      ),
+                      overflow:
+                          widget.overflow
+                              ? TextOverflow.ellipsis
+                              : TextOverflow.visible,
+                      maxLines: 1,
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 10),
+
+          // Divider
+          Container(height: 1, color: const Color(0xFFE0E0E0)),
+
+          const SizedBox(height: 10),
+
+          // Last updated info with loading indicator
+          if (_lastFetchTime != null && widget.showRefresh)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Row(
+                children: [
+                  const Icon(
+                    Icons.access_time,
+                    size: 14,
+                    color: Color(0xFF999999),
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    'Updated ${_getTimeAgo(_lastFetchTime!)}',
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: Color(0xFF999999),
+                    ),
+                  ),
+                  const Spacer(),
+                  // Show loading indicator instead of refresh button
+                  SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: const Color(0xFF2B9EB3),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+          // Suggestion section with cached data
+          const Text(
+  'Suggestion for you',
+  style: TextStyle(
+    fontSize: 16,
+    fontWeight: FontWeight.w700,
+    color: Color(0xFF333333),
+  ),
+),
+const SizedBox(height: 12),
+if (_airQualityData!.healthRecommendation != null)
+  Text(
+    _airQualityData!.healthRecommendation!,
+    style: const TextStyle(
+      fontSize: 13,
+      color: Color(0xFF666666),
+      height: 1.5,
+    ),
+    maxLines: widget.healthRecoOverflow ? 3 : null,
+    overflow: widget.healthRecoOverflow ? TextOverflow.ellipsis : null,
+  ),
+        ],
+      ),
     );
   }
 
@@ -937,8 +1461,10 @@ class _AirQualityWidgetState extends State<AirQualityWidget> {
     final dominantPollutant = _airQualityData!.dominantPollutant;
 
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      padding: const EdgeInsets.all(20),
+      margin:
+          widget.margin ??
+          const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: widget.padding ?? const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
@@ -955,151 +1481,165 @@ class _AirQualityWidgetState extends State<AirQualityWidget> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Search bar with location
-          Row(
-            children: [
-              Expanded(
-                child: GestureDetector(
-                  onTap: () {
-                    setState(() {
-                      _isSearching = true;
-                    });
-                  },
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 8,
-                    ),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF5F5F5),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Row(
-                      children: [
-                        const Icon(
-                          Icons.location_on,
-                          size: 18,
-                          color: Color(0xFF666666),
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child:
-                              _isSearching
-                                  ? TextField(
-                                    controller: _searchController,
-                                    autofocus: true,
-                                    style: const TextStyle(
-                                      fontSize: 15,
-                                      color: Color(0xFF333333),
-                                    ),
-                                    decoration: const InputDecoration(
-                                      hintText: 'Search location...',
-                                      border: InputBorder.none,
-                                      isDense: true,
-                                      contentPadding: EdgeInsets.zero,
-                                    ),
-                                    onChanged: _onSearchChanged,
-                                  )
-                                  : Text(
-                                    _location,
-                                    style: const TextStyle(
-                                      fontSize: 15,
-                                      color: Color(0xFF666666),
-                                      fontWeight: FontWeight.w500,
-                                    ),
-                                  ),
-                        ),
-                        if (_isUsingSearchedLocation)
-                          GestureDetector(
-                            onTap: _clearSearch,
-                            child: const Icon(
-                              Icons.close,
+          if (widget.showSearch) ...[
+            Row(
+              children: [
+                Expanded(
+                  child: GestureDetector(
+                    onTap: () {
+                      setState(() {
+                        _isSearching = true;
+                      });
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 8,
+                      ),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF5F5F5),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Row(
+                        children: [
+                          if (widget.showLocation) ...[
+                            const Icon(
+                              Icons.location_on,
                               size: 18,
                               color: Color(0xFF666666),
                             ),
+                            const SizedBox(width: 8),
+                          ],
+                          Expanded(
+                            child:
+                                _isSearching
+                                    ? TextField(
+                                      controller: _searchController,
+                                      autofocus: true,
+                                      style: const TextStyle(
+                                        fontSize: 15,
+                                        color: Color(0xFF333333),
+                                      ),
+                                      decoration: const InputDecoration(
+                                        hintText: 'Search location...',
+                                        border: InputBorder.none,
+                                        isDense: true,
+                                        contentPadding: EdgeInsets.zero,
+                                      ),
+                                      onChanged: _onSearchChanged,
+                                    )
+                                    : Text(
+                                      _location,
+                                      style: const TextStyle(
+                                        fontSize: 15,
+                                        color: Color(0xFF666666),
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                      overflow:
+                                          widget.overflow
+                                              ? TextOverflow.ellipsis
+                                              : TextOverflow.visible,
+                                      maxLines: 1,
+                                    ),
                           ),
-                      ],
+                          if (_isUsingSearchedLocation)
+                            GestureDetector(
+                              onTap: _clearSearch,
+                              child: const Icon(
+                                Icons.close,
+                                size: 18,
+                                color: Color(0xFF666666),
+                              ),
+                            ),
+                        ],
+                      ),
                     ),
                   ),
                 ),
-              ),
-              const SizedBox(width: 8),
-              GestureDetector(
-                onTap: () {
-                  setState(() {
-                    _isSearching = !_isSearching;
-                    if (!_isSearching) {
-                      _searchController.clear();
-                      _searchSuggestions = [];
-                    }
-                  });
-                },
-                child: Icon(
-                  _isSearching ? Icons.close : Icons.search,
-                  size: 24,
-                  color: const Color(0xFF333333),
+                const SizedBox(width: 8),
+                GestureDetector(
+                  onTap: () {
+                    setState(() {
+                      _isSearching = !_isSearching;
+                      if (!_isSearching) {
+                        _searchController.clear();
+                        _searchSuggestions = [];
+                      }
+                    });
+                  },
+                  child: Icon(
+                    _isSearching ? Icons.close : Icons.search,
+                    size: 24,
+                    color: const Color(0xFF333333),
+                  ),
                 ),
+              ],
+            ),
+
+            // Search suggestions
+            if (_searchSuggestions.isNotEmpty || _isLoadingSuggestions) ...[
+              const SizedBox(height: 8),
+              Container(
+                height: 150,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: const Color(0xFFE0E0E0)),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.1),
+                      blurRadius: 4,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child:
+                    _isLoadingSuggestions
+                        ? const Center(
+                          child: Padding(
+                            padding: EdgeInsets.all(16.0),
+                            child: CircularProgressIndicator(),
+                          ),
+                        )
+                        : Scrollbar(
+                          child: ListView.separated(
+                            padding: EdgeInsets.zero,
+                            shrinkWrap: true,
+                            itemCount: _searchSuggestions.length,
+                            separatorBuilder:
+                                (context, index) => const Divider(height: 1),
+                            itemBuilder: (context, index) {
+                              final suggestion = _searchSuggestions[index];
+                              return ListTile(
+                                dense: true,
+                                leading: const Icon(
+                                  Icons.location_on,
+                                  size: 20,
+                                ),
+                                title: Text(
+                                  suggestion['description'] ??
+                                      'Unknown location',
+                                  style: const TextStyle(fontSize: 14),
+                                  overflow: TextOverflow.ellipsis,
+                                  maxLines: 1,
+                                ),
+                                onTap: () => _selectLocation(suggestion),
+                              );
+                            },
+                          ),
+                        ),
               ),
             ],
-          ),
-
-          // FIXED: Search suggestions with fixed height and scrollable
-          if (_searchSuggestions.isNotEmpty || _isLoadingSuggestions) ...[
-            const SizedBox(height: 8),
-            Container(
-              height: 150, // Fixed height instead of maxHeight
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: const Color(0xFFE0E0E0)),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.1),
-                    blurRadius: 4,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-              ),
-              child:
-                  _isLoadingSuggestions
-                      ? const Center(
-                        child: Padding(
-                          padding: EdgeInsets.all(16.0),
-                          child: CircularProgressIndicator(),
-                        ),
-                      )
-                      : Scrollbar(
-                        child: ListView.separated(
-                          padding: EdgeInsets.zero,
-                          shrinkWrap: true,
-                          itemCount: _searchSuggestions.length,
-                          separatorBuilder:
-                              (context, index) => const Divider(height: 1),
-                          itemBuilder: (context, index) {
-                            final suggestion = _searchSuggestions[index];
-                            return ListTile(
-                              dense: true,
-                              leading: const Icon(Icons.location_on, size: 20),
-                              title: Text(
-                                suggestion['description'] ?? 'Unknown location',
-                                style: const TextStyle(fontSize: 14),
-                              ),
-                              onTap: () => _selectLocation(suggestion),
-                            );
-                          },
-                        ),
-                      ),
-            ),
+            const SizedBox(height: 16),
           ],
-
-          const SizedBox(height: 16),
 
           // AQI gauge and info row
           Row(
             children: [
               // Circular gauge
               SizedBox(
-                width: 100,
-                height: 100,
+                width: widget.gaugeSize,
+                height: widget.gaugeSize,
                 child: CustomPaint(
                   painter: AQIGaugePainter(
                     aqi: aqi.toDouble(),
@@ -1111,10 +1651,10 @@ class _AirQualityWidgetState extends State<AirQualityWidget> {
                       children: [
                         Text(
                           '$aqi',
-                          style: const TextStyle(
-                            fontSize: 24,
+                          style: TextStyle(
+                            fontSize: widget.gaugeSize * 0.24,
                             fontWeight: FontWeight.bold,
-                            color: Color(0xFF333333),
+                            color: const Color(0xFF333333),
                           ),
                         ),
                         const SizedBox(height: 2),
@@ -1159,6 +1699,11 @@ class _AirQualityWidgetState extends State<AirQualityWidget> {
                         fontSize: 13,
                         color: Color(0xFF999999),
                       ),
+                      overflow:
+                          widget.overflow
+                              ? TextOverflow.ellipsis
+                              : TextOverflow.visible,
+                      maxLines: 1,
                     ),
                   ],
                 ),
@@ -1174,7 +1719,7 @@ class _AirQualityWidgetState extends State<AirQualityWidget> {
           const SizedBox(height: 10),
 
           // Last updated info
-          if (_lastFetchTime != null)
+          if (_lastFetchTime != null && widget.showRefresh)
             Padding(
               padding: const EdgeInsets.only(bottom: 8),
               child: Row(
@@ -1206,28 +1751,52 @@ class _AirQualityWidgetState extends State<AirQualityWidget> {
             ),
 
           // Suggestion section
-          const Text(
-            'Suggestion for you',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w700,
-              color: Color(0xFF333333),
-            ),
-          ),
-          const SizedBox(height: 12),
-          if (_airQualityData!.healthRecommendation != null)
-            Text(
-              _airQualityData!.healthRecommendation!,
-              style: const TextStyle(
-                fontSize: 13,
-                color: Color(0xFF666666),
-                height: 1.5,
-              ),
-              maxLines: 3,
-              overflow: TextOverflow.ellipsis,
-            ),
+         const Text(
+  'Suggestion for you',
+  style: TextStyle(
+    fontSize: 16,
+    fontWeight: FontWeight.w700,
+    color: Color(0xFF333333),
+  ),
+),
+const SizedBox(height: 12),
+if (_airQualityData!.healthRecommendation != null)
+  Text(
+    _airQualityData!.healthRecommendation!,
+    style: const TextStyle(
+      fontSize: 13,
+      color: Color(0xFF666666),
+      height: 1.5,
+    ),
+    maxLines: widget.healthRecoOverflow ? 2 : null,
+    overflow: widget.healthRecoOverflow ? TextOverflow.ellipsis : null,
+  ),
         ],
       ),
+    );
+  }
+
+  Widget _buildErrorWidget() {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        const Icon(Icons.error_outline, size: 48, color: Colors.red),
+        const SizedBox(height: 12),
+        Text(
+          _error!,
+          style: const TextStyle(color: Color(0xFF666666)),
+          textAlign: TextAlign.center,
+        ),
+        const SizedBox(height: 12),
+        ElevatedButton(
+          onPressed: _initialize,
+          style: ElevatedButton.styleFrom(
+            backgroundColor: const Color(0xFF2B9EB3),
+            foregroundColor: Colors.white,
+          ),
+          child: const Text('Retry'),
+        ),
+      ],
     );
   }
 
