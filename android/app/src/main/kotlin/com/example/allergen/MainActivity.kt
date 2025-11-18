@@ -346,29 +346,34 @@ class MainActivity: FlutterActivity() {
         }
     }
 
-    override fun onRequestPermissionsResult(
-        requestCode: Int,
-        permissions: Array<out String>,
-        grantResults: IntArray
-    ) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        
-        Log.d(TAG, "🔧 Permission result - Request code: $requestCode")
-        
-        when (requestCode) {
-            CALL_PERMISSION_REQUEST -> {
-                val allGranted = grantResults.all { it == PackageManager.PERMISSION_GRANTED }
-                Log.d(TAG, "🔧 Call permissions granted: $allGranted")
-                if (allGranted) {
-                    startCallStateMonitoring()
-                }
-            }
-            SMS_PERMISSION_REQUEST -> {
-                val allGranted = grantResults.all { it == PackageManager.PERMISSION_GRANTED }
-                Log.d(TAG, "🔧 SMS permissions granted: $allGranted")
+   override fun onRequestPermissionsResult(
+    requestCode: Int,
+    permissions: Array<out String>,
+    grantResults: IntArray
+) {
+    Log.d(TAG, "🔧 Permission result - Request code: $requestCode")
+    
+    when (requestCode) {
+        CALL_PERMISSION_REQUEST -> {
+            // Handle your call permissions - DON'T call super
+            val allGranted = grantResults.all { it == PackageManager.PERMISSION_GRANTED }
+            Log.d(TAG, "🔧 Call permissions granted: $allGranted")
+            if (allGranted) {
+                startCallStateMonitoring()
             }
         }
+        SMS_PERMISSION_REQUEST -> {
+            // Handle your SMS permissions - DON'T call super
+            val allGranted = grantResults.all { it == PackageManager.PERMISSION_GRANTED }
+            Log.d(TAG, "🔧 SMS permissions granted: $allGranted")
+        }
+        else -> {
+            // For any other permission requests (like from Flutter plugins),
+            // let super handle them
+            super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        }
     }
+}
 
     private fun startCallStateMonitoring() {
         try {
