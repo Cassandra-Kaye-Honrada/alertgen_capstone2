@@ -953,14 +953,17 @@ class _FoodAllergyScreenState extends State<FoodAllergyScreen>
                 Container(
                   padding: EdgeInsets.symmetric(horizontal: 4, vertical: 2),
                   decoration: BoxDecoration(
-                    color: allergen.color.withOpacity(0.1),
+                    color:
+                        isRead
+                            ? AppColors.Gray.withOpacity(0.1)
+                            : allergen.color.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(6),
                   ),
                   child: Text(
                     isRead ? 'Read' : 'Tap to learn',
                     style: TextStyle(
                       fontSize: 8,
-                      color: allergen.color,
+                      color: isRead ? AppColors.Gray : allergen.color,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
