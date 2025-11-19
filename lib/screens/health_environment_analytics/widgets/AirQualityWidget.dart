@@ -23,7 +23,7 @@ class AirQualityWidget extends StatefulWidget {
   final EdgeInsetsGeometry? margin;
   final EdgeInsetsGeometry? padding;
   final double gaugeSize;
-    final bool healthRecoOverflow;
+  final bool healthRecoOverflow;
 
   const AirQualityWidget({
     Key? key,
@@ -36,7 +36,8 @@ class AirQualityWidget extends StatefulWidget {
     this.showLocation = true,
     this.margin,
     this.padding,
-    this.gaugeSize = 100,   this.healthRecoOverflow = true,
+    this.gaugeSize = 100,
+    this.healthRecoOverflow = true,
   }) : super(key: key);
 
   @override
@@ -52,8 +53,8 @@ class _AirQualityWidgetState extends State<AirQualityWidget> {
   double? _latitude;
   double? _longitude;
   String _location = "Loading...";
+  bool _hasStoredData = false;
 
-  // Search related
   final TextEditingController _searchController = TextEditingController();
   bool _isSearching = false;
   List<Map<String, dynamic>> _searchSuggestions = [];
@@ -100,10 +101,8 @@ class _AirQualityWidgetState extends State<AirQualityWidget> {
   }
 
   Future<void> _initialize() async {
-    // First try to load cached data immediately for instant display
     await _loadCachedDataForPlaceholder();
 
-    // Then proceed with normal initialization
     await _loadCachedData();
     await _getLocation();
     await _determinePopulationFromFirebase();
@@ -118,7 +117,6 @@ class _AirQualityWidgetState extends State<AirQualityWidget> {
         final data = json.decode(cachedData);
         final airQualityData = data['airQualityData'];
 
-        // Create AirQualityData from cached data for placeholder
         setState(() {
           _cachedAirQualityData = AirQualityData.fromGoogleJson(
             airQualityData,
@@ -127,11 +125,161 @@ class _AirQualityWidgetState extends State<AirQualityWidget> {
             _applicablePopulations,
           );
           _location = data['location'] ?? 'Current Location';
+          _hasStoredData = true;
+        });
+      } else {
+        setState(() {
+          _hasStoredData = false;
         });
       }
     } catch (e) {
       print('Error loading cached data for placeholder: $e');
+      setState(() {
+        _hasStoredData = false;
+      });
     }
+  }
+
+  Widget _buildFirstTimeLoadingWidget() {
+    return Container(
+      margin:
+          widget.margin ??
+          const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: widget.padding ?? const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.08),
+            spreadRadius: 0,
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          SizedBox(
+            width: widget.gaugeSize,
+            height: widget.gaugeSize,
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                SizedBox(
+                  width: widget.gaugeSize,
+                  height: widget.gaugeSize,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 12,
+                    valueColor: AlwaysStoppedAnimation<Color>(
+                      const Color(0xFF2B9EB3).withOpacity(0.3),
+                    ),
+                  ),
+                ),
+                const Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.air, size: 32, color: Color(0xFF2B9EB3)),
+                    SizedBox(height: 8),
+                    Text(
+                      'Loading',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: Color(0xFF999999),
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 20),
+          const Text(
+            'Fetching Air Quality Data',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w600,
+              color: Color(0xFF333333),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            _location == "Loading..."
+                ? 'Getting your location...'
+                : 'Analyzing air quality in $_location',
+            style: const TextStyle(fontSize: 13, color: Color(0xFF666666)),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 16),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              _buildLoadingStep(1, 'Location', _latitude != null),
+              const SizedBox(width: 8),
+              _buildLoadingStep(2, 'Data', false),
+              const SizedBox(width: 8),
+              _buildLoadingStep(3, 'Analysis', false),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLoadingStep(int step, String label, bool isComplete) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color:
+            isComplete
+                ? const Color(0xFF2B9EB3).withOpacity(0.1)
+                : const Color(0xFFF5F5F5),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: isComplete ? const Color(0xFF2B9EB3) : const Color(0xFFE0E0E0),
+        ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (isComplete)
+            const Icon(Icons.check_circle, size: 16, color: Color(0xFF2B9EB3))
+          else
+            Container(
+              width: 16,
+              height: 16,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(color: const Color(0xFF999999), width: 2),
+              ),
+              child: Center(
+                child: Text(
+                  '$step',
+                  style: const TextStyle(
+                    fontSize: 10,
+                    color: Color(0xFF999999),
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ),
+          const SizedBox(width: 6),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 12,
+              color:
+                  isComplete
+                      ? const Color(0xFF2B9EB3)
+                      : const Color(0xFF999999),
+              fontWeight: isComplete ? FontWeight.w600 : FontWeight.normal,
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   Future<void> _loadCachedData() async {
@@ -156,11 +304,23 @@ class _AirQualityWidgetState extends State<AirQualityWidget> {
             _location = data['location'] ?? 'Current Location';
             _latitude = data['latitude'];
             _longitude = data['longitude'];
+            _hasStoredData = true;
+          });
+        } else {
+          setState(() {
+            _hasStoredData = false;
           });
         }
+      } else {
+        setState(() {
+          _hasStoredData = false;
+        });
       }
     } catch (e) {
       print('Error loading cached data: $e');
+      setState(() {
+        _hasStoredData = false;
+      });
     }
   }
 
@@ -849,6 +1009,9 @@ class _AirQualityWidgetState extends State<AirQualityWidget> {
   @override
   Widget build(BuildContext context) {
     // If we have real data, show the main content
+    if (!_hasStoredData && _isLoading) {
+      return _buildFirstTimeLoadingWidget();
+    }
     if (_airQualityData != null && !_isLoading) {
       return GestureDetector(
         onTap: _navigateToDetailScreen,
@@ -1431,25 +1594,26 @@ class _AirQualityWidgetState extends State<AirQualityWidget> {
 
           // Suggestion section with cached data
           const Text(
-  'Suggestion for you',
-  style: TextStyle(
-    fontSize: 16,
-    fontWeight: FontWeight.w700,
-    color: Color(0xFF333333),
-  ),
-),
-const SizedBox(height: 12),
-if (_airQualityData!.healthRecommendation != null)
-  Text(
-    _airQualityData!.healthRecommendation!,
-    style: const TextStyle(
-      fontSize: 13,
-      color: Color(0xFF666666),
-      height: 1.5,
-    ),
-    maxLines: widget.healthRecoOverflow ? 3 : null,
-    overflow: widget.healthRecoOverflow ? TextOverflow.ellipsis : null,
-  ),
+            'Suggestion for you',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w700,
+              color: Color(0xFF333333),
+            ),
+          ),
+          const SizedBox(height: 12),
+          if (_airQualityData!.healthRecommendation != null)
+            Text(
+              _airQualityData!.healthRecommendation!,
+              style: const TextStyle(
+                fontSize: 13,
+                color: Color(0xFF666666),
+                height: 1.5,
+              ),
+              maxLines: widget.healthRecoOverflow ? 3 : null,
+              overflow:
+                  widget.healthRecoOverflow ? TextOverflow.ellipsis : null,
+            ),
         ],
       ),
     );
@@ -1751,26 +1915,27 @@ if (_airQualityData!.healthRecommendation != null)
             ),
 
           // Suggestion section
-         const Text(
-  'Suggestion for you',
-  style: TextStyle(
-    fontSize: 16,
-    fontWeight: FontWeight.w700,
-    color: Color(0xFF333333),
-  ),
-),
-const SizedBox(height: 12),
-if (_airQualityData!.healthRecommendation != null)
-  Text(
-    _airQualityData!.healthRecommendation!,
-    style: const TextStyle(
-      fontSize: 13,
-      color: Color(0xFF666666),
-      height: 1.5,
-    ),
-    maxLines: widget.healthRecoOverflow ? 2 : null,
-    overflow: widget.healthRecoOverflow ? TextOverflow.ellipsis : null,
-  ),
+          const Text(
+            'Suggestion for you',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w700,
+              color: Color(0xFF333333),
+            ),
+          ),
+          const SizedBox(height: 12),
+          if (_airQualityData!.healthRecommendation != null)
+            Text(
+              _airQualityData!.healthRecommendation!,
+              style: const TextStyle(
+                fontSize: 13,
+                color: Color(0xFF666666),
+                height: 1.5,
+              ),
+              maxLines: widget.healthRecoOverflow ? 2 : null,
+              overflow:
+                  widget.healthRecoOverflow ? TextOverflow.ellipsis : null,
+            ),
         ],
       ),
     );

@@ -509,23 +509,16 @@ class _AirQualityDetailScreenState extends State<AirQualityDetailScreen>
       ),
       body: Stack(
         children: [
-          // REMOVED: Loading and error states - AirQualityWidget handles its own state
           TabBarView(
             controller: _tabController,
             children: [
               AirQualityTab(
-                // Pass the API key and let AirQualityWidget handle data fetching
                 apiKey: widget.apiKey,
                 location: _location,
                 applicablePopulations: _applicablePopulations,
                 weatherData: WeatherData.mock(),
               ),
-              // For AllergenAnalyticsTab, we need to pass air quality data if available
-              // or let it fetch its own data
-              if (_airQualityData != null)
-                AllergenAnalyticsTab()
-              else
-                const Center(child: Text('No air quality data available')),
+              const AllergenAnalyticsTab(),
             ],
           ),
           Positioned(

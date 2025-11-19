@@ -243,6 +243,7 @@ class _AirQualityTabState extends State<AirQualityTab> {
             showSearch: true,
             showRefresh: true,
             healthRecoOverflow: false,
+            margin: EdgeInsets.symmetric(horizontal: 2, vertical: 10),
           ),
           const SizedBox(height: 20),
 

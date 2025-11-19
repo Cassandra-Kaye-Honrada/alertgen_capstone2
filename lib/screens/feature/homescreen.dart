@@ -850,64 +850,69 @@ class HomescreenState extends State<Homescreen> {
                     padding: EdgeInsets.only(left: 20, right: 20, top: 0),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [ Container(
-          padding: const EdgeInsets.fromLTRB(10, 24, 20, 10),
-          child: Row(
-            children: [
-              Expanded(
-                child: Column(
-                  children: [
-                    Text(
-                      '$_weeklyAllergenCount',
-                      style: const TextStyle(
-                        fontSize: 48,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                        height: 1,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    const Text(
-                      'potential allergens\ndetected this week',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.white70,
-                        height: 1.3,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Container(width: 1, height: 60, color: Colors.white30),
-              Expanded(
-                child: Column(
-                  children: [
-                    Text(
-                      '$_environmentalAlerts',
-                      style: const TextStyle(
-                        fontSize: 48,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                        height: 1,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    const Text(
-                      'environmental\nalerts this week',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.white70,
-                        height: 1.3,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.fromLTRB(10, 24, 20, 10),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: Column(
+                                  children: [
+                                    Text(
+                                      '$_weeklyAllergenCount',
+                                      style: const TextStyle(
+                                        fontSize: 48,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.white,
+                                        height: 1,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    const Text(
+                                      'potential allergens\ndetected this week',
+                                      textAlign: TextAlign.center,
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color: Colors.white70,
+                                        height: 1.3,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              Container(
+                                width: 1,
+                                height: 60,
+                                color: Colors.white30,
+                              ),
+                              Expanded(
+                                child: Column(
+                                  children: [
+                                    Text(
+                                      '$_environmentalAlerts',
+                                      style: const TextStyle(
+                                        fontSize: 48,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.white,
+                                        height: 1,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    const Text(
+                                      'environmental\nalerts this week',
+                                      textAlign: TextAlign.center,
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color: Colors.white70,
+                                        height: 1.3,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
 
                         // ElevatedButton(
                         //   onPressed: () async {
@@ -923,6 +928,10 @@ class HomescreenState extends State<Homescreen> {
                         // ),
                         AirQualityWidget(
                           apiKey: 'AIzaSyCWva81wgqeq5qIShLvoO9hs20ejk73gCE',
+                          margin: EdgeInsets.symmetric(
+                            horizontal: 2,
+                            vertical: 10,
+                          ),
                         ),
                         //SizedBox(height: 30),
                         // buildEmergencySection(),

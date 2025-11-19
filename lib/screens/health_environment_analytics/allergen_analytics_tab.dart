@@ -14,7 +14,7 @@ class AllergenAnalyticsTab extends StatefulWidget {
 
 class _AllergenAnalyticsTabState extends State<AllergenAnalyticsTab> {
   List<Map<String, dynamic>> _allergenHistory = [];
-  bool _isLoadingHistory = true;
+  bool _isLoadingHistory = true;  
   String _selectedTimeRange = '7';
   bool _mounted = true; // ADD THIS
 
