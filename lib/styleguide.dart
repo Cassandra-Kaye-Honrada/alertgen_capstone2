@@ -14,6 +14,7 @@ class AppColors {
 
   /// Primary brand color - Main teal blue
   static const Color primary = Color(0xFF027A9B);
+  static const Color primary1 = Color(0xFF0B8FAC);
 
   /// Primary color 2 - Teal
   static const Color primaryColor2Teal = Color(0xFF02B3AB);
