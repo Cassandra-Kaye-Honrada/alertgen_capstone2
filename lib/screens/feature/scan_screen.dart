@@ -379,166 +379,146 @@ Return JSON:
       builder: (BuildContext context) {
         return Dialog(
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(24),
+            borderRadius: BorderRadius.circular(28),
           ),
-          elevation: 8,
+          elevation: 0,
+          backgroundColor: Colors.transparent,
           child: Container(
-            constraints: const BoxConstraints(maxWidth: 400),
+            constraints: const BoxConstraints(maxWidth: 340),
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(24),
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [Colors.white, Colors.grey[50]!],
-              ),
+              borderRadius: BorderRadius.circular(28),
+              color: Colors.white,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.08),
+                  blurRadius: 40,
+                  offset: const Offset(0, 20),
+                ),
+              ],
             ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
+                const SizedBox(height: 32),
+
+                // Icon
+                Container(
+                  width: 48,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    color: Colors.grey[100],
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Icons.info_outline_rounded,
+                    color: Colors.grey[700],
+                    size: 24,
+                  ),
+                ),
+
+                const SizedBox(height: 20),
+
+                // Message
                 Padding(
-                  padding: const EdgeInsets.all(24),
+                  padding: const EdgeInsets.symmetric(horizontal: 28),
+                  child: Text(
+                    reason.isNotEmpty
+                        ? reason
+                        : 'This image doesn\'t appear to contain food or a skin allergy.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.grey[800],
+                      height: 1.4,
+                      fontWeight: FontWeight.w400,
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 24),
+
+                // Divider
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 28),
+                  child: Container(height: 1, color: Colors.grey[200]),
+                ),
+
+                const SizedBox(height: 20),
+
+                // Supported scans title
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 28),
+                  child: Text(
+                    'SUPPORTED SCANS',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.grey[500],
+                      letterSpacing: 1.5,
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 16),
+
+                // Scan options
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 28),
                   child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: Colors.grey[100],
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(
-                            color: Colors.grey[300]!,
-                            width: 1,
-                          ),
-                        ),
-                        child: Row(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.all(8),
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                              child: Icon(
-                                Icons.info_outline_rounded,
-                                color: Colors.grey[700],
-                                size: 20,
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Text(
-                                reason.isNotEmpty
-                                    ? reason
-                                    : 'This image doesn\'t appear to contain food or a skin allergy.',
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  color: Colors.grey[800],
-                                  height: 1.5,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-
-                      const SizedBox(height: 24),
-
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Container(
-                              height: 1,
-                              color: Colors.grey[300],
-                            ),
-                          ),
-                          Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 12),
-                            child: Text(
-                              'SUPPORTED SCANS',
-                              style: TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.w600,
-                                color: Colors.grey[600],
-                                letterSpacing: 1.2,
-                              ),
-                            ),
-                          ),
-                          Expanded(
-                            child: Container(
-                              height: 1,
-                              color: Colors.grey[300],
-                            ),
-                          ),
-                        ],
-                      ),
-
-                      const SizedBox(height: 20),
-
-                      buildScanOption(
+                      buildMinimalScanOption(
                         Icons.restaurant_menu_rounded,
                         'Food & Products',
-                        'Dishes, meals, packaged foods(ingredients)',
-                        const Color(0xFF4CAF50),
+                        'Dishes, meals, packaged foods',
+                        const Color(0xFF10B981),
                       ),
                       const SizedBox(height: 12),
-                      buildScanOption(
+                      buildMinimalScanOption(
                         Icons.health_and_safety_rounded,
                         'Skin Allergy',
-                        'Allergic reactions, rashes, hives, eczema',
-                        const Color(0xFF2196F3),
+                        'Reactions, rashes, hives, eczema',
+                        const Color(0xFF3B82F6),
                       ),
                     ],
                   ),
                 ),
 
+                const SizedBox(height: 24),
+
+                // Button
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
-                  child: Container(
+                  padding: const EdgeInsets.fromLTRB(28, 0, 28, 28),
+                  child: SizedBox(
                     width: double.infinity,
-                    height: 56,
-                    decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        colors: [Color(0xFF00BCD4), Color(0xFF00838F)],
+                    height: 48,
+                    child: ElevatedButton(
+                      onPressed: () {
+                        Navigator.of(context).pop();
+                        resetCameraState();
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.grey[900],
+                        foregroundColor: Colors.white,
+                        elevation: 0,
+                        shadowColor: Colors.transparent,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
                       ),
-                      borderRadius: BorderRadius.circular(16),
-                      boxShadow: [
-                        BoxShadow(
-                          color: const Color(0xFF00BCD4).withOpacity(0.3),
-                          blurRadius: 12,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
-                    ),
-                    child: Material(
-                      color: Colors.transparent,
-                      child: InkWell(
-                        onTap: () {
-                          Navigator.of(context).pop();
-                          resetCameraState();
-                        },
-                        borderRadius: BorderRadius.circular(16),
-                        child: const Center(
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(
-                                Icons.camera_alt_rounded,
-                                color: Colors.white,
-                                size: 22,
-                              ),
-                              SizedBox(width: 10),
-                              Text(
-                                'Scan Again',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w700,
-                                  color: Colors.white,
-                                  letterSpacing: 0.5,
-                                ),
-                              ),
-                            ],
+                      child: const Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.camera_alt_rounded, size: 18),
+                          SizedBox(width: 8),
+                          Text(
+                            'Scan Again',
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                              letterSpacing: 0.2,
+                            ),
                           ),
-                        ),
+                        ],
                       ),
                     ),
                   ),
@@ -548,6 +528,53 @@ Return JSON:
           ),
         );
       },
+    );
+  }
+
+  Widget buildMinimalScanOption(
+    IconData icon,
+    String title,
+    String subtitle,
+    Color accentColor,
+  ) {
+    return Row(
+      children: [
+        Container(
+          width: 36,
+          height: 36,
+          decoration: BoxDecoration(
+            color: accentColor.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Icon(icon, color: accentColor, size: 18),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.grey[900],
+                  height: 1.2,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                subtitle,
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Colors.grey[600],
+                  height: 1.3,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 
@@ -4885,7 +4912,7 @@ class ScannerOverlay extends StatelessWidget {
                 children: [
                   ...List.generate(4, (index) => buildCornerBracket(index)),
                   Positioned(
-                    top: animation.value * 220,
+                    top: animation.value * 255,
                     left: 15,
                     right: 15,
                     child: Container(
