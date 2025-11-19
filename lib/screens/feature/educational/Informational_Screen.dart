@@ -122,8 +122,8 @@ class _FoodAllergyScreenState extends State<FoodAllergyScreen>
   final PageController _pageController = PageController();
   int _currentPage = 0;
   Timer? _autoScrollTimer;
-
-  final List<String> filters = ['All', 'Children', 'Adults', 'Severe'];
+  bool _carouselDismissed = false;
+  Set<String> _readAllergens = {};
 
   final List<StatisticCard> statistics = [
     StatisticCard(
@@ -194,7 +194,7 @@ class _FoodAllergyScreenState extends State<FoodAllergyScreen>
 
   void _startAutoScroll() {
     _autoScrollTimer = Timer.periodic(const Duration(seconds: 5), (timer) {
-      if (_pageController.hasClients) {
+      if (_pageController.hasClients && !_carouselDismissed) {
         int nextPage = (_currentPage + 1) % statistics.length;
         _pageController.animateToPage(
           nextPage,
@@ -203,20 +203,6 @@ class _FoodAllergyScreenState extends State<FoodAllergyScreen>
         );
       }
     });
-  }
-
-  Future<void> _launchURL(String urlString) async {
-    final Uri url = Uri.parse(urlString);
-    if (!await launchUrl(url, mode: LaunchMode.externalApplication)) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Could not open $urlString'),
-            backgroundColor: AppColors.primary,
-          ),
-        );
-      }
-    }
   }
 
   Widget _buildResourceImage({
@@ -306,30 +292,38 @@ class _FoodAllergyScreenState extends State<FoodAllergyScreen>
                     a.name.toLowerCase().contains(searchQuery.toLowerCase()) ||
                     a.description.toLowerCase().contains(
                       searchQuery.toLowerCase(),
+                    ) ||
+                    a.symptoms.any(
+                      (s) =>
+                          s.toLowerCase().contains(searchQuery.toLowerCase()),
+                    ) ||
+                    a.hiddenSources.any(
+                      (h) =>
+                          h.toLowerCase().contains(searchQuery.toLowerCase()),
                     ),
               )
               .toList();
     }
 
-    if (selectedFilter != 'All') {
-      filtered =
-          filtered.where((a) {
-            switch (selectedFilter) {
-              case 'Children':
-                return a.prevalence.toLowerCase().contains('children');
-              case 'Adults':
-                return a.prevalence.toLowerCase().contains('adults');
-              case 'Severe':
-                return a.symptoms.any(
-                  (s) => s.toLowerCase().contains('anaphylaxis'),
-                );
-              default:
-                return true;
-            }
-          }).toList();
+    return filtered;
+  }
+
+  List<ResourceLink> getFilteredResources() {
+    if (searchQuery.isEmpty) {
+      return resources;
     }
 
-    return filtered;
+    return resources
+        .where(
+          (r) =>
+              r.title.toLowerCase().contains(searchQuery.toLowerCase()) ||
+              r.description.toLowerCase().contains(searchQuery.toLowerCase()) ||
+              r.category.toLowerCase().contains(searchQuery.toLowerCase()) ||
+              r.detailedContent.toLowerCase().contains(
+                searchQuery.toLowerCase(),
+              ),
+        )
+        .toList();
   }
 
   Widget buildTreatmentSection() {
@@ -474,6 +468,10 @@ class _FoodAllergyScreenState extends State<FoodAllergyScreen>
   }
 
   Widget _buildStatisticsCarousel() {
+    if (_carouselDismissed) {
+      return SizedBox.shrink();
+    }
+
     return AnimatedBuilder(
       animation: _statsController,
       builder: (context, child) {
@@ -481,46 +479,73 @@ class _FoodAllergyScreenState extends State<FoodAllergyScreen>
           opacity: _statsController.value,
           child: Transform.translate(
             offset: Offset(0, 20 * (1 - _statsController.value)),
-            child: Container(
-              margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              height: 270,
-              child: Column(
-                children: [
-                  Expanded(
-                    child: PageView.builder(
-                      controller: _pageController,
-                      onPageChanged: (index) {
-                        setState(() {
-                          _currentPage = index;
-                        });
-                      },
-                      itemCount: statistics.length,
-                      itemBuilder: (context, index) {
-                        return _buildStatCard(statistics[index]);
-                      },
-                    ),
+            child: Dismissible(
+              key: Key('statistics_carousel'),
+              direction: DismissDirection.up,
+              onDismissed: (direction) {
+                setState(() {
+                  _carouselDismissed = true;
+                });
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Statistics carousel hidden'),
+                    backgroundColor: AppColors.primary,
+                    duration: Duration(seconds: 2),
                   ),
-                  const SizedBox(height: 12),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: List.generate(
-                      statistics.length,
-                      (index) => AnimatedContainer(
-                        duration: const Duration(milliseconds: 300),
-                        margin: const EdgeInsets.symmetric(horizontal: 4),
-                        width: _currentPage == index ? 24 : 8,
-                        height: 8,
-                        decoration: BoxDecoration(
-                          color:
-                              _currentPage == index
-                                  ? statistics[index].color
-                                  : Colors.grey.withOpacity(0.3),
-                          borderRadius: BorderRadius.circular(4),
-                        ),
+                );
+              },
+              child: Container(
+                margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                height: 200,
+                child: Column(
+                  children: [
+                    Expanded(
+                      child: PageView.builder(
+                        controller: _pageController,
+                        onPageChanged: (index) {
+                          setState(() {
+                            _currentPage = index;
+                          });
+                        },
+                        itemCount: statistics.length,
+                        itemBuilder: (context, index) {
+                          return _buildStatCard(statistics[index]);
+                        },
                       ),
                     ),
-                  ),
-                ],
+                    const SizedBox(height: 10),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        ...List.generate(
+                          statistics.length,
+                          (index) => AnimatedContainer(
+                            duration: const Duration(milliseconds: 300),
+                            margin: const EdgeInsets.symmetric(horizontal: 4),
+                            width: _currentPage == index ? 24 : 8,
+                            height: 8,
+                            decoration: BoxDecoration(
+                              color:
+                                  _currentPage == index
+                                      ? statistics[index].color
+                                      : Colors.grey.withOpacity(0.3),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                          ),
+                        ),
+                        SizedBox(width: 8),
+                        Text(
+                          'Swipe up to hide',
+                          style: TextStyle(
+                            fontSize: 10,
+                            color: AppColors.textGray,
+                            fontStyle: FontStyle.italic,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
@@ -549,7 +574,6 @@ class _FoodAllergyScreenState extends State<FoodAllergyScreen>
       ),
       child: Stack(
         children: [
-          // Background pattern/image
           if (stat.imagePath != null)
             Positioned.fill(
               child: ClipRRect(
@@ -565,9 +589,8 @@ class _FoodAllergyScreenState extends State<FoodAllergyScreen>
                 ),
               ),
             ),
-          // Content
           Padding(
-            padding: const EdgeInsets.all(24),
+            padding: const EdgeInsets.all(16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -575,38 +598,14 @@ class _FoodAllergyScreenState extends State<FoodAllergyScreen>
                 Row(
                   children: [
                     Container(
-                      padding: const EdgeInsets.all(12),
+                      padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
                         color: Colors.white.withOpacity(0.25),
                         borderRadius: BorderRadius.circular(16),
                       ),
-                      child: Icon(stat.icon, color: Colors.white, size: 32),
+                      child: Icon(stat.icon, color: Colors.white, size: 26),
                     ),
                     const Spacer(),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 6,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.2),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(Icons.schedule, color: Colors.white, size: 14),
-                          SizedBox(width: 4),
-                          Text(
-                            'Live',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
                   ],
                 ),
                 const SizedBox(height: 8),
@@ -617,12 +616,12 @@ class _FoodAllergyScreenState extends State<FoodAllergyScreen>
                       stat.number,
                       style: TextStyle(
                         color: Colors.white,
-                        fontSize: 40,
+                        fontSize: 26,
                         fontWeight: FontWeight.bold,
                         height: 1.1,
                       ),
                     ),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 2),
                     Text(
                       stat.label,
                       style: TextStyle(
@@ -631,7 +630,7 @@ class _FoodAllergyScreenState extends State<FoodAllergyScreen>
                         fontWeight: FontWeight.w600,
                       ),
                     ),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 6),
                     Text(
                       stat.description,
                       style: TextStyle(
@@ -652,6 +651,8 @@ class _FoodAllergyScreenState extends State<FoodAllergyScreen>
 
   @override
   Widget build(BuildContext context) {
+    final filteredResources = getFilteredResources();
+
     return Scaffold(
       backgroundColor: AppColors.defaultbackground,
       appBar: AppBar(
@@ -666,14 +667,6 @@ class _FoodAllergyScreenState extends State<FoodAllergyScreen>
         automaticallyImplyLeading: false,
         backgroundColor: AppColors.primary,
         elevation: 0,
-        // actions: [
-        //   IconButton(
-        //     icon: Icon(Icons.info_outline, color: Colors.white),
-        //     onPressed: () =>{},
-        //     // _showInfoDialog(context),
-        //     tooltip: 'About',
-        //   ),
-        // ],
       ),
       body:
           isLoading
@@ -692,7 +685,6 @@ class _FoodAllergyScreenState extends State<FoodAllergyScreen>
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       _buildSearchBar(),
-                      _buildFilterChips(),
                       _buildStatisticsCarousel(),
                       const SizedBox(height: 8),
                       _buildSectionHeader(
@@ -703,20 +695,67 @@ class _FoodAllergyScreenState extends State<FoodAllergyScreen>
                       _buildAllergensGrid(),
                       const SizedBox(height: 16),
                       buildTreatmentSection(),
-                      _buildSectionHeader(
-                        context,
-                        'Educational Resources',
-                        Icons.menu_book,
-                      ),
-                      ...resources.map(
-                        (resource) => _buildResourceItem(resource, context),
-                      ),
+                      if (filteredResources.isNotEmpty) ...[
+                        _buildSectionHeader(
+                          context,
+                          'Educational Resources',
+                          Icons.menu_book,
+                        ),
+                        ...filteredResources.map(
+                          (resource) => _buildResourceItem(resource, context),
+                        ),
+                      ],
+                      if (searchQuery.isNotEmpty &&
+                          getFilteredAllergens().isEmpty &&
+                          filteredResources.isEmpty)
+                        _buildNoResultsFound(),
                       const SizedBox(height: 32),
                     ],
                   ),
                 ),
               ),
       bottomNavigationBar: _buildBottomNavigation(),
+    );
+  }
+
+  Widget _buildNoResultsFound() {
+    return Container(
+      padding: const EdgeInsets.all(48),
+      child: Center(
+        child: Column(
+          children: [
+            Container(
+              padding: EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: AppColors.lightGray,
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Icons.search_off,
+                size: 64,
+                color: AppColors.textGray,
+              ),
+            ),
+            const SizedBox(height: 20),
+            Text(
+              'No results found',
+              style: AppTextStyles.headline.copyWith(
+                color: AppColors.textBlack,
+                fontSize: 18,
+              ),
+            ),
+            SizedBox(height: 8),
+            Text(
+              'Try different keywords or clear your search',
+              style: AppTextStyles.body.copyWith(
+                color: AppColors.textGray,
+                fontSize: 14,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -749,7 +788,7 @@ class _FoodAllergyScreenState extends State<FoodAllergyScreen>
             });
           },
           decoration: InputDecoration(
-            hintText: 'Search allergens, symptoms...',
+            hintText: 'Search allergens, symptoms, resources...',
             hintStyle: TextStyle(color: AppColors.textGray),
             prefixIcon: Icon(Icons.search, color: AppColors.primary, size: 24),
             suffixIcon:
@@ -770,49 +809,6 @@ class _FoodAllergyScreenState extends State<FoodAllergyScreen>
             ),
           ),
         ),
-      ),
-    );
-  }
-
-  Widget _buildFilterChips() {
-    return Container(
-      height: 64,
-      padding: const EdgeInsets.symmetric(vertical: 12),
-      child: ListView.builder(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        itemCount: filters.length,
-        itemBuilder: (context, index) {
-          final filter = filters[index];
-          final isSelected = selectedFilter == filter;
-          return Padding(
-            padding: const EdgeInsets.only(right: 10),
-            child: FilterChip(
-              label: Text(
-                filter,
-                style: AppTextStyles.body.copyWith(
-                  fontWeight: FontWeight.w600,
-                  color: isSelected ? Colors.white : AppColors.textBlack,
-                ),
-              ),
-              selected: isSelected,
-              onSelected: (selected) {
-                setState(() {
-                  selectedFilter = selected ? filter : 'All';
-                });
-              },
-              backgroundColor: Colors.white,
-              selectedColor: AppColors.primary,
-              checkmarkColor: Colors.white,
-              labelStyle: TextStyle(
-                color: isSelected ? Colors.white : AppColors.textBlack,
-              ),
-              elevation: isSelected ? 4 : 1,
-              shadowColor: AppColors.primary.withOpacity(0.3),
-              padding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-            ),
-          );
-        },
       ),
     );
   }
@@ -908,6 +904,8 @@ class _FoodAllergyScreenState extends State<FoodAllergyScreen>
   }
 
   Widget _buildAllergenCard(Allergen allergen) {
+    final isRead = _readAllergens.contains(allergen.name);
+
     return Card(
       elevation: 3,
       shadowColor: allergen.color.withOpacity(0.3),
@@ -959,7 +957,7 @@ class _FoodAllergyScreenState extends State<FoodAllergyScreen>
                     borderRadius: BorderRadius.circular(6),
                   ),
                   child: Text(
-                    'Tap to learn',
+                    isRead ? 'Read' : 'Tap to learn',
                     style: TextStyle(
                       fontSize: 8,
                       color: allergen.color,
@@ -1046,15 +1044,6 @@ class _FoodAllergyScreenState extends State<FoodAllergyScreen>
                                 ),
                               ),
                             ),
-                            // Spacer(),
-                            // Text(
-                            //   'Read more',
-                            //   style: TextStyle(
-                            //     fontSize: 12,
-                            //     color: resource.color,
-                            //     fontWeight: FontWeight.w600,
-                            //   ),
-                            // ),
                           ],
                         ),
                       ],
@@ -1094,7 +1083,6 @@ class _FoodAllergyScreenState extends State<FoodAllergyScreen>
   Widget _buildAccordionSection(Allergen allergen) {
     return Column(
       children: [
-        // Allergic Reactions
         if (allergen.allergicReactions.isNotEmpty)
           _buildAccordionItem(
             title: 'Allergic Reactions to ${allergen.name}',
@@ -1102,10 +1090,6 @@ class _FoodAllergyScreenState extends State<FoodAllergyScreen>
             color: allergen.color,
             icon: Icons.warning_amber_rounded,
           ),
-
-        // Hidden Sources
-
-        // Avoiding section
         if (allergen.avoidance.isNotEmpty)
           _buildAccordionItem(
             title: 'Avoiding ${allergen.name}',
@@ -1113,8 +1097,6 @@ class _FoodAllergyScreenState extends State<FoodAllergyScreen>
             color: allergen.color,
             icon: Icons.block,
           ),
-
-        // Outgrow section
         if (allergen.outgrow.isNotEmpty)
           _buildAccordionItem(
             title: 'Will My Child Outgrow a ${allergen.name} Allergy?',
@@ -1313,7 +1295,6 @@ class _FoodAllergyScreenState extends State<FoodAllergyScreen>
                   ),
                   child: Column(
                     children: [
-                      // Drag handle
                       Padding(
                         padding: const EdgeInsets.only(top: 12, bottom: 8),
                         child: Center(
@@ -1327,7 +1308,6 @@ class _FoodAllergyScreenState extends State<FoodAllergyScreen>
                           ),
                         ),
                       ),
-                      // Header with image
                       Container(
                         height: 180,
                         margin: EdgeInsets.symmetric(horizontal: 16),
@@ -1343,7 +1323,6 @@ class _FoodAllergyScreenState extends State<FoodAllergyScreen>
                         ),
                         child: Stack(
                           children: [
-                            // Background image
                             if (allergen.imagePath != null)
                               Positioned.fill(
                                 child: ClipRRect(
@@ -1368,7 +1347,6 @@ class _FoodAllergyScreenState extends State<FoodAllergyScreen>
                                   ),
                                 ),
                               ),
-                            // Gradient overlay
                             Positioned.fill(
                               child: Container(
                                 decoration: BoxDecoration(
@@ -1384,7 +1362,6 @@ class _FoodAllergyScreenState extends State<FoodAllergyScreen>
                                 ),
                               ),
                             ),
-                            // Content
                             Positioned(
                               bottom: 20,
                               left: 20,
@@ -1449,6 +1426,15 @@ class _FoodAllergyScreenState extends State<FoodAllergyScreen>
                                             ),
                                           ),
                                         ),
+                                        SizedBox(height: 2),
+                                        Text(
+                                          "Source: foodallergy.org",
+                                          style: TextStyle(
+                                            fontSize: 8,
+                                            color: Colors.white70,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
                                       ],
                                     ),
                                   ),
@@ -1459,7 +1445,6 @@ class _FoodAllergyScreenState extends State<FoodAllergyScreen>
                         ),
                       ),
                       const SizedBox(height: 16),
-                      // Scrollable content
                       Expanded(
                         child: SingleChildScrollView(
                           controller: scrollController,
@@ -1467,15 +1452,12 @@ class _FoodAllergyScreenState extends State<FoodAllergyScreen>
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              // Main information section
                               if (allergen.detailedInfo.isNotEmpty)
                                 _buildInfoSection(
                                   'What Is ${allergen.name} Allergy?',
                                   allergen.detailedInfo,
                                   allergen.color,
                                 ),
-
-                              // Living With section
                               Text(
                                 'Living With ${allergen.name} Allergy',
                                 style: TextStyle(
@@ -1485,11 +1467,8 @@ class _FoodAllergyScreenState extends State<FoodAllergyScreen>
                                 ),
                               ),
                               SizedBox(height: 20),
-
                               _buildAccordionSection(allergen),
-
                               const SizedBox(height: 24),
-
                               Row(
                                 children: [
                                   Expanded(
@@ -1525,7 +1504,12 @@ class _FoodAllergyScreenState extends State<FoodAllergyScreen>
                                   const SizedBox(width: 12),
                                   Expanded(
                                     child: OutlinedButton.icon(
-                                      onPressed: () => Navigator.pop(context),
+                                      onPressed: () {
+                                        setState(() {
+                                          _readAllergens.add(allergen.name);
+                                        });
+                                        Navigator.pop(context);
+                                      },
                                       icon: const Icon(Icons.check, size: 20),
                                       label: const Text(
                                         'Got it',
@@ -1607,212 +1591,6 @@ class _FoodAllergyScreenState extends State<FoodAllergyScreen>
             ],
           ),
           const SizedBox(height: 16),
-          Text(
-            content,
-            style: AppTextStyles.body.copyWith(
-              fontSize: 14,
-              color: AppColors.textGray,
-              height: 1.6,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSymptomsList(String title, List<String> symptoms, Color color) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: color.withOpacity(0.2), width: 1),
-        boxShadow: [
-          BoxShadow(
-            color: color.withOpacity(0.08),
-            blurRadius: 8,
-            offset: Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                padding: EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: color.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Icon(
-                  Icons.warning_amber_rounded,
-                  color: color,
-                  size: 20,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Text(
-                title,
-                style: AppTextStyles.body.copyWith(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.textBlack,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          ...symptoms.map(
-            (symptom) => Padding(
-              padding: const EdgeInsets.only(bottom: 8),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Container(
-                    margin: const EdgeInsets.only(top: 6),
-                    width: 6,
-                    height: 6,
-                    decoration: BoxDecoration(
-                      color: color,
-                      shape: BoxShape.circle,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      symptom,
-                      style: AppTextStyles.body.copyWith(
-                        fontSize: 14,
-                        color: AppColors.textGray,
-                        height: 1.5,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildHiddenSourcesList(
-    String title,
-    List<String> sources,
-    Color color,
-  ) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: color.withOpacity(0.2), width: 1),
-        boxShadow: [
-          BoxShadow(
-            color: color.withOpacity(0.08),
-            blurRadius: 8,
-            offset: Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                padding: EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: color.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Icon(Icons.visibility_off, color: color, size: 20),
-              ),
-              const SizedBox(width: 12),
-              Text(
-                title,
-                style: AppTextStyles.body.copyWith(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.textBlack,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children:
-                sources
-                    .map(
-                      (source) => Container(
-                        padding: EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 8,
-                        ),
-                        decoration: BoxDecoration(
-                          color: color.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(
-                            color: color.withOpacity(0.3),
-                            width: 1,
-                          ),
-                        ),
-                        child: Text(
-                          source,
-                          style: TextStyle(
-                            fontSize: 13,
-                            color: color,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                    )
-                    .toList(),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildDetailSection(
-    String title,
-    String content,
-    IconData icon,
-    Color color,
-  ) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 20),
-      padding: EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.05),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withOpacity(0.2), width: 1),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(icon, color: color, size: 20),
-              SizedBox(width: 8),
-              Text(
-                title,
-                style: AppTextStyles.body.copyWith(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.textBlack,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
           Text(
             content,
             style: AppTextStyles.body.copyWith(
@@ -2028,160 +1806,4 @@ class _FoodAllergyScreenState extends State<FoodAllergyScreen>
       ),
     );
   }
-
-  // void _showInfoDialog(BuildContext context) {
-  //   showDialog(
-  //     context: context,
-  //     builder: (context) => AlertDialog(
-  //       shape: RoundedRectangleBorder(
-  //         borderRadius: BorderRadius.circular(20),
-  //       ),
-  //       title: Row(
-  //         children: [
-  //           Container(
-  //             padding: EdgeInsets.all(8),
-  //             decoration: BoxDecoration(
-  //               color: AppColors.textBackground,
-  //               shape: BoxShape.circle,
-  //             ),
-  //             child: Icon(Icons.info, color: AppColors.primary, size: 24),
-  //           ),
-  //           SizedBox(width: 12),
-  //           Text(
-  //             'About This App',
-  //             style: AppTextStyles.headline.copyWith(fontSize: 18),
-  //           ),
-  //         ],
-  //       ),
-  //       content: SingleChildScrollView(
-  //         child: Column(
-  //           mainAxisSize: MainAxisSize.min,
-  //           crossAxisAlignment: CrossAxisAlignment.start,
-  //           children: [
-  //             Text(
-  //               'This educational app provides information about food allergies based on data from FoodAllergy.org (FARE) and AAAAI.',
-  //               style: AppTextStyles.body.copyWith(height: 1.5),
-  //             ),
-  //             const SizedBox(height: 20),
-  //             _buildInfoSection(
-  //               'Key Facts',
-  //               Icons.analytics,
-  //               AppColors.primary,
-  //               [
-  //                 '33 million Americans impacted',
-  //                 '1 in 13 children affected',
-  //                 '9 major allergens recognized',
-  //               ],
-  //             ),
-  //             const SizedBox(height: 16),
-  //             _buildInfoSection(
-  //               'Features',
-  //               Icons.stars,
-  //               AppColors.primaryColor2Teal,
-  //               [
-  //                 'Search allergens',
-  //                 'Filter by category',
-  //                 'Emergency info access',
-  //                 'Educational resources',
-  //               ],
-  //             ),
-  //             const SizedBox(height: 16),
-  //             Container(
-  //               padding: EdgeInsets.all(12),
-  //               decoration: BoxDecoration(
-  //                 color: AppColors.primary.withOpacity(0.1),
-  //                 borderRadius: BorderRadius.circular(10),
-  //                 border: Border.all(
-  //                   color: AppColors.primary.withOpacity(0.3),
-  //                 ),
-  //               ),
-  //               child: Row(
-  //                 children: [
-  //                   Icon(
-  //                     Icons.medical_information,
-  //                     color: AppColors.primary,
-  //                     size: 20,
-  //                   ),
-  //                   SizedBox(width: 10),
-  //                   Expanded(
-  //                     child: Text(
-  //                       'Always consult healthcare providers for medical advice.',
-  //                       style: TextStyle(
-  //                         fontStyle: FontStyle.italic,
-  //                         fontSize: 12,
-  //                         color: AppColors.primary,
-  //                       ),
-  //                     ),
-  //                   ),
-  //                 ],
-  //               ),
-  //             ),
-  //           ],
-  //         ),
-  //       ),
-  //       actions: [
-  //         TextButton(
-  //           onPressed: () => Navigator.pop(context),
-  //           child: Text(
-  //             'Close',
-  //             style: AppTextStyles.body.copyWith(
-  //               fontWeight: FontWeight.w600,
-  //               color: AppColors.primary,
-  //             ),
-  //           ),
-  //         ),
-  //       ],
-  //     ),
-  //   );
-  // }
-
-  //   Widget _buildInfoSection(
-  //     String title,
-  //     IconData icon,
-  //     Color color,
-  //     List<String> items,
-  //   ) {
-  //     return Column(
-  //       crossAxisAlignment: CrossAxisAlignment.start,
-  //       children: [
-  //         Row(
-  //           children: [
-  //             Icon(icon, color: color, size: 18),
-  //             SizedBox(width: 8),
-  //             Text(
-  //               title,
-  //               style: AppTextStyles.body.copyWith(
-  //                 fontWeight: FontWeight.bold,
-  //                 fontSize: 15,
-  //                 color: AppColors.textBlack,
-  //               ),
-  //             ),
-  //           ],
-  //         ),
-  //         SizedBox(height: 8),
-  //         ...items.map(
-  //           (item) => Padding(
-  //             padding: const EdgeInsets.only(left: 26, bottom: 4),
-  //             child: Row(
-  //               crossAxisAlignment: CrossAxisAlignment.start,
-  //               children: [
-  //                 Text('• ', style: TextStyle(color: color)),
-  //                 Expanded(
-  //                   child: Text(
-  //                     item,
-  //                     style: AppTextStyles.body.copyWith(
-  //                       fontSize: 13,
-  //                       height: 1.3,
-  //                       color: AppColors.textGray,
-  //                     ),
-  //                   ),
-  //                 ),
-  //               ],
-  //             ),
-  //           ),
-  //         ),
-  //       ],
-  //     );
-  //   }
-  // }
 }

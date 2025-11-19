@@ -40,8 +40,21 @@ class AllergenAnalysis {
         }
       }
 
+      final cacheKeyMatch = await checkCacheKeyMatch(cacheKey);
+      if (cacheKeyMatch != null) {
+        print('Level 2: Cache key match');
+        return {
+          ...cacheKeyMatch,
+          'matchType': 'cache_key',
+          'matchLevel': 2,
+          'fromCache': true,
+        };
+      } else {
+        print('Level 2: No cache key match');
+      }
+
       if (imageFile != null && apiKey != null && apiKey.isNotEmpty) {
-        print('Level 2: Checking visual similarity...');
+        print('Level 3: Checking visual similarity...');
         final similarMatch = await checkSimilarFoodImage(
           imageFile,
           apiKey,
@@ -49,31 +62,18 @@ class AllergenAnalysis {
         );
         if (similarMatch != null) {
           print(
-            'Level 2: Visual similarity match (same dish, different angle)',
+            'Level 3: Visual similarity match (same dish, different angle)',
           );
           return similarMatch;
         } else {
-          print('Level 2: No visual similarity match');
+          print('Level 3: No visual similarity match');
         }
       }
 
-      final cacheKeyMatch = await checkCacheKeyMatch(cacheKey);
-      if (cacheKeyMatch != null) {
-        print('Level 3: Cache key match');
-        return {
-          ...cacheKeyMatch,
-          'matchType': 'cache_key',
-          'matchLevel': 3,
-          'fromCache': true,
-        };
-      } else {
-        print(' Level 3: No cache key match');
-      }
-
-      print(' No cache match found at any level');
+      print('No cache match found at any level');
       return null;
     } catch (e) {
-      print(' Error in enhanced cache check: $e');
+      print('Error in enhanced cache check: $e');
       return null;
     }
   }
