@@ -24,14 +24,23 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
 }
 
 Future<void> requestLocationPermissions() async {
-  final status = await Permission.location.request();
-  if (status.isDenied) {
-    await Permission.location.request();
+  try {
+    final status = await Permission.location.request();
+    if (status.isDenied) {
+      await Permission.location.request();
+    }
+  } catch (e) {
+    print('Location permission error: $e');
   }
 }
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  FlutterError.onError = (FlutterErrorDetails details) {
+    print('Flutter Error: ${details.exception}');
+    print('Stack trace: ${details.stack}');
+  };
 
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
@@ -48,11 +57,14 @@ void main() async {
 
 Future<void> _initializeServicesInBackground() async {
   try {
-    await Future.wait([
-      AirQualityWidgetManager.initialize(),
-      requestLocationPermissions(),
-      PushNotificationService().initialize(),
-    ], eagerError: true);
+    await AirQualityWidgetManager.initialize();
+    await requestLocationPermissions();
+
+    try {
+      await PushNotificationService().initialize();
+    } catch (e) {
+      print('Notification service initialization error: $e');
+    }
 
     print('All services initialized successfully');
   } catch (e) {
@@ -221,15 +233,20 @@ class _ShortcutHandlerState extends State<ShortcutHandler> {
     print(
       'Triggering air quality from widget, needsPermission: $needsPermission',
     );
-    final context = navigatorKey.currentContext;
 
-    if (context == null) {
+    final context = navigatorKey.currentContext;
+    if (context == null || !context.mounted) {
       print('No context available');
       return;
     }
 
     if (needsPermission) {
       await _handleLocationPermission(context);
+
+      if (!context.mounted) {
+        print('Context no longer mounted after permission handling');
+        return;
+      }
 
       try {
         await platform.invokeMethod('updateWidget');
@@ -238,28 +255,30 @@ class _ShortcutHandlerState extends State<ShortcutHandler> {
       }
     }
 
-    if (context.mounted) {
-      print('Context mounted, navigating to AirQualityLoader');
-      Navigator.of(context).popUntil((route) => route.isFirst);
+    if (!context.mounted) return;
 
-      Future.delayed(const Duration(milliseconds: 100), () async {
-        if (context.mounted) {
-          await Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => AirQualityLoader(),
-              settings: RouteSettings(
-                name: '/air_quality',
-                arguments: {'timestamp': DateTime.now().millisecondsSinceEpoch},
-              ),
-            ),
-          );
-        }
-      });
+    print('Context mounted, navigating to AirQualityLoader');
+    Navigator.of(context).popUntil((route) => route.isFirst);
+
+    await Future.delayed(const Duration(milliseconds: 100));
+
+    if (context.mounted) {
+      await Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => AirQualityLoader(),
+          settings: RouteSettings(
+            name: '/air_quality',
+            arguments: {'timestamp': DateTime.now().millisecondsSinceEpoch},
+          ),
+        ),
+      );
     }
   }
 
   Future<void> _handleLocationPermission(BuildContext context) async {
+    if (!context.mounted) return;
+
     var status = await Permission.location.status;
 
     if (status.isGranted) {
@@ -268,22 +287,25 @@ class _ShortcutHandlerState extends State<ShortcutHandler> {
     }
 
     if (status.isDenied) {
+      if (!context.mounted) return;
+
       bool shouldRequest =
           await showDialog<bool>(
             context: context,
+            barrierDismissible: false,
             builder:
-                (context) => AlertDialog(
+                (dialogContext) => AlertDialog(
                   title: Text('Location Permission'),
                   content: Text(
                     'This app needs location access to show accurate air quality data for your area.',
                   ),
                   actions: [
                     TextButton(
-                      onPressed: () => Navigator.pop(context, false),
+                      onPressed: () => Navigator.pop(dialogContext, false),
                       child: Text('Cancel'),
                     ),
                     TextButton(
-                      onPressed: () => Navigator.pop(context, true),
+                      onPressed: () => Navigator.pop(dialogContext, true),
                       child: Text('Grant Permission'),
                     ),
                   ],
@@ -291,41 +313,42 @@ class _ShortcutHandlerState extends State<ShortcutHandler> {
           ) ??
           false;
 
-      if (!shouldRequest) {
+      if (!shouldRequest || !context.mounted) {
         print('User declined to grant location permission');
         return;
       }
 
       status = await Permission.location.request();
 
+      if (!context.mounted) return;
+
       if (status.isGranted) {
         print('Location permission granted');
-        if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Location permission granted! Updating widget...'),
-              duration: Duration(seconds: 2),
-            ),
-          );
-        }
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Location permission granted! Updating widget...'),
+            duration: Duration(seconds: 2),
+          ),
+        );
       } else if (status.isPermanentlyDenied) {
-        if (context.mounted) {
-          showOpenSettingsDialog(context);
-        }
+        await showOpenSettingsDialog(context);
       }
     } else if (status.isPermanentlyDenied) {
       if (context.mounted) {
-        showOpenSettingsDialog(context);
+        await showOpenSettingsDialog(context);
       }
     }
   }
 
   Future<void> showOpenSettingsDialog(BuildContext context) async {
+    if (!context.mounted) return;
+
     bool shouldOpenSettings =
         await showDialog<bool>(
           context: context,
+          barrierDismissible: false,
           builder:
-              (context) => AlertDialog(
+              (dialogContext) => AlertDialog(
                 title: Text('Permission Required'),
                 content: Text(
                   'Location permission is required to show accurate air quality data. '
@@ -333,11 +356,11 @@ class _ShortcutHandlerState extends State<ShortcutHandler> {
                 ),
                 actions: [
                   TextButton(
-                    onPressed: () => Navigator.pop(context, false),
+                    onPressed: () => Navigator.pop(dialogContext, false),
                     child: Text('Cancel'),
                   ),
                   TextButton(
-                    onPressed: () => Navigator.pop(context, true),
+                    onPressed: () => Navigator.pop(dialogContext, true),
                     child: Text('Open Settings'),
                   ),
                 ],
@@ -354,7 +377,7 @@ class _ShortcutHandlerState extends State<ShortcutHandler> {
     print('Triggering emergency from shortcut');
 
     final context = navigatorKey.currentContext;
-    if (context == null) {
+    if (context == null || !context.mounted) {
       print('No context available');
       return;
     }
@@ -380,7 +403,7 @@ class _ShortcutHandlerState extends State<ShortcutHandler> {
       print('Permissions not granted');
       if (context.mounted) {
         bool granted = await emergencyService.showPermissionDialog(context);
-        if (!granted) {
+        if (!granted || !context.mounted) {
           print('Permissions denied by user');
           return;
         }
