@@ -168,7 +168,7 @@ class _DeleteAccountScreenState extends State<DeleteAccountScreen>
 
       if (isGoogleUser) {
         try {
-          final GoogleSignIn googleSignIn = GoogleSignIn();
+          final GoogleSignIn googleSignIn = GoogleSignIn(scopes: ['email']);
           final GoogleSignInAccount? googleUser = await googleSignIn.signIn();
 
           if (googleUser == null) {

@@ -25,7 +25,7 @@ class LoginScreenState extends State<LoginScreen> {
   bool isLoading = false;
 
   final auth = FirebaseAuth.instance;
-  final GoogleSignIn _googleSignIn = GoogleSignIn();
+  final GoogleSignIn _googleSignIn = GoogleSignIn(scopes: ['email']);
 
   @override
   void initState() {
@@ -169,33 +169,52 @@ class LoginScreenState extends State<LoginScreen> {
   }
 
   Future<void> signInWithGoogle() async {
+    print('🔵 [LOGIN] Starting Google Sign-In process');
     setState(() => isLoading = true);
 
     try {
+      print('🔵 [LOGIN] Attempting Google Sign-In...');
       final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
+
       if (googleUser == null) {
+        print('⚠️ [LOGIN] User cancelled Google Sign-In');
         setState(() => isLoading = false);
         return;
       }
+      print('✅ [LOGIN] Google user obtained: ${googleUser.email}');
 
+      print('🔵 [LOGIN] Getting authentication credentials...');
       final GoogleSignInAuthentication googleAuth =
           await googleUser.authentication;
+      print(
+        '✅ [LOGIN] Access token: ${googleAuth.accessToken != null ? "Present" : "Missing"}',
+      );
+      print(
+        '✅ [LOGIN] ID token: ${googleAuth.idToken != null ? "Present" : "Missing"}',
+      );
 
+      print('🔵 [LOGIN] Creating Firebase credential...');
       final AuthCredential credential = GoogleAuthProvider.credential(
         accessToken: googleAuth.accessToken,
         idToken: googleAuth.idToken,
       );
 
+      print('🔵 [LOGIN] Signing in with Firebase...');
       final UserCredential userCredential = await FirebaseAuth.instance
           .signInWithCredential(credential);
+      print('✅ [LOGIN] Firebase sign-in successful');
 
       final user = userCredential.user;
+      print('✅ [LOGIN] User UID: ${user?.uid}');
+      print('✅ [LOGIN] User email: ${user?.email}');
 
       if (user != null) {
+        print('🔵 [LOGIN] Saving auto-login preference...');
         SharedPreferences prefs = await SharedPreferences.getInstance();
         await prefs.setBool('auto_login', true);
 
         bool isNewUser = userCredential.additionalUserInfo?.isNewUser ?? false;
+        print('✅ [LOGIN] Is new user: $isNewUser');
 
         if (isNewUser) {
           await FirebaseFirestore.instance
@@ -227,7 +246,12 @@ class LoginScreenState extends State<LoginScreen> {
           }
         }
       }
-    } catch (e) {
+    } catch (e, stackTrace) {
+      print('❌ [LOGIN] Google Sign-In failed!');
+      print('❌ [LOGIN] Error type: ${e.runtimeType}');
+      print('❌ [LOGIN] Error message: ${e.toString()}');
+      print('❌ [LOGIN] Stack trace: $stackTrace');
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Failed to sign in with Google: ${e.toString()}'),
