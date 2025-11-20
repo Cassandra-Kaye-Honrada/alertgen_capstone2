@@ -28,9 +28,7 @@ class SignUpScreenState extends State<SignUpScreen> {
   bool isLoading = false;
   bool acceptTerms = false;
 
-  final GoogleSignIn googleSignIn = GoogleSignIn(
-    scopes: ['email'],
-  );
+  final GoogleSignIn googleSignIn = GoogleSignIn(scopes: ['email']);
 
   bool hasMinLength = false;
   bool hasUppercase = false;

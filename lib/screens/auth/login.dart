@@ -25,9 +25,7 @@ class LoginScreenState extends State<LoginScreen> {
   bool isLoading = false;
 
   final auth = FirebaseAuth.instance;
-  final GoogleSignIn _googleSignIn = GoogleSignIn(
-    scopes: ['email'],
-  );
+  final GoogleSignIn _googleSignIn = GoogleSignIn(scopes: ['email']);
 
   @override
   void initState() {
