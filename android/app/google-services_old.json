@@ -14,22 +14,6 @@
       },
       "oauth_client": [
         {
-          "client_id": "223497311060-97k4eitfm9jo7b8uu6ojhs7moqig3qhf.apps.googleusercontent.com",
-          "client_type": 1,
-          "android_info": {
-            "package_name": "com.example.allergen",
-            "certificate_hash": "fbb48a5b02d9e8e0754d26ad6366dd1468ea271c"
-          }
-        },
-        {
-          "client_id": "223497311060-fr10b3tftq0j73ru5hl33n3iti3j30pg.apps.googleusercontent.com",
-          "client_type": 1,
-          "android_info": {
-            "package_name": "com.example.allergen",
-            "certificate_hash": "2a6cff0331c1eccea8939f1a82d1583833482849"
-          }
-        },
-        {
           "client_id": "223497311060-f5ct4pb4iaih4megqb8aq40btfp2367l.apps.googleusercontent.com",
           "client_type": 3
         }

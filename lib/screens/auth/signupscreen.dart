@@ -28,7 +28,9 @@ class SignUpScreenState extends State<SignUpScreen> {
   bool isLoading = false;
   bool acceptTerms = false;
 
-  final GoogleSignIn googleSignIn = GoogleSignIn();
+  final GoogleSignIn googleSignIn = GoogleSignIn(
+    scopes: ['email'],
+  );
 
   bool hasMinLength = false;
   bool hasUppercase = false;
@@ -155,35 +157,56 @@ class SignUpScreenState extends State<SignUpScreen> {
   }
 
   Future<void> signInWithGoogle() async {
+    print('🟢 [SIGNUP] Starting Google Sign-In process');
     setState(() => isLoading = true);
 
     try {
+      print('🟢 [SIGNUP] Signing out any existing Google session...');
       await googleSignIn.signOut();
 
+      print('🟢 [SIGNUP] Attempting Google Sign-In...');
       final GoogleSignInAccount? googleUser = await googleSignIn.signIn();
+
       if (googleUser == null) {
+        print('⚠️ [SIGNUP] User cancelled Google Sign-In');
         setState(() => isLoading = false);
         return;
       }
+      print('✅ [SIGNUP] Google user obtained: ${googleUser.email}');
 
+      print('🟢 [SIGNUP] Getting authentication credentials...');
       final GoogleSignInAuthentication googleAuth =
           await googleUser.authentication;
+      print(
+        '✅ [SIGNUP] Access token: ${googleAuth.accessToken != null ? "Present" : "Missing"}',
+      );
+      print(
+        '✅ [SIGNUP] ID token: ${googleAuth.idToken != null ? "Present" : "Missing"}',
+      );
 
+      print('🟢 [SIGNUP] Creating Firebase credential...');
       final AuthCredential credential = GoogleAuthProvider.credential(
         accessToken: googleAuth.accessToken,
         idToken: googleAuth.idToken,
       );
 
+      print('🟢 [SIGNUP] Signing in with Firebase...');
       UserCredential userCredential = await FirebaseAuth.instance
           .signInWithCredential(credential);
+      print('✅ [SIGNUP] Firebase sign-in successful');
 
       bool isNewUser = userCredential.additionalUserInfo?.isNewUser ?? false;
+      print('✅ [SIGNUP] User UID: ${userCredential.user?.uid}');
+      print('✅ [SIGNUP] User email: ${userCredential.user?.email}');
+      print('✅ [SIGNUP] Is new user: $isNewUser');
 
+      print('🟢 [SIGNUP] Checking if user exists in Firestore...');
       DocumentSnapshot userDoc =
           await FirebaseFirestore.instance
               .collection('users')
               .doc(userCredential.user!.uid)
               .get();
+      print('✅ [SIGNUP] User document exists: ${userDoc.exists}');
 
       if (userDoc.exists && !isNewUser) {
         await FirebaseAuth.instance.signOut();
@@ -226,7 +249,12 @@ class SignUpScreenState extends State<SignUpScreen> {
               (_) => VerifyEmailScreen(email: userCredential.user!.email ?? ''),
         ),
       );
-    } catch (e) {
+    } catch (e, stackTrace) {
+      print('❌ [SIGNUP] Google Sign-In failed!');
+      print('❌ [SIGNUP] Error type: ${e.runtimeType}');
+      print('❌ [SIGNUP] Error message: ${e.toString()}');
+      print('❌ [SIGNUP] Stack trace: $stackTrace');
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Failed to sign in with Google: ${e.toString()}'),
